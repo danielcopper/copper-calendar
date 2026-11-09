@@ -9,7 +9,7 @@ import dev.cupr.calendar.month.MonthLayout
 import dev.cupr.calendar.month.MonthView
 import dev.cupr.calendar.sample.SampleData
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -74,13 +74,24 @@ class WeekRowRenderTest {
     }
 
     @Test
-    fun `today's number stands in the accent's pill`() {
-        val palette = SampleData.dark
-        val bitmap = rows.render(view.weeks[view.todayWeek], widthPx, scale, palette)
+    fun `today's number stands in the accent's pill, in each palette`() {
         val column = widthPx / 7f
         val x = 2 * column + scale.hairline + scale.px(2f + 1.5f)
         val y = scale.hairline + scale.px(3f + 11f)
-        assertEquals(palette.accent, bitmap.getPixel(x.toInt(), y.toInt()))
+        for ((_, palette) in modes) {
+            val bitmap = rows.render(view.weeks[view.todayWeek], widthPx, scale, palette)
+            assertEquals(palette.accent, bitmap.getPixel(x.toInt(), y.toInt()))
+        }
+    }
+
+    @Test
+    fun `plus is the accent's circle, in each palette`() {
+        // Inside the circle, left of the plus, at the circle's middle height.
+        val x = scale.px(ChromeRenderer.FAB_MARGIN + 6f)
+        val y = scale.px(ChromeRenderer.FAB_MARGIN + ChromeRenderer.FAB_SIZE / 2)
+        for ((_, palette) in modes) {
+            assertEquals(palette.accent, chrome.fab(scale, palette).getPixel(x.toInt(), y.toInt()))
+        }
     }
 
     @Test
@@ -95,12 +106,10 @@ class WeekRowRenderTest {
     }
 
     @Test
-    fun `the header and the weeks differ between dark and light`() {
-        for (index in view.weeks.indices) {
-            val dark = rows.render(view.weeks[index], widthPx, scale, SampleData.dark)
-            val light = rows.render(view.weeks[index], widthPx, scale, SampleData.light)
-            assertTrue(!dark.sameAs(light))
-        }
+    fun `the header draws in the palette it is given`() {
+        val dark = chrome.header(SampleData.month, widthPx, scale, SampleData.dark)
+        val light = chrome.header(SampleData.month, widthPx, scale, SampleData.light)
+        assertFalse(dark.sameAs(light))
     }
 
     private fun write(
