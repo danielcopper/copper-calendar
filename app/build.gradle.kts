@@ -40,14 +40,11 @@ android {
                 test.maxHeapSize = "1536m"
                 // Robolectric sets up API 37's shared memory through JDK internals.
                 test.jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED")
-                // Where the render test writes its PNGs (`mise run render`).
-                test.systemProperty(
-                    "render.dir",
-                    layout.buildDirectory
-                        .dir("render")
-                        .get()
-                        .asFile.path,
-                )
+                // Where the render test writes its PNGs (`mise run render`), an
+                // output of the task, so a result from the build cache brings them too.
+                val renderDir = layout.buildDirectory.dir("render")
+                test.systemProperty("render.dir", renderDir.get().asFile.path)
+                test.outputs.dir(renderDir)
                 // Coverage of the classes Robolectric loads into its sandbox.
                 test.extensions.configure<JacocoTaskExtension> {
                     isIncludeNoLocationClasses = true
