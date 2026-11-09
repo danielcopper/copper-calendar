@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import java.time.LocalDate
+import java.time.format.DateTimeParseException
 
 /** What a tap on a widget hit (design.md, "Taps"). */
 enum class TapElement { HEADER, DAY, NEW }
@@ -60,12 +61,22 @@ object Taps {
             PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
-    /** The tap an intent carries, none when it carries no complete one. */
+    /**
+     * The tap an intent carries, none when it carries no complete one: no or
+     * an unknown element, no or a malformed day.
+     */
     fun read(intent: Intent): Pair<TapElement, LocalDate>? {
         val element = intent.getStringExtra(ELEMENT)?.let { name -> TapElement.entries.find { it.name == name } }
-        val day = intent.getStringExtra(DAY)?.let(LocalDate::parse)
+        val day = intent.getStringExtra(DAY)?.let(::parseDay)
         return if (element != null && day != null) element to day else null
     }
+
+    private fun parseDay(text: String): LocalDate? =
+        try {
+            LocalDate.parse(text)
+        } catch (_: DateTimeParseException) {
+            null
+        }
 
     private const val TEMPLATE_REQUEST = 100
 }
