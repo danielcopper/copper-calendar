@@ -36,6 +36,16 @@ android {
                 // Robolectric with native graphics needs more than the default
                 // 512 MB test heap.
                 test.maxHeapSize = "1536m"
+                // Robolectric sets up API 37's shared memory through JDK internals.
+                test.jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED")
+                // Where the render test writes its PNGs (`mise run render`).
+                test.systemProperty(
+                    "render.dir",
+                    layout.buildDirectory
+                        .dir("render")
+                        .get()
+                        .asFile.path,
+                )
             }
         }
     }
