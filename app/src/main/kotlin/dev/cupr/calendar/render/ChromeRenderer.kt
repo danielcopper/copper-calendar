@@ -27,12 +27,18 @@ import kotlin.math.ceil
 
 /**
  * Draws the month widget's fixed parts: the header (month title, chevron,
- * weekday heads) and the round "+".
+ * weekday heads) and the round "+". The weekday heads, Monday to Sunday,
+ * come from the string resource `weekday_heads`.
  */
 class ChromeRenderer(
     private val fonts: Fonts,
     private val icons: Icons,
+    private val weekdays: List<String>,
 ) {
+    init {
+        require(weekdays.size == DAYS_IN_WEEK) { "The header needs $DAYS_IN_WEEK weekday heads, not ${weekdays.size}" }
+    }
+
     /** "NOVEMBER 2026" and the chevron at the right, then the weekday heads, one per column. */
     fun header(
         month: YearMonth,
@@ -68,7 +74,7 @@ class ChromeRenderer(
 
         val column = widthPx / DAYS_IN_WEEK.toFloat()
         val baseline = heads.baselineIn(titleRow, headsLine)
-        WEEKDAYS.forEachIndexed { index, name ->
+        weekdays.forEachIndexed { index, name ->
             canvas.drawText(name.uppercase(Locale.GERMAN), (index + HALF) * column, baseline, heads)
         }
         return bitmap
@@ -109,11 +115,6 @@ class ChromeRenderer(
         private const val HALF = 0.5f
         private const val CHEVRON_ICON = "chevron-right"
         private const val PLUS_ICON = "plus"
-        private val WEEKDAYS = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
-
-        init {
-            check(WEEKDAYS.size == DAYS_IN_WEEK)
-        }
 
         /** "November 2026" */
         fun title(month: YearMonth): String =

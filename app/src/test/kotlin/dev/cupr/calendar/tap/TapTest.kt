@@ -126,14 +126,14 @@ class TapTest {
             listOf("No app opens $calendar?day=2026-11-12"),
             ShadowLog.getLogsForTag("TapActivity").map { it.msg },
         )
-        assertEquals("Home Assistant-App nicht gefunden", ShadowToast.getTextOfLatestToast())
+        assertEquals("Home-Assistant-App nicht gefunden", ShadowToast.getTextOfLatestToast())
     }
 
     @Test
     fun `a target the app may not open is logged and shown, not thrown`() {
         openTarget(application, calendar) { throw SecurityException("denied") }
         assertEquals(listOf("Not allowed to open $calendar"), ShadowLog.getLogsForTag("TapActivity").map { it.msg })
-        assertEquals("Home Assistant-App nicht gefunden", ShadowToast.getTextOfLatestToast())
+        assertEquals("Home-Assistant-App nicht gefunden", ShadowToast.getTextOfLatestToast())
     }
 
     @Test

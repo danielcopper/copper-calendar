@@ -73,7 +73,8 @@ object MonthWidget {
         // The drawn rows and header span the widget less the card's inset at both sides.
         val widthPx = scale.px(widthDp - 2 * PhoneMonth.CARD_INSET).roundToInt()
         val assets = RenderAssets.of(context)
-        val chrome = ChromeRenderer(assets.fonts, assets.icons)
+        val chrome =
+            ChromeRenderer(assets.fonts, assets.icons, context.resources.getStringArray(R.array.weekday_heads).toList())
         val rows = WeekRowRenderer(assets.fonts, assets.icons, assets.drawings)
         val drawn = mutableListOf<Bitmap>()
 

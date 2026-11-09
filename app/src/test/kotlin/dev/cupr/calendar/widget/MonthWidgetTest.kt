@@ -12,7 +12,10 @@ import android.widget.ListView
 import android.widget.RemoteViews
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.R
+import dev.cupr.calendar.render.ChromeRenderer
 import dev.cupr.calendar.render.PhoneMonth
+import dev.cupr.calendar.render.RenderAssets
+import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.sample.SampleData
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.TapActivity
@@ -63,6 +66,19 @@ class MonthWidgetTest {
     fun `the list has one row per week of the month`() {
         val list = applied().findViewById<ListView>(R.id.list)
         assertEquals(6, list.adapter.count)
+    }
+
+    @Test
+    fun `the header draws the weekday heads from the string resource`() {
+        val header = applied().findViewById<ImageView>(R.id.header_light)
+        val assets = RenderAssets.of(application)
+        val weekdays = application.resources.getStringArray(R.array.weekday_heads).toList()
+        val density = application.resources.displayMetrics.density
+        val widthPx = ((276 - 2 * PhoneMonth.CARD_INSET) * density).roundToInt()
+        val expected =
+            ChromeRenderer(assets.fonts, assets.icons, weekdays)
+                .header(SampleData.month, widthPx, Scale(density), SampleData.light)
+        assertTrue((header.drawable as BitmapDrawable).bitmap.sameAs(expected))
     }
 
     @Test

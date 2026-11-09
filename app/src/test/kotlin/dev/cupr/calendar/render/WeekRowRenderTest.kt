@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.test.core.app.ApplicationProvider
+import dev.cupr.calendar.R
 import dev.cupr.calendar.model.Palette
 import dev.cupr.calendar.month.MonthLayout
 import dev.cupr.calendar.month.MonthView
@@ -11,6 +12,8 @@ import dev.cupr.calendar.render.Probe.at
 import dev.cupr.calendar.render.Probe.has
 import dev.cupr.calendar.sample.SampleData
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,7 +34,14 @@ class WeekRowRenderTest {
     private val fonts = Fonts(assets)
     private val icons = Icons(assets)
     private val rows = WeekRowRenderer(fonts, icons, Drawings(assets))
-    private val chrome = ChromeRenderer(fonts, icons)
+    private val weekdays =
+        ApplicationProvider
+            .getApplicationContext<Context>()
+            .resources
+            .getStringArray(
+                R.array.weekday_heads,
+            ).toList()
+    private val chrome = ChromeRenderer(fonts, icons, weekdays)
     private val scale = Probe.scale
     private val widthPx = Probe.widthPx
     private val view: MonthView =
@@ -123,6 +133,21 @@ class WeekRowRenderTest {
                 header.has(palette.tertiaryText, 0f, rowBottom, widthPx.toFloat(), header.height.toFloat()),
             )
         }
+    }
+
+    @Test
+    fun `the weekday heads are the string resource's, Monday to Sunday`() {
+        assertEquals(listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"), weekdays)
+    }
+
+    @Test
+    fun `the header draws the weekday heads it is given, and needs seven`() {
+        val given = chrome.header(SampleData.month, widthPx, scale, SampleData.dark)
+        val other = ChromeRenderer(fonts, icons, listOf("A", "B", "C", "D", "E", "F", "G"))
+        assertFalse(given.sameAs(other.header(SampleData.month, widthPx, scale, SampleData.dark)))
+        val error =
+            assertThrows(IllegalArgumentException::class.java) { ChromeRenderer(fonts, icons, weekdays.drop(1)) }
+        assertEquals("The header needs 7 weekday heads, not 6", error.message)
     }
 
     private fun write(
