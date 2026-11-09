@@ -11,14 +11,14 @@ import java.util.Locale
 import kotlin.math.ceil
 
 /**
- * Draws the month widget's fixed parts as the mockup Month.dc.html does:
- * the header (month title, chevron, weekday heads) and the round "+".
+ * Draws the month widget's fixed parts: the header (month title, chevron,
+ * weekday heads) and the round "+".
  */
 class ChromeRenderer(
     private val fonts: Fonts,
     private val icons: Icons,
 ) {
-    /** "NOVEMBER 2026" and the chevron (`.ch`, `.ct`, `.trng`), then the weekday heads (`.wdh`). */
+    /** "NOVEMBER 2026" and the chevron at the right, then the weekday heads, one per column. */
     fun header(
         month: YearMonth,
         widthPx: Int,
@@ -60,7 +60,7 @@ class ChromeRenderer(
     }
 
     /**
-     * The round "+" (`.fab`): the accent's circle with its shadow and the
+     * The round "+": the accent's circle with its shadow and the
      * plus in the on-accent colour, inside a square that leaves room for the
      * shadow up to the widget's edge ([FAB_MARGIN] on each side).
      */
@@ -88,13 +88,13 @@ class ChromeRenderer(
     }
 
     companion object {
-        /** "+" is 40 dp across, 12 dp inside the card's 1 dp border. */
+        /** "+" is 40 dp across; around it the room up to the widget's edge. */
         const val FAB_SIZE = 40f
-        const val FAB_MARGIN = 13f
+        const val FAB_MARGIN = PhoneMonth.FAB_INSET + PhoneMonth.CARD_BORDER
 
         private const val FAB_ICON = 24f
 
-        // box-shadow: 0 4px 14px; a CSS blur of 14 px is a Gaussian sigma of 7,
+        // The shadow falls 4 dp down with a 14 dp blur, a Gaussian sigma of 7,
         // which Android's shadow radius r gives as 0.57735 r + 0.5.
         private const val SHADOW_Y = 4f
         private const val SHADOW_RADIUS = 11.26f

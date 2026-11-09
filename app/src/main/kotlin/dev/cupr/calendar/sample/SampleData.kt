@@ -10,8 +10,8 @@ import java.time.YearMonth
 import java.time.ZoneId
 
 /**
- * SAMPLE DATA, not real data. The entries of the approved month mockup and
- * the two palettes of the theme "Zuhause" (homelab,
+ * SAMPLE DATA, not real data. The entries of the sample month shown to the
+ * owner for approval and the two palettes of the theme "Zuhause" (homelab,
  * infra/homeassistant/config/themes/zuhause.yaml at 24b4a670). They stand in
  * until Home Assistant delivers entries (D16) and the theme (D17); the
  * widget and the tests both draw from them.
@@ -33,7 +33,7 @@ object SampleData {
     const val PUBLIC_HOLIDAYS = "calendar.deutschland_he"
     const val SPECIAL = "special"
 
-    // The mockup's own colours (CSS colour names).
+    // The entries' own colours: hotpink, rebeccapurple, lightskyblue, steelblue.
     private const val HOTPINK = 0xFFFF69B4.toInt()
     private const val REBECCAPURPLE = 0xFF663399.toInt()
     private const val LIGHTSKYBLUE = 0xFF87CEFA.toInt()

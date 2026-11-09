@@ -288,10 +288,10 @@ class MonthLayoutTest {
         assertEquals(listOf(0, 1), week.bars.map { it.lane })
     }
 
-    // The sample month against the approved mockup.
+    // The sample month: its weeks, bars and cells.
 
     @Test
-    fun `the sample month matches the mockup`() {
+    fun `the sample month places its entries in six weeks, two bars and the cells`() {
         val view = MonthLayout.build(SampleData.month, SampleData.entries, LocalDateTime.now(SampleData.clock))
         assertEquals(6, view.weeks.size)
         assertEquals(2, view.todayWeek)

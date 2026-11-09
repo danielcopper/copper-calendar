@@ -4,13 +4,13 @@ import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-/** Converts the mockup's CSS pixels (dp on the phone) to bitmap pixels. */
+/** Converts dp to the bitmap's pixels at a display density. */
 class Scale(
     val density: Float,
 ) {
     fun px(dp: Float): Float = dp * density
 
-    /** A CSS 1 px border, as the browser snaps it to whole device pixels. */
+    /** A 1 dp line in whole pixels, so it stays sharp. */
     val hairline: Float = max(1f, floor(density))
 
     /** The bitmap density (dpi) to tag a bitmap drawn at this scale with. */

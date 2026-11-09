@@ -56,9 +56,9 @@ import kotlin.math.ceil
 import kotlin.math.max
 
 /**
- * Draws one week of the month as a bitmap (D8), at phone size as the
- * mockup Month.dc.html draws it: the week's top divider, seven cells and
- * the bars over them. The bitmap is transparent where the card shows.
+ * Draws one week of the month as a bitmap (D8), at phone size
+ * ([PhoneMonth]): the week's top divider, seven cells and the bars over
+ * them. The bitmap is transparent where the card shows.
  */
 class WeekRowRenderer(
     private val fonts: Fonts,
@@ -82,7 +82,7 @@ class WeekRowRenderer(
         return bitmap
     }
 
-    /** The row's height below its divider: its tallest cell, at least `--ch`. */
+    /** The row's height below its divider: its tallest cell, at least [CELL_MIN]. */
     fun heightDp(week: Week): Float =
         max(
             CELL_MIN,

@@ -16,7 +16,7 @@ class Fonts(
 ) {
     private val byWeight = mutableMapOf<Int, Typeface>()
 
-    /** Roboto at a CSS weight (400 regular, 500 medium, 600 semi-bold, 700 bold). */
+    /** Roboto at a font weight (400 regular, 500 medium, 600 semi-bold, 700 bold). */
     fun weight(weight: Int): Typeface =
         byWeight.getOrPut(weight) {
             Typeface

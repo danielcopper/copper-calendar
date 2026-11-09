@@ -11,20 +11,20 @@ import androidx.core.graphics.withTranslation
 import com.caverock.androidsvg.RenderOptions
 import kotlin.math.roundToInt
 
-/** A colour with its alpha multiplied by a CSS opacity. */
+/** A colour with its alpha multiplied by an opacity (0 to 1). */
 fun Int.withOpacity(opacity: Float): Int {
     val alpha = ((this ushr ALPHA_SHIFT) * opacity).roundToInt()
     return (alpha shl ALPHA_SHIFT) or (this and RGB_MASK)
 }
 
-/** A CSS opacity as a layer alpha. */
+/** An opacity (0 to 1) as a layer alpha (0 to 255). */
 fun opacityAlpha(opacity: Float): Int = (opacity * FULL_ALPHA).roundToInt()
 
 private const val ALPHA_SHIFT = 24
 private const val RGB_MASK = 0x00FFFFFF
 private const val FULL_ALPHA = 255
 
-/** Text in Roboto at a CSS size and weight. */
+/** Text in Roboto at a size in dp and a font weight. */
 fun Fonts.paint(
     scale: Scale,
     sizeDp: Float,
@@ -37,7 +37,7 @@ fun Fonts.paint(
         this.color = color
     }
 
-/** The baseline that centres a line of this paint's text in a box, as CSS centres a line box. */
+/** The baseline that centres a line of this paint's text, from its ascent to its descent, in a box. */
 fun TextPaint.baselineIn(
     top: Float,
     height: Float,
@@ -46,7 +46,7 @@ fun TextPaint.baselineIn(
     return top + (height - (metrics.descent - metrics.ascent)) / 2 - metrics.ascent
 }
 
-/** Draws text from x, cut with "…" at maxWidth (`text-overflow: ellipsis`). */
+/** Draws text from x, cut with "…" where it would pass maxWidth. */
 fun Canvas.drawCut(
     text: String,
     x: Float,
@@ -110,8 +110,8 @@ fun roundedPath(
     }
 
 /**
- * The left inset band of a shape (`box-shadow: inset <width>px 0 0`): the
- * shape less itself moved right by width.
+ * The coloured band along a shape's left edge, following its rounded
+ * corners: the shape less itself moved right by width.
  */
 fun insetBand(
     shape: Path,

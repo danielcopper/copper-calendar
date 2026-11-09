@@ -11,6 +11,7 @@ import dev.cupr.calendar.render.ChromeRenderer
 import dev.cupr.calendar.render.Drawings
 import dev.cupr.calendar.render.Fonts
 import dev.cupr.calendar.render.Icons
+import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.render.WeekRowRenderer
 import dev.cupr.calendar.sample.SampleData
@@ -32,9 +33,6 @@ import kotlin.math.roundToInt
 object MonthWidget {
     /** The widget's width before the launcher reports one: 4 cells (design.md). */
     private const val DEFAULT_WIDTH_DP = 276
-
-    /** The card's padding and border at each side (`.widget`). */
-    private const val SIDE_DP = 12 + 1
 
     private val dayIds =
         intArrayOf(R.id.day_0, R.id.day_1, R.id.day_2, R.id.day_3, R.id.day_4, R.id.day_5, R.id.day_6)
@@ -66,7 +64,7 @@ object MonthWidget {
         val today = now.toLocalDate()
         val view = MonthLayout.build(YearMonth.from(today), SampleData.entries, now)
         val scale = Scale(context.resources.displayMetrics.density)
-        val widthPx = scale.px((widthDp - 2 * SIDE_DP).toFloat()).roundToInt()
+        val widthPx = scale.px(widthDp - 2 * (PhoneMonth.CARD_BORDER + PhoneMonth.CARD_SIDE)).roundToInt()
         val fonts = Fonts(context.assets)
         val icons = Icons(context.assets)
         val chrome = ChromeRenderer(fonts, icons)
