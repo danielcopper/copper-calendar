@@ -135,17 +135,17 @@ object MonthLayout {
         entries: List<Entry>,
     ): List<List<Row>> {
         val begin = dates.first()
-        val end = dates.last()
+        // An entry that begins after the grid lands on a date the grid never reads.
         val placed =
             entries
                 .filter { it.end.isAfter(begin.atStartOfDay()) }
-                .map { entry ->
+                .groupBy({ entry -> maxOf(entry.start.toLocalDate(), begin) }) { entry ->
                     val first = entry.start.toLocalDate()
-                    val date = maxOf(first, begin)
                     val last = entry.end.minusNanos(1).toLocalDate()
-                    date to Row(entry, first, last, multi = last.isAfter(first), timed = !entry.allDay && first == date)
-                }.filter { (date, _) -> !date.isAfter(end) }
-                .groupBy({ it.first }, { it.second })
+                    // Timed and standing on its own first day, not carried onto the grid's first date.
+                    val timed = !entry.allDay && !first.isBefore(begin)
+                    Row(entry, first, last, multi = last.isAfter(first), timed = timed)
+                }
         val order =
             compareBy<Row>({ it.timed }, { if (it.timed) it.entry.start else null })
                 .then { a, b -> collator.compare(a.entry.title, b.entry.title) }
