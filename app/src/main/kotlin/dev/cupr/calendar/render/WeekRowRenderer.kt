@@ -132,7 +132,7 @@ class WeekRowRenderer(
             canvas.restoreToCount(saved)
         }
 
-        /** The number (today in the accent's pill) and the marked entries' drawings beside it. */
+        /** The number (today in the accent's pill) and the marked entries' marks beside it. */
         private fun numberRow(
             day: Day,
             x: Float,
@@ -152,9 +152,8 @@ class WeekRowRenderer(
             canvas.drawText(label, x + width / 2, paint.baselineIn(boxTop, height), paint)
             var drawingX = x + width + scale.px(NUMBER_GAP)
             val drawingY = y + scale.px(NUMBER_ROW - DRAWING) / 2
-            for (name in day.drawings) {
-                val drawing = drawings.get(name) ?: continue
-                canvas.drawDrawing(drawing, drawingX, drawingY, scale.px(DRAWING))
+            for (entry in day.marks) {
+                mark(entry, palette.colorOf(entry), drawingX, drawingY, scale.px(DRAWING))
                 drawingX += scale.px(DRAWING + DRAWINGS_GAP)
             }
         }
@@ -178,10 +177,9 @@ class WeekRowRenderer(
             if (entry.allDay) {
                 canvas.fill(shape, color.withOpacity(CHIP_TINT))
                 canvas.fill(insetBand(shape, scale.px(CHIP_BAND)), color)
-                val drawing = entry.drawing?.let(drawings::get)
-                if (drawing != null) {
+                if (entry.drawing != null) {
                     val drawingX = x + scale.px(CHIP_LEFT + CHIP_DRAWING_SHIFT)
-                    canvas.drawDrawing(drawing, drawingX, y + (height - scale.px(MARK)) / 2, scale.px(MARK))
+                    mark(entry, color, drawingX, y + (height - scale.px(MARK)) / 2, scale.px(MARK))
                     textX = drawingX + scale.px(MARK + ENTRY_GAP)
                 } else {
                     textX = x + scale.px(CHIP_LEFT)
@@ -190,7 +188,7 @@ class WeekRowRenderer(
                 weight = FontWeight.MEDIUM
             } else {
                 val markX = x + scale.px(TIMED_SIDE)
-                mark(entry, color, markX, y + (height - scale.px(MARK)) / 2)
+                mark(entry, color, markX, y + (height - scale.px(MARK)) / 2, scale.px(MARK))
                 textX = markX + scale.px(MARK + ENTRY_GAP)
                 textEnd = x + width - scale.px(TIMED_SIDE)
                 weight = FontWeight.REGULAR
@@ -201,17 +199,19 @@ class WeekRowRenderer(
         }
 
         /**
-         * A timed entry's mark: its drawing, else its icon in its colour, else
-         * the dot (also for an unknown icon). The icon is looked up only when
-         * no drawing is drawn.
+         * An entry's mark in a size × size box, wherever a mark stands (a timed
+         * line, an all-day chip with a drawing, beside the day's number): its
+         * drawing, else its icon in its colour, else a dot in its colour, also
+         * for a drawing or icon the app does not ship (D22, D24). The icon is
+         * looked up only when no drawing is drawn.
          */
         private fun mark(
             entry: Entry,
             @ColorInt color: Int,
             x: Float,
             y: Float,
+            size: Float,
         ) {
-            val size = scale.px(MARK)
             val drawing = entry.drawing?.let(drawings::get)
             if (drawing != null) {
                 canvas.drawDrawing(drawing, x, y, size)

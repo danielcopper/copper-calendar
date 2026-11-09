@@ -54,8 +54,8 @@ data class Day internal constructor(
     val today: Boolean,
     /** A public holiday starts on it: its number is red. */
     val holiday: Boolean,
-    /** The drawings of its marked entries (special days, public holidays), beside its number. */
-    val drawings: List<String>,
+    /** Its marked entries with a drawing (special days, public holidays), drawn beside its number. */
+    val marks: List<Entry>,
     /** Its own entries shown in the cell, in order. */
     val shown: List<Entry>,
     /** How many of its own entries "+N" counts, 0 for none. */
@@ -192,7 +192,7 @@ object MonthLayout {
             past = !otherMonth && date.isBefore(today),
             today = date == today,
             holiday = rows.any { it.entry.kind == Kinds.HOLIDAY },
-            drawings = marks.mapNotNull { it.entry.drawing }.take(MOST_DRAWINGS),
+            marks = marks.filter { it.entry.drawing != null }.map { it.entry }.take(MOST_DRAWINGS),
             shown = shown,
             more = singles.size - shown.size,
         )

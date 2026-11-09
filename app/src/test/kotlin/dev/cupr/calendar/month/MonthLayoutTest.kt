@@ -116,7 +116,7 @@ class MonthLayoutTest {
     @Test
     fun `calendar_marked puts a special day's drawing beside the number, not among the entries`() {
         val day = build(allDay(date(11, 11), kind = "special", drawing = "lantern.svg")).day(date(11, 11))
-        assertEquals(listOf("lantern.svg"), day.drawings)
+        assertEquals(listOf("lantern.svg"), day.marks.map { it.drawing })
         assertTrue(day.shown.isEmpty())
         assertEquals(0, day.more)
     }
@@ -125,13 +125,13 @@ class MonthLayoutTest {
     fun `calendar_marked takes a public holiday of one day too, also without a drawing`() {
         val day = build(allDay(date(11, 18), kind = "holiday")).day(date(11, 18))
         assertTrue(day.shown.isEmpty())
-        assertTrue(day.drawings.isEmpty())
+        assertTrue(day.marks.isEmpty())
     }
 
     @Test
     fun `calendar_marked leaves a special day over several days to the bars`() {
         val view = build(allDay(date(11, 18), days = 2, kind = "special", drawing = "tree.svg"))
-        assertTrue(view.day(date(11, 18)).drawings.isEmpty())
+        assertTrue(view.day(date(11, 18)).marks.isEmpty())
         assertEquals(1, view.weeks[3].bars.size)
     }
 
@@ -143,7 +143,7 @@ class MonthLayoutTest {
                 allDay(date(11, 11), kind = "special", drawing = "lantern.svg", title = "B"),
                 allDay(date(11, 11), kind = "special", drawing = "candles-1.svg", title = "C"),
             ).day(date(11, 11))
-        assertEquals(listOf("lantern.svg"), day.drawings)
+        assertEquals(listOf("lantern.svg"), day.marks.map { it.drawing })
     }
 
     // calendar_month_view: at most 2 entries on the phone, of more one less and "+N".
@@ -349,9 +349,9 @@ class MonthLayoutTest {
         assertEquals(listOf("Adventskranz binden"), advent.shown.map { it.title })
         assertEquals(2, advent.more)
         val today = view.day(date(11, 11))
-        assertEquals(listOf("lantern.svg"), today.drawings)
+        assertEquals(listOf("lantern.svg"), today.marks.map { it.drawing })
         assertEquals(listOf("Gelber Sack", "Martinsumzug Kita"), today.shown.map { it.title })
-        assertEquals(listOf("halloween.svg"), view.day(date(10, 31)).drawings)
+        assertEquals(listOf("halloween.svg"), view.day(date(10, 31)).marks.map { it.drawing })
         assertEquals(listOf("Schwimmkurs Anna"), view.day(date(10, 26)).shown.map { it.title })
     }
 }

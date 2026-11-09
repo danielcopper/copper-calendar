@@ -64,9 +64,9 @@ internal object Probe {
         past: Boolean = false,
         today: Boolean = false,
         holiday: Boolean = false,
-        drawings: List<String> = emptyList(),
+        marks: List<Entry> = emptyList(),
         more: Int = 0,
-    ) = Day(date, otherMonth, past, today, holiday, drawings, shown, more)
+    ) = Day(date, otherMonth, past, today, holiday, marks, shown, more)
 
     /** A week from monday, its days as given by index, the others empty. */
     fun week(

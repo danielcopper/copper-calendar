@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.model.Entry
+import dev.cupr.calendar.model.Kinds
 import dev.cupr.calendar.render.Probe.at
 import dev.cupr.calendar.sample.SampleData
 import org.junit.Assert.assertEquals
@@ -84,6 +85,33 @@ class MarkTest {
         val y = Probe.lineMiddle(0)
         assertNotEquals(plain.at(x, y), drawn.at(x, y))
         assertFalse(Color.alpha(drawn.at(x, y)) == 0)
+    }
+
+    @Test
+    fun `a mark beside the number with a drawing the app does not ship draws a dot in its colour`() {
+        val special = allDay(drawing = "not-shipped.svg").copy(kind = Kinds.SPECIAL)
+        val bitmap =
+            rows.render(
+                Probe.week(monday, mapOf(0 to Probe.day(monday, marks = listOf(special)))),
+                Probe.widthPx,
+                Probe.scale,
+                SampleData.dark,
+            )
+        // "16" is narrower than the number's least width, so the mark starts after that and the gap.
+        val x =
+            Probe.cellX(0) +
+                Probe.scale.px(PhoneMonth.NUMBER_MIN_WIDTH + PhoneMonth.NUMBER_GAP + PhoneMonth.DRAWING / 2)
+        val y = Probe.scale.hairline + Probe.scale.px(PhoneMonth.CELL_TOP + PhoneMonth.NUMBER_ROW / 2)
+        assertEquals(color, bitmap.at(x, y))
+    }
+
+    @Test
+    fun `an all-day chip with a drawing the app does not ship draws its icon`() {
+        // plus is filled at the box's centre.
+        val bitmap = render(allDay(drawing = "not-shipped.svg").copy(icon = "mdi:plus"))
+        val x =
+            Probe.cellX(0) + Probe.scale.px(PhoneMonth.CHIP_LEFT + PhoneMonth.CHIP_DRAWING_SHIFT + PhoneMonth.MARK / 2)
+        assertEquals(color, bitmap.at(x, Probe.lineMiddle(0)))
     }
 
     private fun timed(
