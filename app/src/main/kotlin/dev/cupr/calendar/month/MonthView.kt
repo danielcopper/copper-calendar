@@ -1,13 +1,16 @@
 package dev.cupr.calendar.month
 
 import dev.cupr.calendar.model.Entry
+import dev.cupr.calendar.model.Kinds
 import java.text.Collator
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
+
+/** The days of a week, Monday to Sunday: the month's columns. */
+const val DAYS_IN_WEEK = 7
 
 /**
  * The month as the dashboard's calendar page shows it at phone size, one
@@ -15,8 +18,10 @@ import java.util.Locale
  * `calendar_marked` and `calendar_month_view` (the dashboard's file is named
  * in [dev.cupr.calendar.render.PhoneMonth]). Only the display rules are
  * ported; an entry's kind, drawing and colour come with the entry (D4).
+ * [MonthLayout] makes it, and the types below it.
  */
-data class MonthView(
+@ConsistentCopyVisibility
+data class MonthView internal constructor(
     val month: YearMonth,
     val weeks: List<Week>,
 ) {
@@ -24,24 +29,30 @@ data class MonthView(
     val todayWeek: Int get() = weeks.indexOfFirst { week -> week.days.any { it.today } }.coerceAtLeast(0)
 }
 
-data class Week(
+@ConsistentCopyVisibility
+data class Week internal constructor(
     /** Monday to Sunday. */
     val days: List<Day>,
     /** The entries over several days that cross this week, as bars. */
     val bars: List<Bar>,
-    /** How many lanes the bars take; the cells' own entries start below them. */
-    val lanes: Int,
-)
+) {
+    init {
+        require(days.size == DAYS_IN_WEEK) { "A week has $DAYS_IN_WEEK days, not ${days.size}" }
+    }
 
-data class Day(
+    /** How many lanes the bars take; the cells' own entries start below them. */
+    val lanes: Int get() = bars.maxOfOrNull { it.lane + 1 } ?: 0
+}
+
+@ConsistentCopyVisibility
+data class Day internal constructor(
     val date: LocalDate,
     /** A day of the month before or after, drawn faint. */
     val otherMonth: Boolean,
     /** A day of the month before today, dimmed; never set on a day of another month. */
     val past: Boolean,
     val today: Boolean,
-    val weekend: Boolean,
-    /** A public holiday stands on it: its number is red. */
+    /** A public holiday starts on it: its number is red. */
     val holiday: Boolean,
     /** The drawings of its marked entries (special days, public holidays), beside its number. */
     val drawings: List<String>,
@@ -49,10 +60,13 @@ data class Day(
     val shown: List<Entry>,
     /** How many of its own entries "+N" counts, 0 for none. */
     val more: Int,
-)
+) {
+    val weekend: Boolean get() = date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY
+}
 
 /** An entry over several days, as one week draws it. */
-data class Bar(
+@ConsistentCopyVisibility
+data class Bar internal constructor(
     val entry: Entry,
     /** The first and last column it covers in this week (0 = Monday). */
     val from: Int,
@@ -62,9 +76,15 @@ data class Bar(
     val opens: Boolean,
     /** It ends in this week: rounded end. */
     val closes: Boolean,
+) {
+    init {
+        require(from in 0..to && to < DAYS_IN_WEEK) { "A bar covers columns $from to $to of a week" }
+        require(lane >= 0) { "A bar's lane is $lane" }
+    }
+
     /** Its title shows: where it begins and at the start of each week. */
-    val titled: Boolean,
-)
+    val titled: Boolean get() = opens || from == 0
+}
 
 object MonthLayout {
     /** At phone size a cell shows at most 2 entries, or 1 and "+N" (`most`). */
@@ -73,7 +93,6 @@ object MonthLayout {
     /** At phone size a cell shows 1 drawing of its marked entries (`drawn`). */
     const val MOST_DRAWINGS = 1
 
-    private const val DAYS_PER_WEEK = 7
     private val collator: Collator = Collator.getInstance(Locale.GERMAN)
 
     /** The dates from the Monday on or before the 1st to the Sunday on or after the last day (`calendar_grid`). */
@@ -86,11 +105,10 @@ object MonthLayout {
     fun build(
         month: YearMonth,
         entries: List<Entry>,
-        now: LocalDateTime,
+        today: LocalDate,
     ): MonthView {
         val dates = grid(month)
         val placed = place(dates, entries)
-        val today = now.toLocalDate()
         val days =
             dates.mapIndexed { index, date -> day(date, month, today, placed[index]) }
         val bars =
@@ -101,9 +119,8 @@ object MonthLayout {
                 }
             }
         val weeks =
-            dates.indices.step(DAYS_PER_WEEK).map { start ->
-                val (segments, lanes) = lanes(bars, dates, start)
-                Week(days.subList(start, start + DAYS_PER_WEEK), segments, lanes)
+            dates.indices.step(DAYS_IN_WEEK).map { start ->
+                Week(days.subList(start, start + DAYS_IN_WEEK).toList(), lanes(bars, dates, start))
             }
         return MonthView(month, weeks)
     }
@@ -153,8 +170,12 @@ object MonthLayout {
     }
 
     /** A special day or a public holiday of one day stands beside the number (`calendar_marked`). */
-    private fun marked(row: Row) = row.entry.kind in setOf("special", "holiday") && !row.multi
+    private fun marked(row: Row) = row.entry.kind in setOf(Kinds.SPECIAL, Kinds.HOLIDAY) && !row.multi
 
+    /**
+     * A day's cell. `holiday` sees only the entries placed on the day, so a
+     * public holiday over several days reds its first day, as on the dashboard.
+     */
     private fun day(
         date: LocalDate,
         month: YearMonth,
@@ -170,9 +191,8 @@ object MonthLayout {
             otherMonth = otherMonth,
             past = !otherMonth && date.isBefore(today),
             today = date == today,
-            weekend = date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY,
-            holiday = rows.any { it.entry.kind == "holiday" },
-            drawings = marks.mapNotNull { it.entry.drawing }.distinct().take(MOST_DRAWINGS),
+            holiday = rows.any { it.entry.kind == Kinds.HOLIDAY },
+            drawings = marks.mapNotNull { it.entry.drawing }.take(MOST_DRAWINGS),
             shown = shown,
             more = singles.size - shown.size,
         )
@@ -180,32 +200,31 @@ object MonthLayout {
 
     /**
      * The bars crossing the week from [start], by first day and then the
-     * longer first, each in the first lane free since its first column.
+     * longer first (bars of the same span keep their days' order), each in
+     * the first lane free since its first column.
      */
     private fun lanes(
         spans: List<Span>,
         dates: List<LocalDate>,
         start: Int,
-    ): Pair<List<Bar>, Int> {
-        val end = start + DAYS_PER_WEEK - 1
+    ): List<Bar> {
+        val end = start + DAYS_IN_WEEK - 1
         val ends = mutableListOf<Int>()
-        val bars =
-            spans
-                .filter { it.from <= end && it.to >= start }
-                .sortedWith(compareBy<Span> { it.from }.thenByDescending { it.to - it.from })
-                .map { span ->
-                    val from = maxOf(span.from, start) - start
-                    val to = minOf(span.to, end) - start
-                    var lane = ends.indexOfFirst { it < from }
-                    if (lane < 0) {
-                        ends.add(0)
-                        lane = ends.lastIndex
-                    }
-                    ends[lane] = to
-                    val opens = span.row.first == dates[span.from] && span.from >= start
-                    val closes = span.row.last == dates[span.to] && span.to <= end
-                    Bar(span.row.entry, from, to, lane, opens, closes, titled = opens || from == 0)
+        return spans
+            .filter { it.from <= end && it.to >= start }
+            .sortedWith(compareBy<Span> { it.from }.thenByDescending { it.to - it.from })
+            .map { span ->
+                val from = maxOf(span.from, start) - start
+                val to = minOf(span.to, end) - start
+                var lane = ends.indexOfFirst { it < from }
+                if (lane < 0) {
+                    ends.add(0)
+                    lane = ends.lastIndex
                 }
-        return bars to ends.size
+                ends[lane] = to
+                val opens = span.row.first == dates[span.from] && span.from >= start
+                val closes = span.row.last == dates[span.to] && span.to <= end
+                Bar(span.row.entry, from, to, lane, opens, closes)
+            }
     }
 }

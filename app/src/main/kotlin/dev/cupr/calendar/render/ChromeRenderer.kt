@@ -5,6 +5,21 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import androidx.core.graphics.createBitmap
 import dev.cupr.calendar.model.Palette
+import dev.cupr.calendar.month.DAYS_IN_WEEK
+import dev.cupr.calendar.render.PhoneMonth.CHEVRON
+import dev.cupr.calendar.render.PhoneMonth.FAB_ICON
+import dev.cupr.calendar.render.PhoneMonth.FAB_MARGIN
+import dev.cupr.calendar.render.PhoneMonth.FAB_SHADOW_BLUR
+import dev.cupr.calendar.render.PhoneMonth.FAB_SHADOW_Y
+import dev.cupr.calendar.render.PhoneMonth.FAB_SIZE
+import dev.cupr.calendar.render.PhoneMonth.HEADS_BOTTOM
+import dev.cupr.calendar.render.PhoneMonth.HEAD_FONT
+import dev.cupr.calendar.render.PhoneMonth.LETTER_SPACING
+import dev.cupr.calendar.render.PhoneMonth.TITLE_BOTTOM
+import dev.cupr.calendar.render.PhoneMonth.TITLE_FONT
+import dev.cupr.calendar.render.PhoneMonth.TITLE_GAP
+import dev.cupr.calendar.render.PhoneMonth.TITLE_ROW
+import dev.cupr.calendar.render.PhoneMonth.TITLE_TOP
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
@@ -25,7 +40,7 @@ class ChromeRenderer(
         scale: Scale,
         palette: Palette,
     ): Bitmap {
-        val heads = fonts.paint(scale, HEAD_FONT, PhoneMonth.BOLD, palette.tertiaryText)
+        val heads = fonts.paint(scale, HEAD_FONT, FontWeight.BOLD, palette.tertiaryText)
         heads.letterSpacing = LETTER_SPACING
         heads.textAlign = Paint.Align.CENTER
         val headsLine = heads.fontMetrics.let { it.descent - it.ascent }
@@ -37,7 +52,7 @@ class ChromeRenderer(
 
         val rowTop = scale.px(TITLE_TOP)
         val rowHeight = scale.px(TITLE_ROW)
-        val title = fonts.paint(scale, TITLE_FONT, PhoneMonth.SEMI_BOLD, palette.secondaryText)
+        val title = fonts.paint(scale, TITLE_FONT, FontWeight.SEMI_BOLD, palette.secondaryText)
         title.letterSpacing = LETTER_SPACING
         val chevron = scale.px(CHEVRON)
         canvas.drawCut(
@@ -51,7 +66,7 @@ class ChromeRenderer(
             canvas.drawIcon(it, widthPx - chevron, rowTop + (rowHeight - chevron) / 2, chevron, palette.tertiaryText)
         }
 
-        val column = widthPx / WEEKDAYS.size.toFloat()
+        val column = widthPx / DAYS_IN_WEEK.toFloat()
         val baseline = heads.baselineIn(titleRow, headsLine)
         WEEKDAYS.forEachIndexed { index, name ->
             canvas.drawText(name.uppercase(Locale.GERMAN), (index + HALF) * column, baseline, heads)
@@ -60,16 +75,15 @@ class ChromeRenderer(
     }
 
     /**
-     * The round "+": the accent's circle with its shadow and the
-     * plus in the on-accent colour, inside a square that leaves room for the
-     * shadow up to the widget's edge ([FAB_MARGIN] on each side).
+     * The round "+": the accent's circle with its shadow and the plus in the
+     * on-accent colour, inside a square that leaves room for the shadow up to
+     * the widget's edge ([FAB_MARGIN] on each side).
      */
     fun fab(
         scale: Scale,
         palette: Palette,
     ): Bitmap {
-        val side = scale.px(FAB_SIZE + 2 * FAB_MARGIN)
-        val sidePx = ceil(side).toInt()
+        val sidePx = ceil(scale.px(FAB_SIZE + 2 * FAB_MARGIN)).toInt()
         val bitmap = createBitmap(sidePx, sidePx)
         bitmap.density = scale.dpi
         val canvas = Canvas(bitmap)
@@ -77,7 +91,7 @@ class ChromeRenderer(
         val circle =
             Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = palette.accent
-                setShadowLayer(scale.px(SHADOW_RADIUS), 0f, scale.px(SHADOW_Y), palette.shadow)
+                setShadowLayer(scale.px(SHADOW_RADIUS), 0f, scale.px(FAB_SHADOW_Y), palette.shadow)
             }
         canvas.drawCircle(centre, centre, scale.px(FAB_SIZE / 2), circle)
         icons.path(PLUS_ICON)?.let {
@@ -88,30 +102,18 @@ class ChromeRenderer(
     }
 
     companion object {
-        /** "+" is 40 dp across; around it the room up to the widget's edge. */
-        const val FAB_SIZE = 40f
-        const val FAB_MARGIN = PhoneMonth.FAB_INSET + PhoneMonth.CARD_BORDER
+        // A blur of b is a Gaussian sigma of b / 2, which Android's shadow radius
+        // r gives as 0.57735 r + 0.5.
+        private const val SHADOW_RADIUS = (FAB_SHADOW_BLUR / 2 - 0.5f) / 0.57735f
 
-        private const val FAB_ICON = 24f
-
-        // The shadow falls 4 dp down with a 14 dp blur, a Gaussian sigma of 7,
-        // which Android's shadow radius r gives as 0.57735 r + 0.5.
-        private const val SHADOW_Y = 4f
-        private const val SHADOW_RADIUS = 11.26f
-
-        private const val TITLE_TOP = 2f
-        private const val TITLE_ROW = 32f
-        private const val TITLE_BOTTOM = 4f
-        private const val TITLE_FONT = 13f
-        private const val TITLE_GAP = 8f
-        private const val CHEVRON = 16f
-        private const val HEAD_FONT = 10.5f
-        private const val HEADS_BOTTOM = 6f
-        private const val LETTER_SPACING = 0.06f
         private const val HALF = 0.5f
         private const val CHEVRON_ICON = "chevron-right"
         private const val PLUS_ICON = "plus"
         private val WEEKDAYS = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
+
+        init {
+            check(WEEKDAYS.size == DAYS_IN_WEEK)
+        }
 
         /** "November 2026" */
         fun title(month: YearMonth): String =

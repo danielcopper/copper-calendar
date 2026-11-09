@@ -6,19 +6,25 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.text.TextPaint
 import android.text.TextUtils
+import androidx.annotation.ColorInt
 import androidx.core.graphics.withScale
 import androidx.core.graphics.withTranslation
 import com.caverock.androidsvg.RenderOptions
 import kotlin.math.roundToInt
 
 /** A colour with its alpha multiplied by an opacity (0 to 1). */
-fun Int.withOpacity(opacity: Float): Int {
+@ColorInt
+internal fun @receiver:ColorInt Int.withOpacity(opacity: Float): Int {
+    require(opacity in 0f..1f) { "An opacity runs from 0 to 1, not $opacity" }
     val alpha = ((this ushr ALPHA_SHIFT) * opacity).roundToInt()
     return (alpha shl ALPHA_SHIFT) or (this and RGB_MASK)
 }
 
 /** An opacity (0 to 1) as a layer alpha (0 to 255). */
-fun opacityAlpha(opacity: Float): Int = (opacity * FULL_ALPHA).roundToInt()
+internal fun opacityAlpha(opacity: Float): Int {
+    require(opacity in 0f..1f) { "An opacity runs from 0 to 1, not $opacity" }
+    return (opacity * FULL_ALPHA).roundToInt()
+}
 
 private const val ALPHA_SHIFT = 24
 private const val RGB_MASK = 0x00FFFFFF
@@ -28,8 +34,8 @@ private const val FULL_ALPHA = 255
 fun Fonts.paint(
     scale: Scale,
     sizeDp: Float,
-    weight: Int,
-    color: Int,
+    weight: FontWeight,
+    @ColorInt color: Int,
 ): TextPaint =
     TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = weight(weight)

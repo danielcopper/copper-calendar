@@ -4,11 +4,13 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
+import androidx.annotation.ColorInt
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.withClip
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.model.Palette
 import dev.cupr.calendar.month.Bar
+import dev.cupr.calendar.month.DAYS_IN_WEEK
 import dev.cupr.calendar.month.Day
 import dev.cupr.calendar.month.Week
 import dev.cupr.calendar.render.PhoneMonth.BAR_BAND
@@ -18,7 +20,6 @@ import dev.cupr.calendar.render.PhoneMonth.BAR_INSET
 import dev.cupr.calendar.render.PhoneMonth.BAR_OPEN_LEFT
 import dev.cupr.calendar.render.PhoneMonth.BAR_SIDE
 import dev.cupr.calendar.render.PhoneMonth.BAR_TINT
-import dev.cupr.calendar.render.PhoneMonth.BOLD
 import dev.cupr.calendar.render.PhoneMonth.CELL_BOTTOM
 import dev.cupr.calendar.render.PhoneMonth.CELL_MIN
 import dev.cupr.calendar.render.PhoneMonth.CELL_SIDE
@@ -38,7 +39,6 @@ import dev.cupr.calendar.render.PhoneMonth.GAP
 import dev.cupr.calendar.render.PhoneMonth.LANE
 import dev.cupr.calendar.render.PhoneMonth.LINE
 import dev.cupr.calendar.render.PhoneMonth.MARK
-import dev.cupr.calendar.render.PhoneMonth.MEDIUM
 import dev.cupr.calendar.render.PhoneMonth.MORE_LEFT
 import dev.cupr.calendar.render.PhoneMonth.NUMBER_FONT
 import dev.cupr.calendar.render.PhoneMonth.NUMBER_GAP
@@ -48,8 +48,6 @@ import dev.cupr.calendar.render.PhoneMonth.NUMBER_ROW
 import dev.cupr.calendar.render.PhoneMonth.NUMBER_SIDE
 import dev.cupr.calendar.render.PhoneMonth.OTHER_MONTH
 import dev.cupr.calendar.render.PhoneMonth.PAST_ENTRY
-import dev.cupr.calendar.render.PhoneMonth.REGULAR
-import dev.cupr.calendar.render.PhoneMonth.SEMI_BOLD
 import dev.cupr.calendar.render.PhoneMonth.TIMED_SIDE
 import dev.cupr.calendar.render.PhoneMonth.WEEKEND_TINT
 import kotlin.math.ceil
@@ -75,7 +73,7 @@ class WeekRowRenderer(
         val bitmap = createBitmap(widthPx, heightPx)
         bitmap.density = scale.dpi
         val canvas = Canvas(bitmap)
-        val frame = Frame(canvas, scale, palette, widthPx / DAYS.toFloat(), heightPx.toFloat())
+        val frame = Frame(canvas, scale, palette, widthPx / DAYS_IN_WEEK.toFloat(), heightPx.toFloat())
         canvas.fill(0f, 0f, widthPx.toFloat(), scale.hairline, palette.divider)
         week.days.forEachIndexed { column, day -> frame.cell(day, column, week.lanes) }
         week.bars.forEach { frame.bar(it) }
@@ -128,7 +126,7 @@ class WeekRowRenderer(
                 y += scale.px(LINE + GAP)
             }
             if (day.more > 0) {
-                val paint = fonts.paint(scale, FONT, BOLD, palette.text)
+                val paint = fonts.paint(scale, FONT, FontWeight.BOLD, palette.text)
                 canvas.drawText("+${day.more}", x + scale.px(MORE_LEFT), paint.baselineIn(y, scale.px(LINE)), paint)
             }
             canvas.restoreToCount(saved)
@@ -140,23 +138,15 @@ class WeekRowRenderer(
             x: Float,
             y: Float,
         ) {
-            val color =
-                when {
-                    day.today -> palette.onAccent
-                    day.past -> palette.tertiaryText
-                    day.holiday -> palette.holiday
-                    day.weekend -> palette.secondaryText
-                    else -> palette.text
-                }
-            val paint = fonts.paint(scale, NUMBER_FONT, if (day.today || day.holiday) BOLD else MEDIUM, color)
+            val paint = fonts.paint(scale, NUMBER_FONT, numberWeight(day), numberColor(day, palette))
             paint.fontFeatureSettings = "tnum"
             val label = day.date.dayOfMonth.toString()
             val width = max(scale.px(NUMBER_MIN_WIDTH), paint.measureText(label) + 2 * scale.px(NUMBER_SIDE))
             val height = scale.px(NUMBER_HEIGHT)
             val boxTop = y + (scale.px(NUMBER_ROW) - height) / 2
             if (day.today) {
-                val accent = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = palette.accent }
-                canvas.drawRoundRect(x, boxTop, x + width, boxTop + height, height / 2, height / 2, accent)
+                val pill = RectF(x, boxTop, x + width, boxTop + height)
+                canvas.fill(roundedPath(pill, height / 2, height / 2), palette.accent)
             }
             paint.textAlign = Paint.Align.CENTER
             canvas.drawText(label, x + width / 2, paint.baselineIn(boxTop, height), paint)
@@ -169,7 +159,7 @@ class WeekRowRenderer(
             }
         }
 
-        /** An entry's line: an all-day entry as a tinted chip, a timed one as its mark and title. */
+        /** An entry's line: an all-day entry as a tinted chip, a timed one as its mark; then its title. */
         private fun entryLine(
             entry: Entry,
             past: Boolean,
@@ -182,62 +172,57 @@ class WeekRowRenderer(
             val height = scale.px(LINE)
             val shape = roundedPath(RectF(x, y, x + width, y + height), scale.px(ENTRY_RADIUS), scale.px(ENTRY_RADIUS))
             canvas.clipPath(shape)
+            val textX: Float
+            val textEnd: Float
+            val weight: FontWeight
             if (entry.allDay) {
                 canvas.fill(shape, color.withOpacity(CHIP_TINT))
                 canvas.fill(insetBand(shape, scale.px(CHIP_BAND)), color)
-                var textX = x + scale.px(CHIP_LEFT)
-                entry.drawing?.let(drawings::get)?.let { drawing ->
-                    val drawingX = textX + scale.px(CHIP_DRAWING_SHIFT)
+                val drawing = entry.drawing?.let(drawings::get)
+                if (drawing != null) {
+                    val drawingX = x + scale.px(CHIP_LEFT + CHIP_DRAWING_SHIFT)
                     canvas.drawDrawing(drawing, drawingX, y + (height - scale.px(MARK)) / 2, scale.px(MARK))
                     textX = drawingX + scale.px(MARK + ENTRY_GAP)
+                } else {
+                    textX = x + scale.px(CHIP_LEFT)
                 }
-                val paint = fonts.paint(scale, FONT, MEDIUM, palette.text)
-                canvas.drawCut(
-                    entry.title,
-                    textX,
-                    paint.baselineIn(y, height),
-                    x + width - scale.px(CHIP_RIGHT) - textX,
-                    paint,
-                )
+                textEnd = x + width - scale.px(CHIP_RIGHT)
+                weight = FontWeight.MEDIUM
             } else {
                 val markX = x + scale.px(TIMED_SIDE)
                 mark(entry, color, markX, y + (height - scale.px(MARK)) / 2)
-                val textX = markX + scale.px(MARK + ENTRY_GAP)
-                val paint = fonts.paint(scale, FONT, REGULAR, palette.text)
-                canvas.drawCut(
-                    entry.title,
-                    textX,
-                    paint.baselineIn(y, height),
-                    x + width - scale.px(TIMED_SIDE) - textX,
-                    paint,
-                )
+                textX = markX + scale.px(MARK + ENTRY_GAP)
+                textEnd = x + width - scale.px(TIMED_SIDE)
+                weight = FontWeight.REGULAR
             }
+            val paint = fonts.paint(scale, FONT, weight, palette.text)
+            canvas.drawCut(entry.title, textX, paint.baselineIn(y, height), textEnd - textX, paint)
             canvas.restoreToCount(saved)
         }
 
-        /** A timed entry's mark: its drawing, else its icon in its colour, else the dot (also for an unknown icon). */
+        /**
+         * A timed entry's mark: its drawing, else its icon in its colour, else
+         * the dot (also for an unknown icon). The icon is looked up only when
+         * no drawing is drawn.
+         */
         private fun mark(
             entry: Entry,
-            color: Int,
+            @ColorInt color: Int,
             x: Float,
             y: Float,
         ) {
             val size = scale.px(MARK)
             val drawing = entry.drawing?.let(drawings::get)
+            if (drawing != null) {
+                canvas.drawDrawing(drawing, x, y, size)
+                return
+            }
             val icon = entry.icon?.let(icons::path)
-            when {
-                drawing != null -> {
-                    canvas.drawDrawing(drawing, x, y, size)
-                }
-
-                icon != null -> {
-                    canvas.drawIcon(icon, x, y, size, color)
-                }
-
-                else -> {
-                    val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
-                    canvas.drawCircle(x + size / 2, y + size / 2, scale.px(DOT) / 2, dot)
-                }
+            if (icon != null) {
+                canvas.drawIcon(icon, x, y, size, color)
+            } else {
+                val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
+                canvas.drawCircle(x + size / 2, y + size / 2, scale.px(DOT) / 2, dot)
             }
         }
 
@@ -259,7 +244,7 @@ class WeekRowRenderer(
             canvas.fill(shape, color.withOpacity(BAR_TINT))
             if (bar.opens) canvas.fill(insetBand(shape, scale.px(BAR_BAND)), color)
             if (!bar.titled) return
-            val paint = fonts.paint(scale, BAR_FONT, SEMI_BOLD, palette.text)
+            val paint = fonts.paint(scale, BAR_FONT, FontWeight.SEMI_BOLD, palette.text)
             val textX = left + scale.px(if (bar.opens) BAR_OPEN_LEFT else BAR_SIDE)
             canvas.withClip(shape) {
                 drawCut(
@@ -272,8 +257,21 @@ class WeekRowRenderer(
             }
         }
     }
-
-    private companion object {
-        const val DAYS = 7
-    }
 }
+
+/** A day number's colour, the first that applies: today, past, public holiday, weekend, else the text's. */
+@ColorInt
+internal fun numberColor(
+    day: Day,
+    palette: Palette,
+): Int =
+    when {
+        day.today -> palette.onAccent
+        day.past -> palette.tertiaryText
+        day.holiday -> palette.holiday
+        day.weekend -> palette.secondaryText
+        else -> palette.text
+    }
+
+/** A day number's weight: bold for today and a public holiday, else medium. */
+internal fun numberWeight(day: Day): FontWeight = if (day.today || day.holiday) FontWeight.BOLD else FontWeight.MEDIUM

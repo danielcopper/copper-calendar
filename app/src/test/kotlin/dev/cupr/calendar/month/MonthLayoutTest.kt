@@ -4,6 +4,7 @@ import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.sample.SampleData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -11,12 +12,12 @@ import java.time.LocalDateTime
 import java.time.YearMonth
 
 /**
- * The month's display rules, each test naming the dashboard's rule it pins
- * (the dashboard's file is named in PhoneMonth).
+ * The month's display rules, each rule's test naming the dashboard's rule it
+ * pins (the dashboard's file is named in PhoneMonth), and the sample month.
  */
 class MonthLayoutTest {
     private val november = YearMonth.of(2026, 11)
-    private val now = LocalDateTime.of(2026, 11, 11, 9, 0)
+    private val today = LocalDate.of(2026, 11, 11)
 
     private fun date(
         month: Int,
@@ -45,7 +46,7 @@ class MonthLayoutTest {
         title: String = "Termin",
     ) = Entry(start = start, end = end, allDay = false, title = title, calendar = "calendar.family")
 
-    private fun build(vararg entries: Entry) = MonthLayout.build(november, entries.toList(), now)
+    private fun build(vararg entries: Entry) = MonthLayout.build(november, entries.toList(), today)
 
     private fun MonthView.day(date: LocalDate) = weeks.flatMap { it.days }.single { it.date == date }
 
@@ -64,7 +65,7 @@ class MonthLayoutTest {
         val grid = MonthLayout.grid(YearMonth.of(2027, 2))
         assertEquals(LocalDate.of(2027, 2, 1), grid.first())
         assertEquals(LocalDate.of(2027, 2, 28), grid.last())
-        assertEquals(4, MonthLayout.build(YearMonth.of(2027, 2), emptyList(), now).weeks.size)
+        assertEquals(4, MonthLayout.build(YearMonth.of(2027, 2), emptyList(), today).weeks.size)
     }
 
     // calendar_month_view: per-day flags: other month, past, today, weekend, holiday.
@@ -106,6 +107,13 @@ class MonthLayoutTest {
     // calendar_marked: a special day or public holiday of one day stands beside the number.
 
     @Test
+    fun `calendar_days reds only the first day of a public holiday over several days`() {
+        val view = build(allDay(date(11, 18), days = 2, kind = "holiday", title = "Zwei Feiertage"))
+        assertTrue(view.day(date(11, 18)).holiday)
+        assertFalse(view.day(date(11, 19)).holiday)
+    }
+
+    @Test
     fun `calendar_marked puts a special day's drawing beside the number, not among the entries`() {
         val day = build(allDay(date(11, 11), kind = "special", drawing = "lantern.svg")).day(date(11, 11))
         assertEquals(listOf("lantern.svg"), day.drawings)
@@ -128,7 +136,7 @@ class MonthLayoutTest {
     }
 
     @Test
-    fun `calendar_month_view shows one drawing at phone size, without repeats`() {
+    fun `calendar_month_view shows one drawing at phone size`() {
         val day =
             build(
                 allDay(date(11, 11), kind = "special", drawing = "lantern.svg", title = "A"),
@@ -181,8 +189,9 @@ class MonthLayoutTest {
     fun `calendar_days orders timed entries by their time, not their title`() {
         val day =
             build(
+                // The earlier start has the later end, so only the start orders them so.
                 timed(date(11, 12).atTime(18, 0), date(11, 12).atTime(19, 0), "Abendessen"),
-                timed(date(11, 12).atTime(8, 0), date(11, 12).atTime(9, 0), "Zahnarzt"),
+                timed(date(11, 12).atTime(8, 0), date(11, 12).atTime(20, 0), "Zahnarzt"),
             ).day(date(11, 12))
         assertEquals(listOf("Zahnarzt", "Abendessen"), day.shown.map { it.title })
     }
@@ -298,11 +307,37 @@ class MonthLayoutTest {
         assertEquals(listOf(0, 1), week.bars.map { it.lane })
     }
 
+    @Test
+    fun `calendar_month_view keeps bars of the same span in their days' order`() {
+        val week =
+            build(
+                allDay(date(11, 16), days = 3, title = "Beta"),
+                allDay(date(11, 16), days = 3, title = "Alpha"),
+            ).weeks[3]
+        assertEquals(listOf("Alpha" to 0, "Beta" to 1), week.bars.map { it.entry.title to it.lane })
+    }
+
+    @Test
+    fun `a week has seven days and a bar stays inside its week`() {
+        val day = build().weeks[0].days[0]
+        assertThrows(IllegalArgumentException::class.java) { Week(List(6) { day }, emptyList()) }
+        val entry = allDay(date(11, 16), days = 2)
+        assertThrows(IllegalArgumentException::class.java) {
+            Bar(entry, from = 5, to = 7, lane = 0, opens = true, closes = true)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            Bar(entry, from = 3, to = 2, lane = 0, opens = true, closes = true)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            Bar(entry, from = 0, to = 1, lane = -1, opens = true, closes = true)
+        }
+    }
+
     // The sample month: its weeks, bars and cells.
 
     @Test
     fun `the sample month places its entries in six weeks, two bars and the cells`() {
-        val view = MonthLayout.build(SampleData.month, SampleData.entries, LocalDateTime.now(SampleData.clock))
+        val view = MonthLayout.build(SampleData.month, SampleData.entries, LocalDate.now(SampleData.clock))
         assertEquals(6, view.weeks.size)
         assertEquals(2, view.todayWeek)
         assertEquals(listOf(0, 0, 0, 1, 1, 0), view.weeks.map { it.lanes })

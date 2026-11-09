@@ -10,17 +10,17 @@ import androidx.core.net.toUri
 /**
  * The invisible activity a widget's taps start (D23): it shows nothing,
  * resolves the tapped element's target, opens it and finishes at once. When
- * the tap carries no complete target, or no app may open it, nothing opens
- * and the log says why.
+ * the intent carries no complete tap, or no app handles or may open its
+ * target, nothing opens and the log says why.
  */
 class TapActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val tap = Taps.read(intent)
         if (tap == null) {
-            Log.w(TAG, "A tap without a complete target, extras: ${intent.extras?.keySet().orEmpty().sorted()}")
+            Log.w(TAG, "An intent without a complete tap: ${Taps.describe(intent)}")
         } else {
-            openTarget(TapTargets.uri(tap.first, tap.second), ::startActivity)
+            openTarget(TapTargets.uri(tap), ::startActivity)
         }
         finish()
     }

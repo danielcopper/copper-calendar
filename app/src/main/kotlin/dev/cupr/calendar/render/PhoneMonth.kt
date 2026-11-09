@@ -1,20 +1,53 @@
 package dev.cupr.calendar.render
 
 /**
- * The month's measures at phone size, in dp. They are copied from the Home
- * Assistant dashboard, the one place this code names its files: homelab at
- * 24b4a670, `infra/homeassistant/config/dashboards/zuhause.yaml` (the
- * calendar page's month styles at phone size, and the rules MonthLayout
- * ports) and `infra/homeassistant/config/themes/zuhause.yaml` (the colours
- * in SampleData). [ChromeRenderer]'s measures come from the same page.
+ * The month widget's measures at phone size, in dp, copied from the Home
+ * Assistant dashboard so the widget looks like its calendar page.
+ *
+ * This is the one place the code names the dashboard's files, all in homelab
+ * at 24b4a670:
+ * - `infra/homeassistant/config/dashboards/zuhause.yaml`: the calendar page's
+ *   month styles at phone size (these measures) and the rules MonthLayout
+ *   ports;
+ * - `infra/homeassistant/config/themes/zuhause.yaml`: the colours in
+ *   SampleData;
+ * - `infra/homeassistant/config/www/zuhause/events/`: the drawings in
+ *   assets/drawings, unchanged copies.
  */
 internal object PhoneMonth {
-    /** The card around the widget: its border and its padding at the left and right. */
+    /** The card around the widget: its border, its padding at the left and right, and at the top and bottom. */
     const val CARD_BORDER = 1f
     const val CARD_SIDE = 12f
+    const val CARD_END = 10f
 
-    /** "+": how far it sits from the card's inner edge, right and bottom. */
+    /** "+": its size, how far it sits from the card's inner edge (right and bottom), and its icon. */
+    const val FAB_SIZE = 40f
     const val FAB_INSET = 12f
+    const val FAB_ICON = 24f
+
+    /** The room around "+" up to the widget's edge, where its shadow may show. */
+    const val FAB_MARGIN = FAB_INSET + CARD_BORDER
+
+    /** "+"'s shadow falls 4 dp down with a 14 dp blur. */
+    const val FAB_SHADOW_Y = 4f
+    const val FAB_SHADOW_BLUR = 14f
+
+    /** The header's title row: space above, its height, space below; the title's text size, its gap to the chevron. */
+    const val TITLE_TOP = 2f
+    const val TITLE_ROW = 32f
+    const val TITLE_BOTTOM = 4f
+    const val TITLE_FONT = 13f
+    const val TITLE_GAP = 8f
+
+    /** The chevron after the title. */
+    const val CHEVRON = 16f
+
+    /** The weekday heads: text size and space below. */
+    const val HEAD_FONT = 10.5f
+    const val HEADS_BOTTOM = 6f
+
+    /** The title's and the weekday heads' letter spacing, in em. */
+    const val LETTER_SPACING = 0.06f
 
     /** Space above a cell's number. */
     const val CELL_TOP = 3f
@@ -42,7 +75,7 @@ internal object PhoneMonth {
     /** A special day's drawing beside the number. */
     const val DRAWING = 17f
 
-    /** A timed entry's mark: its drawing or icon, or the room the dot is centred in. */
+    /** A timed entry's mark (its drawing or icon, or the room the dot is centred in), and an all-day chip's drawing. */
     const val MARK = 11f
 
     /** A timed entry's dot without an icon. */
@@ -89,10 +122,4 @@ internal object PhoneMonth {
     const val WEEKEND_TINT = 0.025f
     const val CHIP_TINT = 0.24f
     const val BAR_TINT = 0.34f
-
-    /** Font weights. */
-    const val REGULAR = 400
-    const val MEDIUM = 500
-    const val SEMI_BOLD = 600
-    const val BOLD = 700
 }

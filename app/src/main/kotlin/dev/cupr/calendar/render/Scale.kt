@@ -8,6 +8,10 @@ import kotlin.math.roundToInt
 class Scale(
     val density: Float,
 ) {
+    init {
+        require(density > 0f) { "A display density is above 0, not $density" }
+    }
+
     fun px(dp: Float): Float = dp * density
 
     /** A 1 dp line in whole pixels, so it stays sharp. */

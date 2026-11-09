@@ -1,6 +1,7 @@
 package dev.cupr.calendar.sample
 
 import dev.cupr.calendar.model.Entry
+import dev.cupr.calendar.model.Kinds
 import dev.cupr.calendar.model.Palette
 import java.time.Clock
 import java.time.LocalDate
@@ -227,5 +228,5 @@ object SampleData {
         date: LocalDate,
         title: String,
         drawing: String,
-    ) = allDay(date, 1, title, null, "special", null).copy(calendar = SPECIAL, drawing = drawing)
+    ) = allDay(date, 1, title, null, Kinds.SPECIAL, null).copy(calendar = SPECIAL, drawing = drawing)
 }

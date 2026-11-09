@@ -7,21 +7,22 @@ import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.model.Palette
 import dev.cupr.calendar.month.MonthLayout
 import dev.cupr.calendar.month.MonthView
+import dev.cupr.calendar.render.Probe.at
+import dev.cupr.calendar.render.Probe.has
 import dev.cupr.calendar.sample.SampleData
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
-import java.time.LocalDateTime
-import kotlin.math.ceil
+import java.time.LocalDate
 
 /**
  * Renders every week row of the sample month, dark and light, to PNG files
- * (on the card's colour, as the widget shows them) under build/render, at
- * the density of a Pixel 6 and the width of a 4-cell-wide widget.
+ * (on the card's colour, as the widget shows them) under build/render, at a
+ * Pixel 6's density and the width of a 4-cell-wide widget ([Probe]).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -31,25 +32,28 @@ class WeekRowRenderTest {
     private val icons = Icons(assets)
     private val rows = WeekRowRenderer(fonts, icons, Drawings(assets))
     private val chrome = ChromeRenderer(fonts, icons)
-    private val scale = Scale(DENSITY)
-    private val widthPx = (CONTENT_WIDTH * DENSITY).toInt()
+    private val scale = Probe.scale
+    private val widthPx = Probe.widthPx
     private val view: MonthView =
-        MonthLayout.build(SampleData.month, SampleData.entries, LocalDateTime.now(SampleData.clock))
+        MonthLayout.build(SampleData.month, SampleData.entries, LocalDate.now(SampleData.clock))
     private val output = File(System.getProperty("render.dir") ?: "build/render")
     private val modes = listOf("dark" to SampleData.dark, "light" to SampleData.light)
 
     @Test
     fun `renders every week row of the sample month, dark and light, to PNG files`() {
+        output.deleteRecursively()
         output.mkdirs()
         var bytes = 0L
         for ((mode, palette) in modes) {
-            view.weeks.forEachIndexed { index, week ->
-                val bitmap = rows.render(week, widthPx, scale, palette)
-                assertEquals(widthPx, bitmap.width)
-                assertEquals(ceil(scale.hairline + scale.px(rows.heightDp(week))).toInt(), bitmap.height)
-                bytes += bitmap.allocationByteCount
-                write(bitmap, palette, "week-$index-$mode.png")
-            }
+            val heights =
+                view.weeks.mapIndexed { index, week ->
+                    val bitmap = rows.render(week, widthPx, scale, palette)
+                    bytes += bitmap.allocationByteCount
+                    write(bitmap, palette, "week-$index-$mode.png")
+                    bitmap.height
+                }
+            // 66 dp plus the 2 px divider is 176 px; the week of 23 November, 79 dp, is 210 px.
+            assertEquals(listOf(176, 176, 176, 176, 210, 176), heights)
             val header = chrome.header(SampleData.month, widthPx, scale, palette)
             val fab = chrome.fab(scale, palette)
             bytes += header.allocationByteCount + fab.allocationByteCount
@@ -60,56 +64,60 @@ class WeekRowRenderTest {
         assertEquals(2 * (view.weeks.size + 2), pngs.size)
         val budget =
             "bitmap: ${view.weeks.size} weeks x 2 modes + header and fab x 2 at ${widthPx}px wide, " +
-                "density $DENSITY: $bytes bytes"
+                "density ${Probe.DENSITY}: $bytes bytes"
         File(output, "budget.txt").writeText(budget + "\n")
         println(budget)
-        pngs.sorted().forEach { println("render: ${it.path}") }
+        assertTrue("$bytes bytes are more than half the bitmap budget", bytes <= BITMAP_BUDGET / 2)
     }
 
     @Test
     fun `the rows of the sample month are as tall as their tallest cell, at least the cell's least height`() {
-        // 66 dp, and 79 dp for the weeks with a bar lane over two lines.
+        // 66 dp, and 79 dp for the week whose bar lane sits above two lines.
         val heights = view.weeks.map { rows.heightDp(it) }
         assertEquals(listOf(66f, 66f, 66f, 66f, 79f, 66f), heights)
     }
 
     @Test
     fun `today's number stands in the accent's pill, in each palette`() {
-        val column = widthPx / 7f
-        val x = 2 * column + scale.hairline + scale.px(2f + 1.5f)
-        val y = scale.hairline + scale.px(3f + 11f)
+        val x = Probe.cellX(2) + scale.px(1.5f)
+        val y = scale.hairline + scale.px(PhoneMonth.CELL_TOP + PhoneMonth.NUMBER_ROW / 2)
         for ((_, palette) in modes) {
             val bitmap = rows.render(view.weeks[view.todayWeek], widthPx, scale, palette)
-            assertEquals(palette.accent, bitmap.getPixel(x.toInt(), y.toInt()))
+            assertEquals(palette.accent, bitmap.at(x, y))
         }
     }
 
     @Test
     fun `plus is the accent's circle, in each palette`() {
         // Inside the circle, left of the plus, at the circle's middle height.
-        val x = scale.px(ChromeRenderer.FAB_MARGIN + 6f)
-        val y = scale.px(ChromeRenderer.FAB_MARGIN + ChromeRenderer.FAB_SIZE / 2)
+        val x = scale.px(PhoneMonth.FAB_MARGIN + 6f)
+        val y = scale.px(PhoneMonth.FAB_MARGIN + PhoneMonth.FAB_SIZE / 2)
         for ((_, palette) in modes) {
-            assertEquals(palette.accent, chrome.fab(scale, palette).getPixel(x.toInt(), y.toInt()))
+            assertEquals(palette.accent, chrome.fab(scale, palette).at(x, y))
         }
     }
 
     @Test
     fun `a bar is drawn in its entry's colour across the days it covers`() {
-        val palette = SampleData.light
-        val bitmap = rows.render(view.weeks[3], widthPx, scale, palette)
-        val column = widthPx / 7f
-        // The inset band at the start of "Kurzurlaub Ostsee" on Friday.
-        val x = 4 * column + scale.px(3f + 1.5f)
-        val y = scale.hairline + scale.px(3f + 22f + 6f)
-        assertEquals(0xFF663399.toInt(), bitmap.getPixel(x.toInt(), y.toInt()))
+        val bitmap = rows.render(view.weeks[3], widthPx, scale, SampleData.light)
+        // The band at the start of "Kurzurlaub Ostsee" on Friday.
+        val x = Probe.columnX(4) + scale.px(PhoneMonth.BAR_INSET + PhoneMonth.BAR_BAND / 2)
+        assertEquals(0xFF663399.toInt(), bitmap.at(x, Probe.laneMiddle(0)))
     }
 
     @Test
-    fun `the header draws in the palette it is given`() {
-        val dark = chrome.header(SampleData.month, widthPx, scale, SampleData.dark)
-        val light = chrome.header(SampleData.month, widthPx, scale, SampleData.light)
-        assertFalse(dark.sameAs(light))
+    fun `the header draws its title, chevron and weekday heads in the palette it is given`() {
+        val rowBottom = scale.px(PhoneMonth.TITLE_TOP + PhoneMonth.TITLE_ROW)
+        val chevronLeft = widthPx - scale.px(PhoneMonth.CHEVRON)
+        for ((_, palette) in modes) {
+            val header = chrome.header(SampleData.month, widthPx, scale, palette)
+            assertTrue("title", header.has(palette.secondaryText, 0f, 0f, chevronLeft, rowBottom))
+            assertTrue("chevron", header.has(palette.tertiaryText, chevronLeft, 0f, widthPx.toFloat(), rowBottom))
+            assertTrue(
+                "heads",
+                header.has(palette.tertiaryText, 0f, rowBottom, widthPx.toFloat(), header.height.toFloat()),
+            )
+        }
     }
 
     private fun write(
@@ -124,16 +132,18 @@ class WeekRowRenderTest {
             drawColor(palette.card)
             drawBitmap(bitmap, 0f, 0f, null)
         }
-        File(output, name).outputStream().use { onCard.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, it) }
+        val written =
+            File(
+                output,
+                name,
+            ).outputStream().use { onCard.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, it) }
+        assertTrue("$name was not written", written)
     }
 
     private companion object {
-        /** A Pixel 6 (411 dpi, density 2.625). */
-        const val DENSITY = 2.625f
-
-        /** A 4-cell-wide widget (276 dp) less the card's padding and border on both sides. */
-        const val CONTENT_WIDTH = 276f - 2 * (12f + 1f)
-
         const val PNG_QUALITY = 100
+
+        /** Android 17's limit for a widget's bitmaps, 6 × width × height bytes, at 1080 × 2400 (research.md, 6). */
+        const val BITMAP_BUDGET = 6L * 1080 * 2400
     }
 }

@@ -1,6 +1,8 @@
 package dev.cupr.calendar.model
 
+import androidx.annotation.ColorInt
 import java.time.LocalDateTime
+import java.time.LocalTime
 
 /**
  * One calendar entry as a source delivers it (D4). The widgets depend on this
@@ -21,7 +23,7 @@ data class Entry(
     /** Home Assistant's kind (`birthday`, `special`, `holiday`, ...); none for an entry of no kind. */
     val kind: String? = null,
     /** The entry's resolved colour (ARGB); none when it has no own colour, then its calendar's applies. */
-    val color: Int? = null,
+    @param:ColorInt val color: Int? = null,
     /** An MDI icon name (`mdi:swim`); none when the entry has no icon. */
     val icon: String? = null,
     /** A drawing's file name (`lantern.svg`); none when the entry has none. */
@@ -30,4 +32,14 @@ data class Entry(
     /** A birthday's year of birth. */
     val year: Int? = null,
     val uid: String? = null,
-)
+) {
+    init {
+        require(!end.isBefore(start)) { "The entry \"$title\" ends before it starts" }
+        if (allDay) {
+            require(start.toLocalTime() == LocalTime.MIDNIGHT && end.toLocalTime() == LocalTime.MIDNIGHT) {
+                "The all-day entry \"$title\" does not run from midnight to midnight"
+            }
+            require(end.isAfter(start)) { "The all-day entry \"$title\" covers no day" }
+        }
+    }
+}

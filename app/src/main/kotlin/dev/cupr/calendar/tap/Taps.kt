@@ -9,46 +9,89 @@ import java.time.format.DateTimeParseException
 /** What a tap on a widget hit (design.md, "Taps"). */
 enum class TapElement { HEADER, DAY, NEW }
 
+/** A tap on a widget: its element and, where the element has one, its day. */
+sealed interface Tap {
+    val element: TapElement
+
+    /** The header: no day. */
+    data object Header : Tap {
+        override val element = TapElement.HEADER
+    }
+
+    /** A day of the month. */
+    data class Day(
+        val date: LocalDate,
+    ) : Tap {
+        override val element = TapElement.DAY
+    }
+
+    /** "+", with the day a new entry starts on (today). */
+    data class New(
+        val date: LocalDate,
+    ) : Tap {
+        override val element = TapElement.NEW
+    }
+}
+
 /**
- * The default tap targets (design.md, "Taps"): the calendar page of the
- * dashboard "Zuhause" in the Home Assistant app, with the tapped day for a
- * day and today for "+". Targets become configurable per widget later (D23).
+ * The tap targets (design.md, "Taps"): a template per element, a Home
+ * Assistant path opened through the Home Assistant app, with `{day}` for the
+ * tapped day. The defaults open the calendar page of the dashboard "Zuhause";
+ * targets become configurable per widget later (D23).
  */
 object TapTargets {
     private const val CALENDAR = "homeassistant://navigate/dashboard-zuhause/kalender"
+    private const val DAY_SLOT = "{day}"
 
+    val defaults: Map<TapElement, String> =
+        mapOf(
+            TapElement.HEADER to CALENDAR,
+            TapElement.DAY to "$CALENDAR?day=$DAY_SLOT",
+            TapElement.NEW to "$CALENDAR?new=$DAY_SLOT",
+        )
+
+    /** The target of a tap: its element's template with its day filled in. */
     fun uri(
-        element: TapElement,
-        day: LocalDate,
+        tap: Tap,
+        template: String = defaults.getValue(tap.element),
     ): String =
-        when (element) {
-            TapElement.HEADER -> CALENDAR
-            TapElement.DAY -> "$CALENDAR?day=$day"
-            TapElement.NEW -> "$CALENDAR?new=$day"
+        when (tap) {
+            Tap.Header -> template
+            is Tap.Day -> template.replace(DAY_SLOT, tap.date.toString())
+            is Tap.New -> template.replace(DAY_SLOT, tap.date.toString())
         }
 }
 
-/** The intents a widget's taps send to [TapActivity]. */
+/**
+ * The intents a widget's taps send to [TapActivity]. The request codes are
+ * one per element; once targets are configurable per widget (D23) they have
+ * to include the widget's id, or two widgets' intents replace each other.
+ */
 object Taps {
     private const val ELEMENT = "dev.cupr.calendar.tap.ELEMENT"
     private const val DAY = "dev.cupr.calendar.tap.DAY"
+    private const val TEMPLATE_REQUEST = 100
 
-    /** The extras of a tap on element for day: alone, the fill-in of a list row's cell. */
-    fun fillIn(
-        element: TapElement,
-        day: LocalDate,
-    ): Intent = Intent().putExtra(ELEMENT, element.name).putExtra(DAY, day.toString())
+    /** The extras of a tap: alone, the fill-in of a list row's cell. */
+    fun fillIn(tap: Tap): Intent {
+        val intent = Intent().putExtra(ELEMENT, tap.element.name)
+        when (tap) {
+            Tap.Header -> Unit
+            is Tap.Day -> intent.putExtra(DAY, tap.date.toString())
+            is Tap.New -> intent.putExtra(DAY, tap.date.toString())
+        }
+        return intent
+    }
 
     /** A tap on a fixed part of the widget (header, "+"). */
     fun pendingIntent(
         context: Context,
-        element: TapElement,
-        day: LocalDate,
+        tap: Tap,
     ): PendingIntent =
         PendingIntent.getActivity(
             context,
-            element.ordinal,
-            fillIn(element, day).setClass(context, TapActivity::class.java),
+            tap.element.ordinal,
+            fillIn(tap).setClass(context, TapActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
@@ -63,13 +106,23 @@ object Taps {
 
     /**
      * The tap an intent carries, none when it carries no complete one: no or
-     * an unknown element, no or a malformed day.
+     * an unknown element, or a day or "+" without a well-formed day.
      */
-    fun read(intent: Intent): Pair<TapElement, LocalDate>? {
+    fun read(intent: Intent): Tap? {
         val element = intent.getStringExtra(ELEMENT)?.let { name -> TapElement.entries.find { it.name == name } }
         val day = intent.getStringExtra(DAY)?.let(::parseDay)
-        return if (element != null && day != null) element to day else null
+        return when (element) {
+            TapElement.HEADER -> Tap.Header
+            TapElement.DAY -> day?.let(Tap::Day)
+            TapElement.NEW -> day?.let(Tap::New)
+            null -> null
+        }
     }
+
+    /** What an intent carries, for a log line: its element and day as given, and the keys of all its extras. */
+    fun describe(intent: Intent): String =
+        "element=${intent.getStringExtra(ELEMENT)}, day=${intent.getStringExtra(DAY)}, " +
+            "extras: ${intent.extras?.keySet().orEmpty().sorted()}"
 
     private fun parseDay(text: String): LocalDate? =
         try {
@@ -77,6 +130,4 @@ object Taps {
         } catch (_: DateTimeParseException) {
             null
         }
-
-    private const val TEMPLATE_REQUEST = 100
 }

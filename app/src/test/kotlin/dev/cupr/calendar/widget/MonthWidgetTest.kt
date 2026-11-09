@@ -12,11 +12,13 @@ import android.widget.ListView
 import android.widget.RemoteViews
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.R
+import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.sample.SampleData
+import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.TapActivity
-import dev.cupr.calendar.tap.TapElement
 import dev.cupr.calendar.tap.Taps
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,6 +27,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.time.LocalDate
+import kotlin.math.roundToInt
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -75,7 +78,7 @@ class MonthWidgetTest {
         wednesday.performClick()
         val started = shadowOf(application).nextStartedActivity
         assertEquals(TapActivity::class.java.name, started.component?.className)
-        assertEquals(TapElement.DAY to LocalDate.of(2026, 11, 11), Taps.read(started))
+        assertEquals(Tap.Day(LocalDate.of(2026, 11, 11)), Taps.read(started))
     }
 
     @Test
@@ -86,15 +89,16 @@ class MonthWidgetTest {
     }
 
     @Test
-    fun `the header opens the calendar page and plus the form, both for today`() {
+    fun `the header and plus send their tap to the tap activity, plus with today`() {
         val widget = applied()
         widget.findViewById<View>(R.id.header).performClick()
-        assertEquals(
-            TapElement.HEADER to LocalDate.of(2026, 11, 11),
-            Taps.read(shadowOf(application).nextStartedActivity),
-        )
+        val header = shadowOf(application).nextStartedActivity
+        assertNotNull("the header started nothing", header)
+        assertEquals(Tap.Header, Taps.read(header))
         widget.findViewById<View>(R.id.fab).performClick()
-        assertEquals(TapElement.NEW to LocalDate.of(2026, 11, 11), Taps.read(shadowOf(application).nextStartedActivity))
+        val plus = shadowOf(application).nextStartedActivity
+        assertNotNull("plus started nothing", plus)
+        assertEquals(Tap.New(LocalDate.of(2026, 11, 11)), Taps.read(plus))
     }
 
     @Test
@@ -154,6 +158,38 @@ class MonthWidgetTest {
         MonthWidgetProvider().onAppWidgetOptionsChanged(application, manager, id, options)
         val header = shadowOf(manager).getViewFor(id).findViewById<ImageView>(R.id.header_light)
         val density = application.resources.displayMetrics.density
-        assertEquals(((180 - 26) * density).toInt(), (header.drawable as BitmapDrawable).bitmap.width)
+        val widthPx = ((180 - 26) * density).toInt()
+        assertEquals(widthPx, (header.drawable as BitmapDrawable).bitmap.width)
+        // The rows at that width: Robolectric's widget host shows no list, so they are read from the views for it.
+        val list = applied(180).findViewById<ListView>(R.id.list)
+        val row = list.adapter.getView(0, null, list)
+        assertEquals(widthPx, (row.findViewById<ImageView>(R.id.week_light).drawable as BitmapDrawable).bitmap.width)
+    }
+
+    @Test
+    @Config(qualifiers = "xxhdpi")
+    fun `the layout's measures fit the drawn parts`() {
+        val density = application.resources.displayMetrics.density
+        val px = { dp: Float -> (dp * density).roundToInt() }
+        val widget = laidOut()
+        val list = widget.findViewById<ListView>(R.id.list)
+        val header = widget.findViewById<View>(R.id.header)
+        val side = px(PhoneMonth.CARD_BORDER + PhoneMonth.CARD_SIDE)
+        assertEquals(side, header.left + (header.parent as View).left)
+        assertEquals(px(PhoneMonth.CARD_BORDER + PhoneMonth.CARD_END), header.top + (header.parent as View).top)
+        val week = list.getChildAt(0).findViewById<ImageView>(R.id.week_light)
+        val bitmap = (week.drawable as BitmapDrawable).bitmap
+        // Drawn at the list's width and the display's density, so the row is shown unscaled.
+        assertEquals(list.width, bitmap.width)
+        assertEquals(week.width, bitmap.width)
+        assertEquals(week.height, bitmap.height)
+        val fabImage = widget.findViewById<ImageView>(R.id.fab_light)
+        val fabBitmap = (fabImage.drawable as BitmapDrawable).bitmap
+        assertEquals(fabImage.width, fabBitmap.width)
+        assertEquals(widget.width, fabImage.right)
+        val fab = widget.findViewById<View>(R.id.fab)
+        assertEquals(px(PhoneMonth.FAB_SIZE), fab.width)
+        assertEquals(px(PhoneMonth.FAB_MARGIN), widget.width - fab.right)
+        assertEquals(px(PhoneMonth.FAB_MARGIN), widget.height - fab.bottom)
     }
 }
