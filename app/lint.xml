@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Every other check stays on, its warnings as errors (build.gradle.kts). -->
+<lint>
+    <!-- Looks up the newest Gradle online, so it fails the gate on a release day; Dependabot proposes updates (D21). -->
+    <issue id="AndroidGradlePluginVersion" severity="ignore" />
+    <!-- Looks up the newest library versions online, so it fails on a release day; Dependabot proposes updates (D21). -->
+    <issue id="GradleDependency" severity="ignore" />
+    <!-- Looks up the newest library versions online, so it fails on a release day; Dependabot proposes updates (D21). -->
+    <issue id="NewerVersionAvailable" severity="ignore" />
+</lint>
