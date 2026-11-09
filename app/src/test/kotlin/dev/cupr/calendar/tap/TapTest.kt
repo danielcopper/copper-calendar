@@ -13,6 +13,7 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowLog
+import org.robolectric.shadows.ShadowToast
 import java.time.LocalDate
 
 @RunWith(RobolectricTestRunner::class)
@@ -49,6 +50,7 @@ class TapTest {
         assertEquals(Intent.ACTION_VIEW, opened.action)
         assertEquals("$calendar?day=2026-11-12", opened.dataString)
         assertTrue(activity.isFinishing)
+        assertEquals(0, ShadowToast.shownToastCount())
     }
 
     @Test
@@ -118,18 +120,29 @@ class TapTest {
     }
 
     @Test
-    fun `a target no app handles is logged, not thrown`() {
-        openTarget("$calendar?day=2026-11-12") { throw ActivityNotFoundException("none") }
+    fun `a target no app handles is logged and shown, not thrown`() {
+        openTarget(application, "$calendar?day=2026-11-12") { throw ActivityNotFoundException("none") }
         assertEquals(
             listOf("No app opens $calendar?day=2026-11-12"),
             ShadowLog.getLogsForTag("TapActivity").map { it.msg },
         )
+        assertEquals("Home Assistant-App nicht gefunden", ShadowToast.getTextOfLatestToast())
     }
 
     @Test
-    fun `a target the app may not open is logged, not thrown`() {
-        openTarget(calendar) { throw SecurityException("denied") }
+    fun `a target the app may not open is logged and shown, not thrown`() {
+        openTarget(application, calendar) { throw SecurityException("denied") }
         assertEquals(listOf("Not allowed to open $calendar"), ShadowLog.getLogsForTag("TapActivity").map { it.msg })
+        assertEquals("Home Assistant-App nicht gefunden", ShadowToast.getTextOfLatestToast())
+    }
+
+    @Test
+    fun `a target outside the Home Assistant app that does not open says so`() {
+        openTarget(application, "other://x/2026-11-12") { throw ActivityNotFoundException("none") }
+        assertEquals("Ziel lässt sich nicht öffnen", ShadowToast.getTextOfLatestToast())
+        openTarget(application, "other://x/2026-11-12") { throw SecurityException("denied") }
+        assertEquals("Ziel lässt sich nicht öffnen", ShadowToast.getTextOfLatestToast())
+        assertEquals(2, ShadowToast.shownToastCount())
     }
 
     private fun tapExtras(
