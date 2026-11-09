@@ -23,7 +23,7 @@ Read from `~/Repos/homelab` at `6bc81d05` (2026-11-07), `infra/homeassistant/`.
 | URL parameters on the page | none: no `location.search` or `hash` in `zuhause.yaml` | opening a day or the form by link needs an HA change |
 | Who sees what | `calendar_access` in `zuhause.yaml:2066`, currently `{}`, and the README says it is display only | the sensor holds every calendar for every account |
 
-**Editing and deleting exist on a branch.** `main` at `6bc81d05` only creates events. Branch `feature/ha-calendar-edit` (`103acad4`, 2026-11-09, not merged) adds the services `get_event`, `find_events`, `change_event` and `delete_event`, a pencil and "Termin löschen" on an entry's sheet, series handling, and a table of what each account may do per calendar (README, "Einträge ändern und löschen"). A tap on an entry in a widget can therefore aim at that entry's sheet, which needs the entry's UID and calendar in the payload.
+**Editing and deleting.** `main` at `6bc81d05` only created events. Branch `feature/ha-calendar-edit` (`103acad4`, 2026-11-09), in `main` by `24b4a670`, adds the services `get_event`, `find_events`, `change_event` and `delete_event`, a pencil and "Termin löschen" on an entry's sheet, series handling, and a table of what each account may do per calendar (README, "Einträge ändern und löschen"). A tap on an entry in a widget can therefore aim at that entry's sheet, which needs the entry's UID and calendar in the payload.
 
 **The page is not the week view.** `/dashboard-zuhause/kalender` shows the day view on top, the month below and the legend at the bottom; the README says "keine Woche". The week exists as the tile "Kalender · diese Woche" on the start page (`zuhause.yaml:1860`). The week widget's model is that tile.
 
