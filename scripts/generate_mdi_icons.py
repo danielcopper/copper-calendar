@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Write the MDI icon path data the widgets draw, from @mdi/svg 7.4.47.
 
-The names are the icons of the dashboard's `calendar_icons` (homelab,
-infra/homeassistant/config/dashboards/zuhause.yaml at 24b4a670), the icons
-Home Assistant names for an entry's kind, plus the widgets' own chevron-right
-and plus. Each line of the output is `<name> <path data>`; the app reads it
-at run time (render/Icons.kt). The package's licence is copied beside it.
+The names are the icons of the dashboard's `calendar_icons` (the dashboard's
+file is named in app/src/main/kotlin/dev/cupr/calendar/render/PhoneMonth.kt),
+the icons Home Assistant names for an entry's kind, plus the widgets' own
+chevron-right and plus. Each line of the output is `<name> <path data>`; the
+app reads it at run time (class Icons in render/Assets.kt). The package's
+licence goes to assets/licenses/mdi-LICENSE.txt.
 
 Run from the repository root:  python3 scripts/generate_mdi_icons.py
 """

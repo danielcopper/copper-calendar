@@ -2,10 +2,11 @@ package dev.cupr.calendar.render
 
 /**
  * The month's measures at phone size, in dp. They are copied from the Home
- * Assistant dashboard (homelab, `infra/homeassistant/config/dashboards/
- * zuhause.yaml`: the calendar page's month styles at phone size), so the
- * widget looks like the page; its colours come from `themes/zuhause.yaml`
- * (see SampleData). [ChromeRenderer]'s measures come from the same page.
+ * Assistant dashboard, the one place this code names its files: homelab at
+ * 24b4a670, `infra/homeassistant/config/dashboards/zuhause.yaml` (the
+ * calendar page's month styles at phone size, and the rules MonthLayout
+ * ports) and `infra/homeassistant/config/themes/zuhause.yaml` (the colours
+ * in SampleData). [ChromeRenderer]'s measures come from the same page.
  */
 internal object PhoneMonth {
     /** The card around the widget: its border and its padding at the left and right. */

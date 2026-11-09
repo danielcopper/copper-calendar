@@ -10,11 +10,11 @@ import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
 /**
- * The month as the dashboard's calendar page shows it at phone size
- * (homelab, infra/homeassistant/config/dashboards/zuhause.yaml at 24b4a670:
- * `calendar_grid`, `calendar_days`, `calendar_marked`, `calendar_month_view`),
- * one [Week] per row. Only the display rules are ported; an entry's kind,
- * drawing and colour come with the entry (D4).
+ * The month as the dashboard's calendar page shows it at phone size, one
+ * [Week] per row: its rules `calendar_grid`, `calendar_days`,
+ * `calendar_marked` and `calendar_month_view` (the dashboard's file is named
+ * in [dev.cupr.calendar.render.PhoneMonth]). Only the display rules are
+ * ported; an entry's kind, drawing and colour come with the entry (D4).
  */
 data class MonthView(
     val month: YearMonth,
@@ -35,9 +35,9 @@ data class Week(
 
 data class Day(
     val date: LocalDate,
-    /** A day of the month before or after, drawn faint (`om`). */
+    /** A day of the month before or after, drawn faint. */
     val otherMonth: Boolean,
-    /** A day of the month before today, dimmed (`past`); never set on a day of another month. */
+    /** A day of the month before today, dimmed; never set on a day of another month. */
     val past: Boolean,
     val today: Boolean,
     val weekend: Boolean,

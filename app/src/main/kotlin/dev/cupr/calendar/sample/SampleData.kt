@@ -10,11 +10,11 @@ import java.time.YearMonth
 import java.time.ZoneId
 
 /**
- * SAMPLE DATA, not real data. The entries of the sample month shown to the
- * owner for approval and the two palettes of the theme "Zuhause" (homelab,
- * infra/homeassistant/config/themes/zuhause.yaml at 24b4a670). They stand in
- * until Home Assistant delivers entries (D16) and the theme (D17); the
- * widget and the tests both draw from them.
+ * SAMPLE DATA, not real data. The entries of a sample month and the two
+ * palettes of the theme "Zuhause" (its file is named in
+ * [dev.cupr.calendar.render.PhoneMonth]). They stand in until Home Assistant
+ * delivers entries (D16) and the theme (D17); the widget and the tests both
+ * draw from them.
  */
 object SampleData {
     val zone: ZoneId = ZoneId.of("Europe/Berlin")

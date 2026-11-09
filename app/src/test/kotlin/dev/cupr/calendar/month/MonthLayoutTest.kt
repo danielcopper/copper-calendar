@@ -11,8 +11,8 @@ import java.time.LocalDateTime
 import java.time.YearMonth
 
 /**
- * The month's display rules, each test naming the rule of the dashboard
- * (homelab, infra/homeassistant/config/dashboards/zuhause.yaml) it pins.
+ * The month's display rules, each test naming the dashboard's rule it pins
+ * (the dashboard's file is named in PhoneMonth).
  */
 class MonthLayoutTest {
     private val november = YearMonth.of(2026, 11)
@@ -67,7 +67,7 @@ class MonthLayoutTest {
         assertEquals(4, MonthLayout.build(YearMonth.of(2027, 2), emptyList(), now).weeks.size)
     }
 
-    // calendar_month_view: per-day classes om, past, today, we, hol.
+    // calendar_month_view: per-day flags: other month, past, today, weekend, holiday.
 
     @Test
     fun `calendar_month_view marks a day of another month faint and never past`() {
