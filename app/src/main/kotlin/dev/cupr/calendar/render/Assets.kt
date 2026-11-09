@@ -3,6 +3,7 @@ package dev.cupr.calendar.render
 import android.content.res.AssetManager
 import android.graphics.Path
 import android.graphics.Typeface
+import android.util.Log
 import androidx.core.graphics.PathParser
 import com.caverock.androidsvg.SVG
 
@@ -13,16 +14,19 @@ import com.caverock.androidsvg.SVG
  */
 class Fonts(
     private val assets: AssetManager,
+    private val path: String = PATH,
 ) {
     private val byWeight = mutableMapOf<Int, Typeface>()
 
     /** Roboto at a font weight (400 regular, 500 medium, 600 semi-bold, 700 bold). */
     fun weight(weight: Int): Typeface =
         byWeight.getOrPut(weight) {
-            Typeface
-                .Builder(assets, PATH)
-                .setFontVariationSettings("'wght' $weight")
-                .build()
+            val typeface: Typeface? =
+                Typeface
+                    .Builder(assets, path)
+                    .setFontVariationSettings("'wght' $weight")
+                    .build()
+            checkNotNull(typeface) { "The font $path does not load at weight $weight" }
         }
 
     private companion object {
@@ -44,11 +48,15 @@ class Icons(
                 .associate { it.substringBefore(' ') to it.substringAfter(' ') }
         }
     private val paths = mutableMapOf<String, Path>()
+    private val unknown = UnknownNames("icon")
 
-    /** The icon's outline in a 24 × 24 box (`mdi:swim` or `swim`), none for an icon the app does not ship. */
+    /**
+     * The icon's outline in a 24 × 24 box (`mdi:swim` or `swim`), none for
+     * an icon the app does not ship (logged once per name).
+     */
     fun path(name: String): Path? {
         val key = name.removePrefix("mdi:")
-        val pathData = data[key] ?: return null
+        val pathData = data[key] ?: return unknown.report(name)
         return paths.getOrPut(key) { PathParser.createPathFromPathData(pathData) }
     }
 
@@ -69,14 +77,31 @@ class Drawings(
 ) {
     private val shipped: Set<String> = assets.list(DIRECTORY).orEmpty().toSet()
     private val parsed = mutableMapOf<String, SVG>()
+    private val unknown = UnknownNames("drawing")
 
-    /** The drawing of a file name (`lantern.svg`), none for a drawing the app does not ship. */
+    /** The drawing of a file name (`lantern.svg`), none for a drawing the app does not ship (logged once per name). */
     fun get(name: String): SVG? {
-        if (name !in shipped) return null
+        if (name !in shipped) return unknown.report(name)
         return parsed.getOrPut(name) { SVG.getFromAsset(assets, "$DIRECTORY/$name") }
     }
 
     private companion object {
         const val DIRECTORY = "drawings"
+    }
+}
+
+/** Logs a name the app does not ship, once per name, so a missing asset shows in the log without flooding it. */
+private class UnknownNames(
+    private val kind: String,
+) {
+    private val logged = mutableSetOf<String>()
+
+    fun <T> report(name: String): T? {
+        if (logged.add(name)) Log.w(TAG, "The app ships no $kind named $name")
+        return null
+    }
+
+    private companion object {
+        const val TAG = "RenderAssets"
     }
 }
