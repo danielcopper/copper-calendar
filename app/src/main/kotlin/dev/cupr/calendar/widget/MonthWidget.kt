@@ -2,9 +2,9 @@ package dev.cupr.calendar.widget
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.graphics.Bitmap
 import android.widget.RemoteViews
 import dev.cupr.calendar.R
-import dev.cupr.calendar.model.Palette
 import dev.cupr.calendar.month.MonthLayout
 import dev.cupr.calendar.month.Week
 import dev.cupr.calendar.render.ChromeRenderer
@@ -16,7 +16,6 @@ import dev.cupr.calendar.render.WeekRowRenderer
 import dev.cupr.calendar.sample.SampleData
 import dev.cupr.calendar.tap.TapElement
 import dev.cupr.calendar.tap.Taps
-import java.time.Clock
 import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -62,9 +61,8 @@ object MonthWidget {
     fun views(
         context: Context,
         widthDp: Int,
-        clock: Clock = SampleData.clock,
     ): RemoteViews {
-        val now = LocalDateTime.now(clock)
+        val now = LocalDateTime.now(SampleData.clock)
         val today = now.toLocalDate()
         val view = MonthLayout.build(YearMonth.from(today), SampleData.entries, now)
         val scale = Scale(context.resources.displayMetrics.density)
@@ -89,13 +87,14 @@ object MonthWidget {
                 .setHasStableIds(true)
                 .setViewTypeCount(1)
         for (week in view.weeks) {
-            val draw = { palette: Palette -> rows.render(week, widthPx, scale, palette) }
+            val light = rows.render(week, widthPx, scale, SampleData.light)
+            val dark = rows.render(week, widthPx, scale, SampleData.dark)
             items.addItem(
                 week.days
                     .first()
                     .date
                     .toEpochDay(),
-                row(context, week, draw),
+                row(context, week, light, dark),
             )
         }
         views.setRemoteAdapter(R.id.list, items.build())
@@ -107,11 +106,12 @@ object MonthWidget {
     private fun row(
         context: Context,
         week: Week,
-        draw: (Palette) -> android.graphics.Bitmap,
+        light: Bitmap,
+        dark: Bitmap,
     ): RemoteViews {
         val row = RemoteViews(context.packageName, R.layout.widget_month_week)
-        row.setImageViewBitmap(R.id.week_light, draw(SampleData.light))
-        row.setImageViewBitmap(R.id.week_dark, draw(SampleData.dark))
+        row.setImageViewBitmap(R.id.week_light, light)
+        row.setImageViewBitmap(R.id.week_dark, dark)
         week.days.forEachIndexed { index, day ->
             row.setOnClickFillInIntent(dayIds[index], Taps.fillIn(TapElement.DAY, day.date))
             row.setContentDescription(dayIds[index], day.date.format(dayLabel))
