@@ -1,0 +1,13 @@
+# Gradle
+.gradle/
+.kotlin/
+build/
+
+# Written by `mise run setup`: the SDK path of this machine
+local.properties
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+captures/
