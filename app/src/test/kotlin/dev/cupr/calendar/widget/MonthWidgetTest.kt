@@ -86,6 +86,18 @@ class MonthWidgetTest {
     }
 
     @Test
+    fun `the header opens the calendar page and plus the form, both for today`() {
+        val widget = applied()
+        widget.findViewById<View>(R.id.header).performClick()
+        assertEquals(
+            TapElement.HEADER to LocalDate.of(2026, 11, 11),
+            Taps.read(shadowOf(application).nextStartedActivity),
+        )
+        widget.findViewById<View>(R.id.fab).performClick()
+        assertEquals(TapElement.NEW to LocalDate.of(2026, 11, 11), Taps.read(shadowOf(application).nextStartedActivity))
+    }
+
+    @Test
     fun `outside night mode the light drawings show`() {
         val widget = applied()
         assertEquals(View.VISIBLE, widget.findViewById<View>(R.id.header_light).visibility)

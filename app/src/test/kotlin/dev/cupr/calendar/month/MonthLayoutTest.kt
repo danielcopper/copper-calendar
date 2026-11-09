@@ -177,6 +177,16 @@ class MonthLayoutTest {
         assertEquals(listOf("Äpfel", "Zweiter"), twoTimed.shown.map { it.title })
     }
 
+    @Test
+    fun `calendar_days orders timed entries by their time, not their title`() {
+        val day =
+            build(
+                timed(date(11, 12).atTime(18, 0), date(11, 12).atTime(19, 0), "Abendessen"),
+                timed(date(11, 12).atTime(8, 0), date(11, 12).atTime(9, 0), "Zahnarzt"),
+            ).day(date(11, 12))
+        assertEquals(listOf("Zahnarzt", "Abendessen"), day.shown.map { it.title })
+    }
+
     // calendar_days: which entries stand in the grid at all.
 
     @Test
