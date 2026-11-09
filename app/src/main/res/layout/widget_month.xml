@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The month widget (MonthWidget.kt). Each drawn part comes twice; the
-     integers light_visibility and dark_visibility show the one of the
-     launcher's night mode. -->
+<!-- The month widget (MonthWidget.kt). Its measures are PhoneMonth's in
+     dp; MonthWidgetTest checks that they fit the drawn parts. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_card">
 
-    <!-- The card's 1 dp border and its padding of 10 dp by 12 dp. -->
+    <!-- Inside the card's 1 dp border, its padding of 10 dp at the top and
+         bottom and 12 dp at the sides. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"

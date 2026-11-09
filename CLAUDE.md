@@ -4,7 +4,7 @@ An Android app with home-screen widgets that draw the family calendar like the H
 
 ## Pipeline
 
-- **Gate**: `mise run gate` (build, unit and render tests with coverage, Android Lint, ktlint, detekt; what CI runs, without the SonarQube Cloud scan). On a fresh machine `mise run setup` first.
+- **Gate**: `mise run gate` (build, unit and render tests with coverage, Android Lint, ktlint, detekt): what CI checks, less the SonarQube Cloud gate, CodeQL and the PR title. On a fresh machine `mise run setup` first.
 - **Review checks**: `mise run lint`; ktlint, detekt and Android Lint run on the whole module, not on single files.
 - **Worktree task**: `mise run worktree-new`
 - **Agent rules**:

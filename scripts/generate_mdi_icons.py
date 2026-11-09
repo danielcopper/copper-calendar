@@ -64,9 +64,12 @@ def main() -> None:
         sys.exit("duplicate icon names")
     with tarfile.open(fileobj=io.BytesIO(download()), mode="r:gz") as archive:
         def read(member: str) -> str:
-            extracted = archive.extractfile(member)
-            if extracted is None:
+            try:
+                extracted = archive.extractfile(member)
+            except KeyError:
                 sys.exit(f"{member} missing from the package")
+            if extracted is None:
+                sys.exit(f"{member} is not a file in the package")
             return extracted.read().decode()
 
         lines = []

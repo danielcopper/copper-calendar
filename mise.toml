@@ -29,7 +29,9 @@ if [ ! -x "$tools/bin/sdkmanager" ]; then
 fi
 yes | "$tools/bin/sdkmanager" --sdk_root="$sdk" --licenses > /dev/null
 "$tools/bin/sdkmanager" --sdk_root="$sdk" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
-if [ ! -f local.properties ]; then
+if [ -f local.properties ]; then
+  echo "local.properties kept: $(grep '^sdk.dir=' local.properties || echo 'no sdk.dir')"
+else
   echo "sdk.dir=$sdk" > local.properties
 fi
 """
@@ -58,11 +60,10 @@ cat app/build/render/budget.txt
 """
 
 [tasks.gate]
-description = "Everything CI enforces: build, unit and render tests with coverage, Android Lint, ktlint, detekt"
+description = "What CI checks, less the SonarQube Cloud gate, CodeQL and the PR title: build, unit and render tests with coverage, Android Lint, ktlint, detekt"
 run = "./gradlew assembleDebug testDebugUnitTest createDebugUnitTestCoverageReport lint ktlintCheck detekt"
 
 [tasks.install]
 description = "Build the debug APK and install it on the device adb is connected to"
-# adb comes from the SDK `setup` installed; pair and connect the phone first
-# (`adb pair`, `adb connect`), this task does neither.
+# Connect the phone first, as README.md describes; this task does not.
 run = "./gradlew installDebug"

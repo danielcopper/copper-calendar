@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  JAVA_VERSION: "21.0.11+10"  # mise.toml's JDK
+
 # The jobs run what `mise run gate` runs locally, split so each check reports
 # on its own. The runner's preinstalled Android SDK (ANDROID_HOME) stands in
 # for `mise run setup`; AGP installs a missing SDK package itself.
@@ -21,7 +24,7 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: "21.0.11+10"  # mise.toml's JDK
+          java-version: ${{ env.JAVA_VERSION }}
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
       - name: Build the debug APK, run the unit and render tests
         run: ./gradlew assembleDebug testDebugUnitTest
@@ -31,7 +34,7 @@ jobs:
         with:
           name: render
           path: app/build/render/
-          if-no-files-found: ignore
+          if-no-files-found: error
 
   lint:
     name: Lint
@@ -42,7 +45,7 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: "21.0.11+10"
+          java-version: ${{ env.JAVA_VERSION }}
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
       - name: Android Lint, ktlint and detekt, warnings as errors
         run: ./gradlew lint ktlintCheck detekt
@@ -66,11 +69,9 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: "21.0.11+10"
+          java-version: ${{ env.JAVA_VERSION }}
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
       - name: Coverage and the SonarQube Cloud scan
-        # The scanner waits on the quality gate (sonar.qualitygate.wait in
-        # build.gradle.kts) and fails when it fails, so this job fails with it.
         run: ./gradlew testDebugUnitTest createDebugUnitTestCoverageReport sonar
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

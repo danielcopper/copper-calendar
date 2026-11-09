@@ -1,4 +1,12 @@
+import org.gradle.process.CommandLineArgumentProvider
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+
+/** Passes the render test's output directory as a system property, as a declared output of the test task. */
+class RenderDir(
+    @get:OutputDirectory val dir: DirectoryProperty,
+) : CommandLineArgumentProvider {
+    override fun asArguments() = listOf("-Drender.dir=${dir.get().asFile.absolutePath}")
+}
 
 plugins {
     alias(libs.plugins.android.application)
@@ -40,11 +48,12 @@ android {
                 test.maxHeapSize = "1536m"
                 // Robolectric sets up API 37's shared memory through JDK internals.
                 test.jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED")
-                // Where the render test writes its PNGs (`mise run render`), an
-                // output of the task, so a result from the build cache brings them too.
-                val renderDir = layout.buildDirectory.dir("render")
-                test.systemProperty("render.dir", renderDir.get().asFile.path)
-                test.outputs.dir(renderDir)
+                // Where the render test writes its PNGs (`mise run render`): an
+                // output of the task, so a result from the build cache brings them
+                // too, and keyed by its place in the project, not its absolute path.
+                test.jvmArgumentProviders.add(
+                    RenderDir(objects.directoryProperty().value(layout.buildDirectory.dir("render"))),
+                )
                 // Coverage of the classes Robolectric loads into its sandbox.
                 test.extensions.configure<JacocoTaskExtension> {
                     isIncludeNoLocationClasses = true

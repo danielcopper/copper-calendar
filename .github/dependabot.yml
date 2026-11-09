@@ -8,3 +8,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Gradle stays at 9.7.1 until a detekt release contains
+      # https://github.com/detekt/detekt/pull/9577 (gradle-wrapper.properties).
+      - dependency-name: gradle-wrapper
