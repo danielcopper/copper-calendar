@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kalender</string>
+    <string name="widget_month_label">Monat</string>
+    <string name="widget_month_description">Der Monat Woche für Woche, wie im Home-Assistant-Dashboard</string>
+    <string name="new_entry">Neuer Eintrag</string>
+</resources>

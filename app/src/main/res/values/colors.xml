@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The card behind the drawn rows, the sample light palette's card and
+         card border (SampleData.light; a test keeps them equal). -->
+    <color name="widget_card">#FFFFFFFF</color>
+    <color name="widget_card_border">#FFDDE2E9</color>
+    <color name="ic_launcher_background">#FF1F6FD6</color>
+</resources>
