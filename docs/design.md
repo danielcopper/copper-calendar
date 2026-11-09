@@ -1,12 +1,15 @@
 # Design
 
-Mockups: [Kalender-Widgets Mockups](https://claude.ai/artifact/6R9mUH9GZJXXdV5Uf3bJK9), with week as rows, week as columns (rejected, D14) and month, each dark and light at 4×2 and 4×4 cells. Values come from `homelab` `infra/homeassistant/config/` (`themes/zuhause.yaml`, `dashboards/zuhause.yaml`); events in the mockups are sample data.
+Mockups: [Kalender-Widgets Mockups](https://claude.ai/artifact/6R9mUH9GZJXXdV5Uf3bJK9), with week as rows, week as columns after the idle page (rejected, D14), month, and two compact column layouts ("Text klein" chosen, D19; "Nur Symbole" dropped). Values come from `homelab` `infra/homeassistant/config/` (`themes/zuhause.yaml`, `dashboards/zuhause.yaml`); events in the mockups are sample data.
+
+More configuration than the calendar widgets on the market is a goal: what a person might want to set differently is a setting per widget, with Home Assistant's look as the default.
 
 ## Widgets
 
 | Widget | Model in Home Assistant | Content |
 |---|---|---|
-| Week | tile "Kalender · diese Woche" (template `calendar`) | Monday to Sunday, one row per day: weekday and date at the left ("HEUTE" for today), the day's entries at the right, an empty day "frei"; days before today dimmed |
+| Week | tile "Kalender · diese Woche" (template `calendar`) | Monday to Sunday, or today and the six days after it (D20), one row per day: weekday and date at the left ("HEUTE" for today), the day's entries at the right, an empty day "frei"; days before today dimmed |
+| Week, columns (optional layout, D19) | a week row of the month below, with every entry of a day | the same days as the rows, seven columns; per entry its mark and title on one line at 10 px |
 | Month | month of the calendar page at phone size (`calendar_month_view`, `.s-phone`) | weeks from the Monday before the first to the Sunday after the last; per day its number, special days as drawings, up to two entries or one and "+N"; entries over several days as bars |
 
 Both follow the system's dark or light mode with the theme's two palettes. Both are a vertically scrolling list of drawn rows (D8): the week a day per row, the month a week per row. The week opens scrolled to today, the month to the current week. Sizes are resizable; the mockups use 4×2 and 4×4 cells (276 × 220 and 276 × 456 dp by Android's table for a Pixel 4).
@@ -28,4 +31,4 @@ The `?day=` and `?new=` parameters do not exist yet; see [ha-additions.md](ha-ad
 
 ## Setup app
 
-Per widget: which calendars it shows (D11), the tap targets above, the corner of "+". Once for the app: sign-in with Home Assistant (D9, D10).
+Per widget: which calendars it shows (D11), the tap targets above, the corner of "+", and for the week its layout, rows or columns (D19), and its days, Monday to Sunday or from today (D20). Once for the app: sign-in with Home Assistant (D9, D10).
