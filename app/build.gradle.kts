@@ -1,3 +1,5 @@
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.ktlint)
@@ -46,6 +48,11 @@ android {
                         .get()
                         .asFile.path,
                 )
+                // Coverage of the classes Robolectric loads into its sandbox.
+                test.extensions.configure<JacocoTaskExtension> {
+                    isIncludeNoLocationClasses = true
+                    excludes = listOf("jdk.internal.*")
+                }
             }
         }
     }
