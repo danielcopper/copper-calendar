@@ -13,7 +13,8 @@ import java.time.YearMonth
 
 /**
  * The month's display rules, each rule's test naming the dashboard's rule it
- * pins (the dashboard's file is named in PhoneMonth), and the sample month.
+ * pins (the dashboard's file is named in PhoneMonth), the checks on days,
+ * weeks and bars, and the sample month.
  */
 class MonthLayoutTest {
     private val november = YearMonth.of(2026, 11)
@@ -104,14 +105,14 @@ class MonthLayoutTest {
         assertFalse(view.day(date(11, 19)).holiday)
     }
 
-    // calendar_marked: a special day or public holiday of one day stands beside the number.
-
     @Test
     fun `calendar_days reds only the first day of a public holiday over several days`() {
         val view = build(allDay(date(11, 18), days = 2, kind = "holiday", title = "Zwei Feiertage"))
         assertTrue(view.day(date(11, 18)).holiday)
         assertFalse(view.day(date(11, 19)).holiday)
     }
+
+    // calendar_marked: a special day or public holiday of one day stands beside the number.
 
     @Test
     fun `calendar_marked puts a special day's drawing beside the number, not among the entries`() {
@@ -197,6 +198,13 @@ class MonthLayoutTest {
     }
 
     // calendar_days: which entries stand in the grid at all.
+
+    @Test
+    fun `a timed entry of no length at the grid's first midnight stands on the first day`() {
+        val midnight = date(10, 26).atStartOfDay()
+        val view = build(timed(midnight, midnight, "Mitternacht"))
+        assertEquals(listOf("Mitternacht"), view.day(date(10, 26)).shown.map { it.title })
+    }
 
     @Test
     fun `calendar_days leaves out an entry that ended before the grid or begins after it`() {
@@ -331,6 +339,17 @@ class MonthLayoutTest {
         assertThrows(IllegalArgumentException::class.java) {
             Bar(entry, from = 0, to = 1, lane = -1, opens = true, closes = true)
         }
+        assertThrows(IllegalArgumentException::class.java) {
+            Bar(entry, from = -1, to = 1, lane = 0, opens = true, closes = true)
+        }
+    }
+
+    @Test
+    fun `a past day is neither today nor of another month, and +N counts no fewer than none`() {
+        val day = build().weeks[2].days[0]
+        assertThrows(IllegalArgumentException::class.java) { day.copy(past = true, today = true) }
+        assertThrows(IllegalArgumentException::class.java) { day.copy(past = true, otherMonth = true) }
+        assertThrows(IllegalArgumentException::class.java) { day.copy(more = -1) }
     }
 
     // The sample month: its weeks, bars and cells.

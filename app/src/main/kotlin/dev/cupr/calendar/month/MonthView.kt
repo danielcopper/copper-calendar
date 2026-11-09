@@ -61,6 +61,11 @@ data class Day internal constructor(
     /** How many of its own entries "+N" counts, 0 for none. */
     val more: Int,
 ) {
+    init {
+        require(!(past && (today || otherMonth))) { "A past day is neither today nor of another month: $date" }
+        require(more >= 0) { "A day's \"+N\" counts $more" }
+    }
+
     val weekend: Boolean get() = date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY
 }
 
@@ -151,16 +156,17 @@ object MonthLayout {
         dates: List<LocalDate>,
         entries: List<Entry>,
     ): List<List<Row>> {
-        val begin = dates.first()
+        val begin = dates.first().atStartOfDay()
         // An entry that begins after the grid lands on a date the grid never reads.
         val placed =
             entries
-                .filter { it.end.isAfter(begin.atStartOfDay()) }
-                .groupBy({ entry -> maxOf(entry.start.toLocalDate(), begin) }) { entry ->
+                // Ended before the grid: left out, except a timed entry of no length at the grid's first midnight.
+                .filter { it.end.isAfter(begin) || it.start == begin }
+                .groupBy({ entry -> maxOf(entry.start.toLocalDate(), begin.toLocalDate()) }) { entry ->
                     val first = entry.start.toLocalDate()
                     val last = entry.end.minusNanos(1).toLocalDate()
                     // Timed and standing on its own first day, not carried onto the grid's first date.
-                    val timed = !entry.allDay && !first.isBefore(begin)
+                    val timed = !entry.allDay && !first.isBefore(begin.toLocalDate())
                     Row(entry, first, last, multi = last.isAfter(first), timed = timed)
                 }
         val order =
