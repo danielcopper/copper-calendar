@@ -89,7 +89,7 @@ object SampleData {
         buildList {
             for (day in listOf(26, 2, 9, 16, 23, 30)) {
                 val date = if (day == 26) LocalDate.of(2026, 10, 26) else LocalDate.of(2026, 11, day)
-                add(timed(date, "16:00", "16:45", "Schwimmkurs Flora", HOTPINK, "swimming", "mdi:swim"))
+                add(timed(date, "16:00", "16:45", "Schwimmkurs Anna", HOTPINK, "swimming", "mdi:swim"))
             }
             for (date in listOf(LocalDate.of(2026, 10, 28), LocalDate.of(2026, 11, 11), LocalDate.of(2026, 11, 25))) {
                 add(allDay(date, 1, "Gelber Sack", REBECCAPURPLE, "trash", "mdi:trash-can"))
@@ -103,7 +103,7 @@ object SampleData {
                     LocalDate.of(2026, 11, 10),
                     "15:30",
                     "16:15",
-                    "Zahnarzt Marlon",
+                    "Zahnarzt Ben",
                     LIGHTSKYBLUE,
                     "dentist",
                     "mdi:tooth-outline",
@@ -125,15 +125,15 @@ object SampleData {
                 ),
             )
             add(
-                allDay(LocalDate.of(2026, 11, 13), 1, "Leon Green", null, "birthday", "mdi:cake-variant")
-                    .copy(calendar = BIRTHDAYS, year = 1990),
+                allDay(LocalDate.of(2026, 11, 13), 1, "Max Weber", null, "birthday", "mdi:cake-variant")
+                    .copy(calendar = BIRTHDAYS, year = 2000),
             )
             add(
                 timed(
                     LocalDate.of(2026, 11, 14),
                     "10:00",
                     "11:30",
-                    "Fußball Marlon",
+                    "Fußball Ben",
                     LIGHTSKYBLUE,
                     "football",
                     "mdi:soccer",
@@ -144,7 +144,7 @@ object SampleData {
                     LocalDate.of(2026, 11, 14),
                     "15:00",
                     "18:00",
-                    "Kindergeburtstag Emma",
+                    "Kindergeburtstag Lena",
                     HOTPINK,
                     "party",
                     "mdi:party-popper",

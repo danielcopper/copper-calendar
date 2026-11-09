@@ -7,7 +7,7 @@ Findings are in [research.md](research.md).
 - [x] Path: configure, fork, or own widget (standalone or inside the HA app) → D1
 - [x] Data source: HA, Android calendar via DAVx5, Nextcloud CalDAV directly, or a combination with a cache → D2
 - [x] Sign-in: HA token and access from outside the home network → D9
-- [x] Multiple people: Chantal's phone, who sees which calendars → D9, D11
+- [x] Multiple people: the second phone, who sees which calendars → D9, D11
 - [x] Minimum Android version (the family's phones) → D12
 - [x] Refresh and battery, behaviour without network → D2, D3
 - [x] Distribution: signed APK sideload, own F-Droid repo, or other → D13

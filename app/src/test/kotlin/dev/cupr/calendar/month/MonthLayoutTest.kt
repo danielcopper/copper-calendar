@@ -307,6 +307,6 @@ class MonthLayoutTest {
         assertEquals(listOf("lantern.svg"), today.drawings)
         assertEquals(listOf("Gelber Sack", "Martinsumzug Kita"), today.shown.map { it.title })
         assertEquals(listOf("halloween.svg"), view.day(date(10, 31)).drawings)
-        assertEquals(listOf("Schwimmkurs Flora"), view.day(date(10, 26)).shown.map { it.title })
+        assertEquals(listOf("Schwimmkurs Anna"), view.day(date(10, 26)).shown.map { it.title })
     }
 }
