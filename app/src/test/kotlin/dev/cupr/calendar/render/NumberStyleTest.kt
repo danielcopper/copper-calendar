@@ -12,10 +12,10 @@ class NumberStyleTest {
     private val friday = LocalDate.of(2026, 11, 13)
 
     @Test
-    fun `today wins over past, holiday and weekend, then past, then holiday, then weekend`() {
+    fun `today wins over holiday and weekend, past over holiday and weekend, then holiday, then weekend`() {
         val cases =
             listOf(
-                Probe.day(sunday, today = true, past = true, holiday = true) to palette.onAccent,
+                Probe.day(sunday, today = true, holiday = true) to palette.onAccent,
                 Probe.day(sunday, past = true, holiday = true) to palette.tertiaryText,
                 Probe.day(sunday, holiday = true) to palette.holiday,
                 Probe.day(sunday) to palette.secondaryText,

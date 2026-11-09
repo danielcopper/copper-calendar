@@ -25,6 +25,9 @@ internal object PhoneMonth {
     const val FAB_INSET = 12f
     const val FAB_ICON = 24f
 
+    /** The card's border and side padding together: how far the drawn rows stand from the widget's edge. */
+    const val CARD_INSET = CARD_BORDER + CARD_SIDE
+
     /** The room around "+" up to the widget's edge, where its shadow may show. */
     const val FAB_MARGIN = FAB_INSET + CARD_BORDER
 
@@ -72,10 +75,13 @@ internal object PhoneMonth {
     const val FONT = 10f
     const val LINE = FONT * 1.45f
 
-    /** A special day's drawing beside the number. */
+    /** A marked entry's mark beside the day's number (its drawing, icon or dot). */
     const val DRAWING = 17f
 
-    /** A timed entry's mark (its drawing or icon, or the room the dot is centred in), and an all-day chip's drawing. */
+    /**
+     * A timed entry's mark, and the mark of an all-day chip that names a
+     * drawing: the drawing, the icon, or the room the dot is centred in.
+     */
     const val MARK = 11f
 
     /** A timed entry's dot without an icon. */

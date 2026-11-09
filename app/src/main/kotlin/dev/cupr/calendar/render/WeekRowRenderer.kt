@@ -158,7 +158,10 @@ class WeekRowRenderer(
             }
         }
 
-        /** An entry's line: an all-day entry as a tinted chip, a timed one as its mark; then its title. */
+        /**
+         * An entry's line: an all-day entry as a tinted chip, with its mark if
+         * it names a drawing; a timed one with its mark; then its title.
+         */
         private fun entryLine(
             entry: Entry,
             past: Boolean,

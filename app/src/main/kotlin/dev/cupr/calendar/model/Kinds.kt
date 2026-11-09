@@ -6,9 +6,9 @@ package dev.cupr.calendar.model
  * treats specially.
  */
 object Kinds {
-    /** A special day (Martinstag, 1. Advent, …), drawn beside the day's number. */
+    /** A special day (Martinstag, 1. Advent, …). */
     const val SPECIAL = "special"
 
-    /** A public holiday: its day's number is red. */
+    /** A public holiday. */
     const val HOLIDAY = "holiday"
 }

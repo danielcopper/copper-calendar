@@ -12,22 +12,24 @@ enum class TapElement { HEADER, DAY, NEW }
 /** A tap on a widget: its element and, where the element has one, its day. */
 sealed interface Tap {
     val element: TapElement
+    val day: LocalDate?
 
     /** The header: no day. */
     data object Header : Tap {
         override val element = TapElement.HEADER
+        override val day: LocalDate? = null
     }
 
     /** A day of the month. */
     data class Day(
-        val date: LocalDate,
+        override val day: LocalDate,
     ) : Tap {
         override val element = TapElement.DAY
     }
 
     /** "+", with the day a new entry starts on (today). */
     data class New(
-        val date: LocalDate,
+        override val day: LocalDate,
     ) : Tap {
         override val element = TapElement.NEW
     }
@@ -36,7 +38,7 @@ sealed interface Tap {
 /**
  * The tap targets (design.md, "Taps"): a template per element, a Home
  * Assistant path opened through the Home Assistant app, with `{day}` for the
- * tapped day. The defaults open the calendar page of the dashboard "Zuhause";
+ * tap's day. The defaults open the calendar page of the dashboard "Zuhause";
  * targets become configurable per widget later (D23).
  */
 object TapTargets {
@@ -54,12 +56,7 @@ object TapTargets {
     fun uri(
         tap: Tap,
         template: String = defaults.getValue(tap.element),
-    ): String =
-        when (tap) {
-            Tap.Header -> template
-            is Tap.Day -> template.replace(DAY_SLOT, tap.date.toString())
-            is Tap.New -> template.replace(DAY_SLOT, tap.date.toString())
-        }
+    ): String = tap.day?.let { template.replace(DAY_SLOT, it.toString()) } ?: template
 }
 
 /**
@@ -75,11 +72,7 @@ object Taps {
     /** The extras of a tap: alone, the fill-in of a list row's cell. */
     fun fillIn(tap: Tap): Intent {
         val intent = Intent().putExtra(ELEMENT, tap.element.name)
-        when (tap) {
-            Tap.Header -> Unit
-            is Tap.Day -> intent.putExtra(DAY, tap.date.toString())
-            is Tap.New -> intent.putExtra(DAY, tap.date.toString())
-        }
+        tap.day?.let { intent.putExtra(DAY, it.toString()) }
         return intent
     }
 

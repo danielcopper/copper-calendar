@@ -1,11 +1,15 @@
 package dev.cupr.calendar.render
 
+import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Color
+import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.month.Bar
 import dev.cupr.calendar.month.DAYS_IN_WEEK
 import dev.cupr.calendar.month.Day
 import dev.cupr.calendar.month.Week
+import dev.cupr.calendar.render.PhoneMonth.CARD_INSET
 import dev.cupr.calendar.render.PhoneMonth.CELL_SIDE
 import dev.cupr.calendar.render.PhoneMonth.CELL_TOP
 import dev.cupr.calendar.render.PhoneMonth.GAP
@@ -14,7 +18,7 @@ import dev.cupr.calendar.render.PhoneMonth.LINE
 import dev.cupr.calendar.render.PhoneMonth.MARK
 import dev.cupr.calendar.render.PhoneMonth.NUMBER_ROW
 import dev.cupr.calendar.render.PhoneMonth.TIMED_SIDE
-import dev.cupr.calendar.widget.MonthWidget
+import dev.cupr.calendar.sample.SampleData
 import java.time.LocalDate
 import kotlin.math.roundToInt
 
@@ -26,7 +30,74 @@ import kotlin.math.roundToInt
 internal object Probe {
     const val DENSITY = 2.625f
     val scale = Scale(DENSITY)
-    val widthPx = scale.px(MonthWidget.contentWidthDp(276)).roundToInt()
+    val widthPx = scale.px(276 - 2 * CARD_INSET).roundToInt()
+
+    /** The entries' own colour in these tests. */
+    const val RED = 0xFFFF0000.toInt()
+
+    /** A week row renderer with the app's fonts, icons and drawings. */
+    fun rows(): WeekRowRenderer {
+        val assets = ApplicationProvider.getApplicationContext<Context>().assets
+        return WeekRowRenderer(Fonts(assets), Icons(assets), Drawings(assets))
+    }
+
+    /** An all-day entry of one day, red. */
+    fun allDay(
+        date: LocalDate,
+        drawing: String? = null,
+        icon: String? = null,
+    ) = Entry(
+        start = date.atStartOfDay(),
+        end = date.plusDays(1).atStartOfDay(),
+        allDay = true,
+        title = "Ganztags",
+        calendar = SampleData.FAMILY,
+        color = RED,
+        icon = icon,
+        drawing = drawing,
+    )
+
+    /** A timed entry from 10 to 11, red. */
+    fun timed(
+        date: LocalDate,
+        icon: String?,
+        drawing: String? = null,
+    ) = Entry(
+        start = date.atTime(10, 0),
+        end = date.atTime(11, 0),
+        allDay = false,
+        title = "Termin",
+        calendar = SampleData.FAMILY,
+        color = RED,
+        icon = icon,
+        drawing = drawing,
+    )
+
+    /**
+     * The lantern drawing's colour at (21.5, 25) of its 64-unit box: its
+     * body, #f08a36, under its glow, #ffd56b at 0.35: rgb(245, 164, 73).
+     */
+    const val LANTERN_BODY = 0xFFF5A449.toInt()
+
+    /** x or y of a point of the lantern drawing in a box of size px at start. */
+    fun lanternPoint(
+        start: Float,
+        size: Float,
+        unit: Float,
+    ): Float = start + size * unit / LANTERN_BOX
+
+    private const val LANTERN_BOX = 64f
+
+    /** Whether a pixel is within 3 of a colour in each channel. */
+    fun near(
+        pixel: Int,
+        color: Int,
+    ): Boolean =
+        Color.alpha(pixel) == 255 &&
+            listOf<(Int) -> Int>({ Color.red(it) }, { Color.green(it) }, { Color.blue(it) }).all { channel ->
+                kotlin.math.abs(channel(pixel) - channel(color)) <= 3
+            }
+
     private val column = widthPx / DAYS_IN_WEEK.toFloat()
 
     /** The left edge of a column's content. */

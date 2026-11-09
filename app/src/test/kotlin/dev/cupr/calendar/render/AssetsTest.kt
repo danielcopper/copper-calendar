@@ -5,6 +5,7 @@ import android.graphics.Paint
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.sample.SampleData
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -45,7 +46,7 @@ class AssetsTest {
     fun `every shipped icon and drawing parses`() {
         val icons = Icons(assets)
         assertEquals(71, icons.names.size)
-        for (name in icons.names) assertNotNull(name, icons.path(name))
+        for (name in icons.names) assertFalse(name, checkNotNull(icons.path(name)).isEmpty)
         val drawings = Drawings(assets)
         assertEquals(setOf("halloween.svg", "lantern.svg", "candles-1.svg", "boot.svg"), drawings.names)
         for (name in drawings.names) assertNotNull(name, drawings.get(name))
@@ -63,13 +64,22 @@ class AssetsTest {
     }
 
     @Test
-    fun `the icon list refuses a line without path data and a name given twice`() {
+    fun `the icon list refuses a line without a name or path data, and a name given twice`() {
         assertEquals(mapOf("plus" to "M19,13Z"), parseIcons(sequenceOf("# a comment", "", "plus M19,13Z")))
-        val bare = assertThrows(IllegalArgumentException::class.java) { parseIcons(sequenceOf("plus")) }
-        assertEquals("icons/mdi.txt: a line without path data: plus", bare.message)
+        for (line in listOf("plus", "plus ", " M1Z")) {
+            val bare = assertThrows(IllegalArgumentException::class.java) { parseIcons(sequenceOf(line)) }
+            assertEquals("icons/mdi.txt: a line without a name or path data: $line", bare.message)
+        }
         val twice =
             assertThrows(IllegalArgumentException::class.java) { parseIcons(sequenceOf("plus M1Z", "plus M2Z")) }
         assertEquals("icons/mdi.txt names these icons twice: [plus]", twice.message)
+    }
+
+    @Test
+    fun `a font weight runs from 1 to 1000`() {
+        assertEquals(1000, FontWeight(1000).value)
+        val error = assertThrows(IllegalArgumentException::class.java) { FontWeight(0) }
+        assertEquals("A font weight runs from 1 to 1000, not 0", error.message)
     }
 
     @Test

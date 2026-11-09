@@ -8,7 +8,11 @@ import android.util.Log
 import androidx.core.graphics.PathParser
 import com.caverock.androidsvg.SVG
 
-/** The fonts, icons and drawings the widgets draw with, loaded once per process. */
+/**
+ * The fonts, icons and drawings the widgets draw with, loaded once per
+ * process. Used on the main thread only, where widget updates run: their
+ * caches are plain maps, and the Paths and SVGs they hand out are shared.
+ */
 class RenderAssets private constructor(
     assets: AssetManager,
 ) {
@@ -31,7 +35,14 @@ class RenderAssets private constructor(
 value class FontWeight(
     val value: Int,
 ) {
+    init {
+        require(value in MIN..MAX) { "A font weight runs from $MIN to $MAX, not $value" }
+    }
+
     companion object {
+        private const val MIN = 1
+        private const val MAX = 1000
+
         val REGULAR = FontWeight(400)
         val MEDIUM = FontWeight(500)
         val SEMI_BOLD = FontWeight(600)
@@ -107,8 +118,12 @@ internal fun parseIcons(lines: Sequence<String>): Map<String, String> {
         lines
             .filter { it.isNotBlank() && !it.startsWith("#") }
             .map { line ->
-                require(' ' in line) { "icons/mdi.txt: a line without path data: $line" }
-                line.substringBefore(' ') to line.substringAfter(' ')
+                val name = line.substringBefore(' ', missingDelimiterValue = "")
+                val pathData = line.substringAfter(' ', missingDelimiterValue = "")
+                require(
+                    name.isNotEmpty() && pathData.isNotBlank(),
+                ) { "icons/mdi.txt: a line without a name or path data: $line" }
+                name to pathData
             }.toList()
     val twice =
         pairs

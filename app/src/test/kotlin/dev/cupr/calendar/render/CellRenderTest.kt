@@ -24,21 +24,19 @@ import kotlin.math.roundToInt
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class CellRenderTest {
-    private val assets = ApplicationProvider.getApplicationContext<Context>().assets
-    private val rows = WeekRowRenderer(Fonts(assets), Icons(assets), Drawings(assets))
+    private val rows = Probe.rows()
     private val monday = LocalDate.of(2026, 11, 16)
     private val palette = SampleData.dark
-    private val color = 0xFFFF0000.toInt()
 
-    private fun chip(date: LocalDate) =
-        Entry(
-            start = date.atStartOfDay(),
-            end = date.plusDays(1).atStartOfDay(),
-            allDay = true,
-            title = "Ganztags",
-            calendar = SampleData.FAMILY,
-            color = color,
-        )
+    private fun chip(date: LocalDate) = Probe.allDay(date)
+
+    /** The "+N" line below one shown entry in Monday's cell, as its own bitmap. */
+    private fun moreLine(more: Int): Bitmap {
+        val bitmap = render(0 to Probe.day(monday, shown = listOf(chip(monday)), more = more))
+        val top = Probe.lineTop(0, line = 1).toInt()
+        val width = (Probe.columnX(1) - Probe.cellX(0)).toInt()
+        return Bitmap.createBitmap(bitmap, Probe.cellX(0).toInt(), top, width, Probe.scale.px(PhoneMonth.LINE).toInt())
+    }
 
     /** The alpha of the opaque band at the left of Monday's chip. */
     private fun bandAlpha(bitmap: Bitmap) =
@@ -84,6 +82,19 @@ class CellRenderTest {
         assertFalse(none.has(palette.text, Probe.cellX(0), top, right, bottom))
         val more = render(0 to Probe.day(monday, shown = listOf(chip(monday)), more = 2))
         assertTrue(more.has(palette.text, Probe.cellX(0), top, right, bottom))
+        // It says how many: "+2" and "+3" differ.
+        assertFalse(moreLine(2).sameAs(moreLine(3)))
+    }
+
+    @Test
+    fun `a public holiday's number is drawn in the holiday colour`() {
+        val top = Probe.scale.hairline + Probe.scale.px(PhoneMonth.CELL_TOP)
+        val bottom = top + Probe.scale.px(PhoneMonth.NUMBER_ROW)
+        val right = Probe.cellX(0) + Probe.scale.px(PhoneMonth.NUMBER_MIN_WIDTH)
+        val plain = render()
+        assertFalse(plain.has(palette.holiday, Probe.cellX(0), top, right, bottom))
+        val holiday = render(0 to Probe.day(monday, holiday = true))
+        assertTrue(holiday.has(palette.holiday, Probe.cellX(0), top, right, bottom))
     }
 
     @Test
@@ -104,7 +115,11 @@ class CellRenderTest {
         // Sunday is tinted under the bar: the bar's opacity over the weekend tint's.
         val overTint = PhoneMonth.BAR_TINT + PhoneMonth.WEEKEND_TINT * (1 - PhoneMonth.BAR_TINT)
         assertAlpha(overTint, Color.alpha(bitmap.at(Probe.columnX(6) + Probe.scale.px(4f), Probe.laneMiddle(0))))
-        // Lane 1 ends with its third column.
-        assertEquals(0, Color.alpha(bitmap.at(Probe.columnX(4) + Probe.scale.px(12f), Probe.laneMiddle(1))))
+        // Lane 1 ends with its third column, its rounded end inset from the column's edge.
+        assertEquals(0, Color.alpha(bitmap.at(Probe.columnX(3) + Probe.scale.px(12f), Probe.laneMiddle(1))))
+        assertEquals(
+            0,
+            Color.alpha(bitmap.at(Probe.columnX(3) - Probe.scale.px(PhoneMonth.BAR_INSET / 2), Probe.laneMiddle(1))),
+        )
     }
 }

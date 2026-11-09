@@ -26,6 +26,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowLog
 import java.time.LocalDate
 import kotlin.math.roundToInt
 
@@ -148,6 +149,14 @@ class MonthWidgetTest {
         for (image in listOf(R.id.header_light, R.id.header_dark, R.id.fab_light, R.id.fab_dark)) {
             assertTrue(widget.findViewById<ImageView>(image).drawable is BitmapDrawable)
         }
+        val log = ShadowLog.getLogsForTag("MonthWidget").single().msg
+        assertTrue(log, log.startsWith("Widget $id: drew 16 bitmaps at "))
+    }
+
+    @Test
+    fun `the card's border is the drawn parts' border`() {
+        val density = application.resources.displayMetrics.density
+        assertEquals(PhoneMonth.CARD_BORDER * density, application.resources.getDimension(R.dimen.widget_card_border))
     }
 
     @Test
@@ -158,7 +167,7 @@ class MonthWidgetTest {
         MonthWidgetProvider().onAppWidgetOptionsChanged(application, manager, id, options)
         val header = shadowOf(manager).getViewFor(id).findViewById<ImageView>(R.id.header_light)
         val density = application.resources.displayMetrics.density
-        val widthPx = ((180 - 26) * density).toInt()
+        val widthPx = ((180 - 2 * PhoneMonth.CARD_INSET) * density).toInt()
         assertEquals(widthPx, (header.drawable as BitmapDrawable).bitmap.width)
         // The rows at that width: Robolectric's widget host shows no list, so they are read from the views for it.
         val list = applied(180).findViewById<ListView>(R.id.list)
@@ -174,7 +183,7 @@ class MonthWidgetTest {
         val widget = laidOut()
         val list = widget.findViewById<ListView>(R.id.list)
         val header = widget.findViewById<View>(R.id.header)
-        val side = px(PhoneMonth.CARD_BORDER + PhoneMonth.CARD_SIDE)
+        val side = px(PhoneMonth.CARD_INSET)
         assertEquals(side, header.left + (header.parent as View).left)
         assertEquals(px(PhoneMonth.CARD_BORDER + PhoneMonth.CARD_END), header.top + (header.parent as View).top)
         val week = list.getChildAt(0).findViewById<ImageView>(R.id.week_light)

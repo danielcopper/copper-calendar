@@ -10,28 +10,9 @@ import androidx.annotation.ColorInt
 import androidx.core.graphics.withScale
 import androidx.core.graphics.withTranslation
 import com.caverock.androidsvg.RenderOptions
-import kotlin.math.roundToInt
-
-/** A colour with its alpha multiplied by an opacity (0 to 1). */
-@ColorInt
-internal fun @receiver:ColorInt Int.withOpacity(opacity: Float): Int {
-    require(opacity in 0f..1f) { "An opacity runs from 0 to 1, not $opacity" }
-    val alpha = ((this ushr ALPHA_SHIFT) * opacity).roundToInt()
-    return (alpha shl ALPHA_SHIFT) or (this and RGB_MASK)
-}
-
-/** An opacity (0 to 1) as a layer alpha (0 to 255). */
-internal fun opacityAlpha(opacity: Float): Int {
-    require(opacity in 0f..1f) { "An opacity runs from 0 to 1, not $opacity" }
-    return (opacity * FULL_ALPHA).roundToInt()
-}
-
-private const val ALPHA_SHIFT = 24
-private const val RGB_MASK = 0x00FFFFFF
-private const val FULL_ALPHA = 255
 
 /** Text in Roboto at a size in dp and a font weight. */
-fun Fonts.paint(
+internal fun Fonts.paint(
     scale: Scale,
     sizeDp: Float,
     weight: FontWeight,
@@ -44,7 +25,7 @@ fun Fonts.paint(
     }
 
 /** The baseline that centres a line of this paint's text, from its ascent to its descent, in a box. */
-fun TextPaint.baselineIn(
+internal fun TextPaint.baselineIn(
     top: Float,
     height: Float,
 ): Float {
@@ -53,7 +34,7 @@ fun TextPaint.baselineIn(
 }
 
 /** Draws text from x, cut with "…" where it would pass maxWidth. */
-fun Canvas.drawCut(
+internal fun Canvas.drawCut(
     text: String,
     x: Float,
     baseline: Float,
@@ -65,30 +46,30 @@ fun Canvas.drawCut(
     drawText(cut, x, baseline, paint)
 }
 
-fun Canvas.fill(
+internal fun Canvas.fill(
     left: Float,
     top: Float,
     right: Float,
     bottom: Float,
-    color: Int,
+    @ColorInt color: Int,
 ) {
     drawRect(left, top, right, bottom, Paint().apply { this.color = color })
 }
 
-fun Canvas.fill(
+internal fun Canvas.fill(
     path: Path,
-    color: Int,
+    @ColorInt color: Int,
 ) {
     drawPath(path, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color })
 }
 
 /** Draws an MDI outline as a size × size icon at (x, y). */
-fun Canvas.drawIcon(
+internal fun Canvas.drawIcon(
     path: Path,
     x: Float,
     y: Float,
     size: Float,
-    color: Int,
+    @ColorInt color: Int,
 ) {
     withTranslation(x, y) {
         withScale(size / Icons.BOX, size / Icons.BOX) { fill(path, color) }
@@ -96,7 +77,7 @@ fun Canvas.drawIcon(
 }
 
 /** Draws a drawing into a size × size box at (x, y). */
-fun Canvas.drawDrawing(
+internal fun Canvas.drawDrawing(
     drawing: com.caverock.androidsvg.SVG,
     x: Float,
     y: Float,
@@ -106,7 +87,7 @@ fun Canvas.drawDrawing(
 }
 
 /** A rectangle with separate radii at its left and right ends. */
-fun roundedPath(
+internal fun roundedPath(
     rect: RectF,
     left: Float,
     right: Float,
@@ -119,7 +100,7 @@ fun roundedPath(
  * The coloured band along a shape's left edge, following its rounded
  * corners: the shape less itself moved right by width.
  */
-fun insetBand(
+internal fun insetBand(
     shape: Path,
     width: Float,
 ): Path {

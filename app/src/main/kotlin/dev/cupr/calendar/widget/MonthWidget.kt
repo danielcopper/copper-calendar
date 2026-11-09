@@ -54,24 +54,24 @@ object MonthWidget {
                 .getAppWidgetOptions(id)
                 .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
                 .takeIf { it > 0 } ?: DEFAULT_WIDTH_DP
-        manager.updateAppWidget(id, views(context, width))
+        manager.updateAppWidget(id, views(context, width, id))
     }
-
-    /** The width of the drawn rows and header: the widget's less the card's border and padding at both sides. */
-    fun contentWidthDp(widthDp: Int): Float = widthDp - 2 * (PhoneMonth.CARD_BORDER + PhoneMonth.CARD_SIDE)
 
     /**
      * The widget at widthDp, for the sample month while the app has no
-     * other data: its "today" is the sample's ([SampleData.clock]).
+     * other data: its "today" is the sample's ([SampleData.clock]). The
+     * widget's id only names it in the log.
      */
     fun views(
         context: Context,
         widthDp: Int,
+        id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
     ): RemoteViews {
         val today = LocalDate.now(SampleData.clock)
         val view = MonthLayout.build(YearMonth.from(today), SampleData.entries, today)
         val scale = Scale(context.resources.displayMetrics.density)
-        val widthPx = scale.px(contentWidthDp(widthDp)).roundToInt()
+        // The drawn rows and header span the widget less the card's inset at both sides.
+        val widthPx = scale.px(widthDp - 2 * PhoneMonth.CARD_INSET).roundToInt()
         val assets = RenderAssets.of(context)
         val chrome = ChromeRenderer(assets.fonts, assets.icons)
         val rows = WeekRowRenderer(assets.fonts, assets.icons, assets.drawings)
@@ -107,7 +107,11 @@ object MonthWidget {
         views.setRemoteAdapter(R.id.list, items.build())
         views.setPendingIntentTemplate(R.id.list, Taps.template(context))
         views.setScrollPosition(R.id.list, view.todayWeek)
-        Log.i(TAG, "Drew ${drawn.size} bitmaps at ${widthPx}px wide: ${drawn.sumOf { it.allocationByteCount }} bytes")
+        Log.i(
+            TAG,
+            "Widget $id: drew ${drawn.size} bitmaps at ${widthPx}px wide, " +
+                "${drawn.sumOf { it.allocationByteCount }} bytes",
+        )
         return views
     }
 

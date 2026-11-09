@@ -41,8 +41,13 @@ class WeekRowRenderTest {
 
     @Test
     fun `renders every week row of the sample month, dark and light, to PNG files`() {
-        output.deleteRecursively()
+        // Only this test's own files, so a render.dir pointed elsewhere loses nothing else.
         output.mkdirs()
+        output
+            .listFiles { file ->
+                file.extension == "png" || file.name == "budget.txt"
+            }.orEmpty()
+            .forEach { it.delete() }
         var bytes = 0L
         for ((mode, palette) in modes) {
             val heights =

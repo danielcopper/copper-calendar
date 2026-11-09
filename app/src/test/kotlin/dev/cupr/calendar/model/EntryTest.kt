@@ -37,6 +37,11 @@ class EntryTest {
                 entry(day.atTime(1, 0), day.plusDays(1).atStartOfDay(), allDay = true)
             }
         assertEquals("The all-day entry \"T\" does not run from midnight to midnight", offMidnight.message)
+        val endOffMidnight =
+            assertThrows(IllegalArgumentException::class.java) {
+                entry(day.atStartOfDay(), day.atTime(23, 0), allDay = true)
+            }
+        assertEquals("The all-day entry \"T\" does not run from midnight to midnight", endOffMidnight.message)
         val empty =
             assertThrows(IllegalArgumentException::class.java) {
                 entry(day.atStartOfDay(), day.atStartOfDay(), allDay = true)
