@@ -130,10 +130,10 @@ class TapTest {
     }
 
     @Test
-    fun `a target the app may not open is logged and shown, not thrown`() {
+    fun `a Home Assistant target this app may not start says it does not open, not that the app is missing`() {
         openTarget(application, calendar) { throw SecurityException("denied") }
         assertEquals(listOf("Not allowed to open $calendar"), ShadowLog.getLogsForTag("TapActivity").map { it.msg })
-        assertEquals("Home-Assistant-App nicht gefunden", ShadowToast.getTextOfLatestToast())
+        assertEquals("Ziel lässt sich nicht öffnen", ShadowToast.getTextOfLatestToast())
     }
 
     @Test

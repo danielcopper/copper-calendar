@@ -4,10 +4,10 @@ import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.core.net.toUri
 import dev.cupr.calendar.R
 
@@ -31,10 +31,11 @@ class TapActivity : Activity() {
 }
 
 /**
- * Opens target with start; when no app handles it or it may not be opened,
- * logs that and shows a short Toast (D25): for a target the Home Assistant
- * app opens (its `homeassistant://` scheme) that the app is missing, for any
- * other that the target does not open.
+ * Opens target with start; when no app handles it or this app may not start
+ * it, logs that and shows a short Toast (D25): when no app handles a target
+ * the Home Assistant app opens (its scheme,
+ * [TapTargets.HOME_ASSISTANT_SCHEME]), that the app is missing; otherwise
+ * that the target does not open.
  */
 internal fun openTarget(
     context: Context,
@@ -46,21 +47,20 @@ internal fun openTarget(
         start(Intent(Intent.ACTION_VIEW, uri))
     } catch (e: ActivityNotFoundException) {
         Log.w(TAG, "No app opens $target", e)
-        toastFailure(context, uri)
+        val homeAssistant = uri.scheme == TapTargets.HOME_ASSISTANT_SCHEME
+        toast(context, if (homeAssistant) R.string.target_home_assistant_missing else R.string.target_not_openable)
     } catch (e: SecurityException) {
+        // An app that handles it is there, so even for Home Assistant's scheme the app is not missing.
         Log.w(TAG, "Not allowed to open $target", e)
-        toastFailure(context, uri)
+        toast(context, R.string.target_not_openable)
     }
 }
 
-private fun toastFailure(
+private fun toast(
     context: Context,
-    uri: Uri,
+    @StringRes text: Int,
 ) {
-    val homeAssistant = uri.scheme == HOME_ASSISTANT_SCHEME
-    val text = if (homeAssistant) R.string.target_home_assistant_missing else R.string.target_not_openable
     Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
 }
 
 private const val TAG = "TapActivity"
-private const val HOME_ASSISTANT_SCHEME = "homeassistant"
