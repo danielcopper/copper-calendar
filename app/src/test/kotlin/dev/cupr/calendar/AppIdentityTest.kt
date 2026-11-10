@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.Drawable
+import androidx.core.graphics.ColorUtils
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.render.Probe
 import dev.cupr.calendar.widget.MonthWidgetProvider
@@ -17,7 +18,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import kotlin.math.roundToInt
 
 /**
  * What the launcher and the widget picker show of the app: its name, the
@@ -73,7 +73,8 @@ class AppIdentityTest {
         assertEquals("sheet", sheet, front.getPixel(SHEET_X, SHEET_Y))
         assertEquals("ring", sheet, front.getPixel(RING_X, RING_Y))
         val day = front.getPixel(DAY_X, DAY_Y)
-        assertTrue("a day is ${Integer.toHexString(day)}", Probe.near(day, blend(background, sheet)))
+        val blend = ColorUtils.blendARGB(sheet, background, DAY_OPACITY)
+        assertTrue("a day is ${Integer.toHexString(day)}", Probe.near(day, blend))
         assertEquals("today", background, front.getPixel(TODAY_X, TODAY_Y))
     }
 
@@ -82,15 +83,6 @@ class AppIdentityTest {
         layer.setBounds(0, 0, VIEWPORT, VIEWPORT)
         layer.draw(Canvas(bitmap))
         return bitmap
-    }
-
-    /** The day's colour: the background at 45 % opacity over the sheet. */
-    private fun blend(
-        background: Int,
-        sheet: Int,
-    ): Int {
-        fun channel(of: (Int) -> Int) = (of(background) * DAY_OPACITY + of(sheet) * (1 - DAY_OPACITY)).roundToInt()
-        return Color.rgb(channel(Color::red), channel(Color::green), channel(Color::blue))
     }
 
     private companion object {
