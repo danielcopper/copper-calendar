@@ -3,6 +3,7 @@ package dev.cupr.calendar.widget
 import android.app.Application
 import android.appwidget.AppWidgetHostView
 import android.appwidget.AppWidgetManager
+import android.content.pm.ApplicationInfo
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.os.Parcel
@@ -167,6 +168,11 @@ class MonthWidgetTest {
         }
         val log = ShadowLog.getLogsForTag("MonthWidget").single().msg
         assertTrue(log, log.startsWith("Widget $id: drew 16 bitmaps at "))
+    }
+
+    @Test
+    fun `the app's data is not backed up`() {
+        assertEquals(0, application.applicationInfo.flags and ApplicationInfo.FLAG_ALLOW_BACKUP)
     }
 
     @Test
