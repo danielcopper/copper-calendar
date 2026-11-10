@@ -52,6 +52,7 @@ import dev.cupr.calendar.render.PhoneMonth.TIMED_SIDE
 import dev.cupr.calendar.render.PhoneMonth.WEEKEND_TINT
 import kotlin.math.ceil
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Draws one week of the month as a bitmap (D8), at phone size
@@ -109,10 +110,9 @@ class WeekRowRenderer(
         ) {
             val left = index * column
             val right = left + column
-            // The whole row as the layer's bounds: a drawing beside the number may reach into the next cell.
             val saved =
                 if (day.otherMonth) {
-                    canvas.saveLayerAlpha(0f, 0f, canvas.width.toFloat(), bottom, opacityAlpha(OTHER_MONTH))
+                    canvas.saveLayerAlpha(left, 0f, right, bottom, opacityAlpha(OTHER_MONTH))
                 } else {
                     canvas.save()
                 }
@@ -122,7 +122,7 @@ class WeekRowRenderer(
             val x = left + border + scale.px(CELL_SIDE)
             val width = right - scale.px(CELL_SIDE) - x
             var y = top + scale.px(CELL_TOP)
-            numberRow(day, x, y)
+            numberRow(day, x, y, x + width)
             y += scale.px(NUMBER_ROW + GAP + lanes * LANE + GAP)
             for (entry in day.shown) {
                 entryLine(entry, day.past, x, y, width)
@@ -135,11 +135,17 @@ class WeekRowRenderer(
             canvas.restoreToCount(saved)
         }
 
-        /** The number (today in the accent's pill) and the marked entries' marks beside it. */
+        /**
+         * The number (today in the accent's pill) and the marked entries'
+         * marks beside it, each [DRAWING] at most and smaller where less room
+         * is left before the cell's content ends at right, so it stays inside
+         * its own cell; one with no room left is not drawn.
+         */
         private fun numberRow(
             day: Day,
             x: Float,
             y: Float,
+            right: Float,
         ) {
             val paint = fonts.paint(scale, NUMBER_FONT, numberWeight(day), numberColor(day, palette))
             paint.fontFeatureSettings = "tnum"
@@ -154,10 +160,11 @@ class WeekRowRenderer(
             paint.textAlign = Paint.Align.CENTER
             canvas.drawText(label, x + width / 2, paint.baselineIn(boxTop, height), paint)
             var drawingX = x + width + scale.px(NUMBER_GAP)
-            val drawingY = y + scale.px(NUMBER_ROW - DRAWING) / 2
             for (entry in day.marks) {
-                mark(entry, palette.colorOf(entry), drawingX, drawingY, scale.px(DRAWING))
-                drawingX += scale.px(DRAWING + DRAWINGS_GAP)
+                val size = min(scale.px(DRAWING), right - drawingX)
+                if (size <= 0f) break
+                mark(entry, palette.colorOf(entry), drawingX, y + (scale.px(NUMBER_ROW) - size) / 2, size)
+                drawingX += size + scale.px(DRAWINGS_GAP)
             }
         }
 

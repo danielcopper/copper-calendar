@@ -19,6 +19,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.GraphicsMode
 import java.time.LocalDate
 import java.time.YearMonth
+import kotlin.math.roundToInt
 
 /**
  * An entry's mark wherever one stands (a timed line, an all-day chip that
@@ -38,6 +39,13 @@ class MarkTest {
 
     /** The left edge of an all-day chip's mark in Monday's first line. */
     private val chipMarkX = Probe.cellX(0) + scale.px(PhoneMonth.CHIP_LEFT + PhoneMonth.CHIP_DRAWING_SHIFT)
+
+    /**
+     * A 5-cell-wide widget's drawn width (349 dp, design.md's table), where a
+     * mark beside the number has room for its full size; at 4 cells it is
+     * drawn smaller, to fit its cell.
+     */
+    private val widePx = scale.px(WIDE_DP - 2 * PhoneMonth.CARD_INSET).roundToInt()
 
     /** The left edge and top of the mark beside Monday's number ("16" is narrower than the number's least width). */
     private val numberMarkX = Probe.cellX(0) + scale.px(PhoneMonth.NUMBER_MIN_WIDTH + PhoneMonth.NUMBER_GAP)
@@ -114,7 +122,7 @@ class MarkTest {
         val special = Probe.allDay(monday).copy(kind = Kinds.SPECIAL)
         val view = MonthLayout.build(YearMonth.from(monday), listOf(special), monday.withDayOfMonth(1))
         val week = view.weeks.single { it.days.first().date == monday }
-        val bitmap = rows.render(week, Probe.widthPx, scale, SampleData.dark)
+        val bitmap = rows.render(week, widePx, scale, SampleData.dark)
         val half = scale.px(PhoneMonth.DRAWING) / 2
         assertEquals(RED, bitmap.at(numberMarkX + half, numberMarkY + half))
     }
@@ -125,6 +133,30 @@ class MarkTest {
         val bitmap = render(Probe.allDay(monday, drawing = "not-shipped.svg", icon = "mdi:plus"))
         assertEquals(RED, bitmap.at(chipMarkX + scale.px(PhoneMonth.MARK) / 2, Probe.lineMiddle(0)))
     }
+
+    @Test
+    fun `a mark beside the number stays inside its own cell at 4 cells wide, the last column's too`() {
+        val plain = rows.render(Probe.week(monday), Probe.widthPx, scale, SampleData.dark)
+        for (column in listOf(5, 6)) {
+            val date = monday.plusDays(column.toLong())
+            val special = Probe.allDay(date, drawing = "lantern.svg").copy(kind = Kinds.SPECIAL)
+            val marked = Probe.week(monday, mapOf(column to Probe.day(date, marks = listOf(special))))
+            val bitmap = rows.render(marked, Probe.widthPx, scale, SampleData.dark)
+            val left = Probe.cellX(column)
+            val right = Probe.columnX(column + 1) - scale.px(PhoneMonth.CELL_SIDE)
+            val changed = (0 until bitmap.width).filter { x -> differs(bitmap, plain, x) }
+            assertTrue("column $column draws no mark", changed.isNotEmpty())
+            val drawn = "column $column draws at x ${changed.first()} to ${changed.last()}, its cell is $left to $right"
+            assertTrue(drawn, changed.first() >= left.toInt() && changed.last() <= right.toInt())
+        }
+    }
+
+    /** Whether any pixel of column x differs between the two bitmaps. */
+    private fun differs(
+        a: Bitmap,
+        b: Bitmap,
+        x: Int,
+    ) = (0 until a.height).any { y -> a.getPixel(x, y) != b.getPixel(x, y) }
 
     private fun assertLantern(
         bitmap: Bitmap,
@@ -144,7 +176,7 @@ class MarkTest {
     private fun renderMark(entry: Entry): Bitmap {
         val special = entry.copy(kind = Kinds.SPECIAL)
         val week = Probe.week(monday, mapOf(0 to Probe.day(monday, marks = listOf(special))))
-        return rows.render(week, Probe.widthPx, scale, SampleData.dark)
+        return rows.render(week, widePx, scale, SampleData.dark)
     }
 
     private companion object {
@@ -152,5 +184,6 @@ class MarkTest {
         const val CHEVRON_FILLED = 14.5f
         const val LANTERN_X = 21.5f
         const val LANTERN_Y = 25f
+        const val WIDE_DP = 349
     }
 }
