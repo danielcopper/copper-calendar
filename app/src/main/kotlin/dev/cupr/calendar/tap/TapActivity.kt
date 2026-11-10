@@ -43,8 +43,12 @@ internal fun openTarget(
     start: (Intent) -> Unit,
 ) {
     val uri = target.toUri()
+    // The Home Assistant app opens each link as one more page in its task, so back
+    // would step through every earlier tap; clearing that task first leaves one (D30).
+    val view =
+        Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
     try {
-        start(Intent(Intent.ACTION_VIEW, uri))
+        start(view)
     } catch (e: ActivityNotFoundException) {
         Log.w(TAG, "No app opens $target", e)
         val homeAssistant = uri.scheme == TapTargets.HOME_ASSISTANT_SCHEME

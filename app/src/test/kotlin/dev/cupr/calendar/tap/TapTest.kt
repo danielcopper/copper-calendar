@@ -54,6 +54,14 @@ class TapTest {
     }
 
     @Test
+    fun `a target opens in a new, cleared task, so Home Assistant keeps one calendar page`() {
+        launch(Taps.fillIn(Tap.Header))
+        val flags = shadowOf(application).nextStartedActivity.flags
+        assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, flags and Intent.FLAG_ACTIVITY_NEW_TASK)
+        assertEquals(Intent.FLAG_ACTIVITY_CLEAR_TASK, flags and Intent.FLAG_ACTIVITY_CLEAR_TASK)
+    }
+
+    @Test
     fun `the fixed parts' pending intents carry their tap to the tap activity`() {
         // Both made before either is read, so the test sees it if the second overwrites the first.
         val header = Taps.pendingIntent(application, Tap.Header)
