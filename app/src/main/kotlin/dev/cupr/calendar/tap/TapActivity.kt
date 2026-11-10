@@ -87,12 +87,14 @@ private fun launcherStart(
             .map { it.activityInfo.packageName }
             .distinct()
     val launch = resolved?.takeIf { it in handlers }?.let(packageManager::getLaunchIntentForPackage)
-    when {
-        resolved == null -> Log.w(TAG, "No app is seen to open $target; opening the link alone")
-        resolved !in handlers ->
-            Log.w(TAG, "${handlers.size} apps open $target and none is the default; opening the link alone")
-        launch == null -> Log.w(TAG, "$resolved opens $target but has no launcher entry; opening the link alone")
-    }
+    val fallback =
+        when {
+            resolved == null -> "No app is seen to open $target"
+            resolved !in handlers -> "${handlers.size} apps open $target and none is the default"
+            launch == null -> "$resolved opens $target but has no launcher entry"
+            else -> null
+        }
+    if (fallback != null) Log.w(TAG, "$fallback; opening the link alone")
     return launch?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
 }
 
