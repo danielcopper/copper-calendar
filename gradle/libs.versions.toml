@@ -1,6 +1,9 @@
 [versions]
 agp = "9.5.1"
-# 2.4.20 is the newest Kotlin CodeQL's extractor supports (codeql.yml).
+# 2.4.20 is the newest Kotlin CodeQL's extractor supports (codeql.yml; "Kotlin
+# 1.8.0 to 2.4.20" for CodeQL CLI 2.27.4). Raise it once CodeQL's supported
+# languages page names a newer one (and lift the ignore for the Kotlin Gradle
+# plugin in .github/dependabot.yml).
 kotlin = "2.4.20"
 androidx-core = "1.19.1"
 androidsvg = "1.4"
