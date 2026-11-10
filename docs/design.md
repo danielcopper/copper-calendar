@@ -10,15 +10,15 @@ Three widgets in the widget picker, under the app's name "Copper Calendar" (D31)
 
 | Widget | Model in Home Assistant | Content |
 |---|---|---|
-| "Woche" | tile "Kalender · diese Woche" (template `calendar`) | Monday to Sunday, or today and the six days after it (D20), one row per day: weekday and date at the left ("HEUTE" for today), the day's entries at the right, an empty day "frei"; days before today dimmed; from 3 cells wide |
-| "Woche quer" (D19) | a week row of the month below, with every entry of a day | the same days as "Woche", seven columns; per entry its mark and title on one line at 10 px |
+| "Woche" | tile "Kalender · diese Woche" (template `calendar`) | Monday to Sunday, or today and the six days after it (D20), one row per day: weekday and date at the left ("HEUTE" for today, tinted), the day's entries at the right, timed ones with their time and mark, all-day ones as tinted chips, with their additions ("wird 26", "bis …", "Feiertag", D18), an empty day "frei", the titles of entries running on from an earlier day in a muted line; days before today dimmed; 4 × 4 cells when added, from 3 cells wide (D34) |
+| "Woche quer" (D19) | a week row of the month below, with every entry of a day | the same days as "Woche", seven columns under weekday heads from the first day on; per entry its mark and title on one line at 10 px, no "+N"; a special day with no room beside the number among the entries; 4 × 2 cells when added, from 4 cells wide (D34) |
 | "Monat" | month of the calendar page at phone size (`calendar_month_view`, `.s-phone`) | weeks from the Monday before the first to the Sunday after the last; per day its number, special days as drawings (one without a drawing as its icon or a dot, D24), up to two entries or one and "+N", which also counts the special days and public holidays with no room beside the number (D24); entries over several days as bars |
 
-All follow the system's dark or light mode with the theme's two palettes. "Woche" and "Monat" are a vertically scrolling list of drawn rows (D8): "Woche" a day per row, "Monat" a week per row. Once the app fetches from Home Assistant, each update brings today's row to the top by default: the week's current day, the month's current week (D27). Sizes are resizable; the mockups use 4×2 and 4×4 cells (276 × 220 and 276 × 456 dp by Android's table for a Pixel 4).
+All follow the system's dark or light mode with the theme's two palettes. "Woche" and "Monat" are a vertically scrolling list of drawn rows (D8): "Woche" a day per row, "Monat" a week per row. "Woche quer" is one drawn row as tall as its fullest day, which scrolls when the widget is lower; a fixed fade above the list's bottom edge shows then, and the row ends in blank room as tall as the fade (D35). Once the app fetches from Home Assistant, each update brings today's row to the top by default: the week's current day, the month's current week (D27). Sizes are resizable; the mockups use 4×2 and 4×4 cells (276 × 220 and 276 × 456 dp by Android's table for a Pixel 4).
 
-A round "+" button (40 dp, accent colour, as the calendar page's 56 px button) floats above the list at the bottom right; its corner is configurable per widget.
+A header stands above the list: the month's name, or for a week widget "DIESE WOCHE" or "NÄCHSTE 7 TAGE" with its days' range at the right ("9.–15. Nov.", D36), and the chevron; the month and "Woche quer" have weekday heads under it. A round "+" button (40 dp, accent colour, as the calendar page's 56 px button) floats above the list at the bottom right; its corner is configurable per widget.
 
-In the widget picker, "Monat" shows a fixed image of itself drawn from the sample month in light mode (D33).
+In the widget picker, each widget shows a fixed image of itself at its default size, drawn from the sample data in light mode (D33).
 
 ## Launcher icon
 
@@ -31,8 +31,8 @@ Each widget has its own tap targets. A target is a Home Assistant path opened th
 | Element | Default target | Notes |
 |---|---|---|
 | Header | `/dashboard-zuhause/kalender` | |
-| Day (week row, month cell) | `/dashboard-zuhause/kalender?day={day}` | on the phone, a day with entries opens its list (D15) |
-| Entry (week only) | `/dashboard-zuhause/kalender?entry={uid}&day={day}` | needs the UID in the sensor data (D16); month cells have no entry areas |
+| Day (week row, week column, month cell) | `/dashboard-zuhause/kalender?day={day}` | on the phone, a day with entries opens its list (D15) |
+| Entry ("Woche" only) | `/dashboard-zuhause/kalender?entry={uid}&day={day}` | needs the UID in the sensor data (D16); an entry without one opens its day (D37); month cells and the columns of "Woche quer" have no entry areas |
 | "+" | `/dashboard-zuhause/kalender?new={day}` | `{day}` is today |
 
 The calendar page reads `?day=`, `?entry=…&day=` and `?new=`, and all three work through the Home Assistant app (checked on the phone, 2026-11-10); see [ha-additions.md](ha-additions.md).
