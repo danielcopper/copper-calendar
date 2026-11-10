@@ -209,7 +209,7 @@ object MonthLayout {
     ): Day {
         val singles = rows.filter { !it.multi && !marked(it) }.map { it.entry }
         val marks = marks(rows)
-        // Marks with no room beside the number go into "+N", which then takes the place of the cell's second line.
+        // Marks with no room beside the number go into "+N", so at most one of the day's own entries is shown.
         val overflow = (marks.size - MOST_DRAWINGS).coerceAtLeast(0)
         val shown = if (singles.size <= MOST_ENTRIES && overflow == 0) singles else singles.take(MOST_ENTRIES - 1)
         val otherMonth = YearMonth.from(date) != month
