@@ -3,9 +3,12 @@ package dev.cupr.calendar.widget
 import android.appwidget.AppWidgetHostView
 import android.content.Context
 import android.os.Parcel
+import android.util.TypedValue
+import android.util.Xml
 import android.view.View
 import android.widget.RemoteViews
 import dev.cupr.calendar.render.Scale
+import org.xmlpull.v1.XmlPullParser
 import kotlin.math.roundToInt
 
 /**
@@ -50,6 +53,32 @@ internal object WidgetHost {
         widget.measure(exactly(scale, WIDTH_DP), exactly(scale, heightDp))
         widget.layout(0, 0, widget.measuredWidth, widget.measuredHeight)
         return widget
+    }
+
+    /** An attribute of a widget's provider info (res/xml): a dimension in pixels, or an integer. */
+    fun providerAttribute(
+        context: Context,
+        xml: Int,
+        attribute: Int,
+    ): Int {
+        val parser = context.resources.getXml(xml)
+        try {
+            while (parser.next() != XmlPullParser.START_TAG) continue
+            val array = context.obtainStyledAttributes(Xml.asAttributeSet(parser), intArrayOf(attribute))
+            try {
+                val value = TypedValue()
+                check(array.getValue(0, value)) { "${parser.name} has no attribute $attribute" }
+                return if (value.type == TypedValue.TYPE_DIMENSION) {
+                    array.getDimensionPixelSize(0, 0)
+                } else {
+                    array.getInt(0, 0)
+                }
+            } finally {
+                array.recycle()
+            }
+        } finally {
+            parser.close()
+        }
     }
 
     private fun exactly(

@@ -146,6 +146,17 @@ class WeekWidgetTest {
     }
 
     @Test
+    fun `it is added 4 cells wide and can be made 2 cells wide and 2 high`() {
+        val info = { attribute: Int -> WidgetHost.providerAttribute(application, R.xml.widget_week_info, attribute) }
+        val scale = Scale(application.resources.displayMetrics.density)
+        assertEquals(scale.px(250f).roundToInt(), info(android.R.attr.minWidth))
+        assertEquals(scale.px(110f).roundToInt(), info(android.R.attr.minResizeWidth))
+        assertEquals(scale.px(110f).roundToInt(), info(android.R.attr.minResizeHeight))
+        assertEquals(4, info(android.R.attr.targetCellWidth))
+        assertEquals(4, info(android.R.attr.targetCellHeight))
+    }
+
+    @Test
     fun `a row filled anew for another day holds only that day's entry areas`() {
         // On each update, and for a row its list recycles, a launcher applies a row's views again to the views it
         // shows; entry areas added there before must not pile up, or the row grows by blank lines below its drawing.

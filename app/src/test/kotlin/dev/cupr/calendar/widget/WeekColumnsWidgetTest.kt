@@ -58,6 +58,18 @@ class WeekColumnsWidgetTest {
     }
 
     @Test
+    fun `it is added 4 cells wide and 2 high and cannot be made narrower than 4 cells`() {
+        val info = { attribute: Int ->
+            WidgetHost.providerAttribute(application, R.xml.widget_week_columns_info, attribute)
+        }
+        val scale = Scale(application.resources.displayMetrics.density)
+        assertEquals(scale.px(250f).roundToInt(), info(android.R.attr.minWidth))
+        assertEquals(scale.px(250f).roundToInt(), info(android.R.attr.minResizeWidth))
+        assertEquals(4, info(android.R.attr.targetCellWidth))
+        assertEquals(2, info(android.R.attr.targetCellHeight))
+    }
+
+    @Test
     fun `the list has one row, the seven days`() {
         val list = WidgetHost.applied(application, views = columns()).findViewById<ListView>(R.id.list)
         assertEquals(1, list.adapter.count)
