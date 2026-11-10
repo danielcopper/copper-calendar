@@ -51,12 +51,11 @@ jobs:
       - name: Android Lint, ktlint and detekt, warnings as errors
         run: ./gradlew lint ktlintCheck detekt
 
-  # A dependency change (a Dependabot update, a version in libs.versions.toml)
-  # has to bring its lock files and checksums: resolving every configuration
-  # with both written must leave them as committed. Dependabot rewrites neither
-  # once verification is on, so its pull requests fail here until someone runs
-  # the task the message names and pushes the reviewed result. The other jobs
-  # and `mise run gate` fail on the same state too, with Gradle's own errors.
+  # Fails when writing lock state and checksums for the configurations the
+  # dependency reports reach changes the committed files; Dependabot's Gradle
+  # pull requests land here (D29). What is resolved only while a task runs
+  # (aapt2) is checked by the other jobs, which, like `mise run gate`, fail on
+  # a stale state too, with Gradle's own errors.
   dependencies:
     name: Lock files and checksums
     runs-on: ubuntu-latest
@@ -68,8 +67,10 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
-      - name: Resolve every configuration, writing lock state and checksums
-        run: ./gradlew --write-locks --write-verification-metadata sha256 dependencies :app:dependencies buildEnvironment
+      # The resolution `mise run deps-refresh` runs (mise.toml), without the
+      # gate's tasks; --refresh-dependencies reads every POM again, as there.
+      - name: Resolve the dependency reports, writing lock state and checksums
+        run: ./gradlew --refresh-dependencies --write-locks --write-verification-metadata sha256 dependencies :app:dependencies buildEnvironment
       - name: Fail when they changed
         run: |
           changed=$(git status --porcelain -- '*.lockfile' gradle/verification-metadata.xml)
