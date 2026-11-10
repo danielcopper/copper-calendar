@@ -68,9 +68,37 @@ class DayRowRenderTest {
                         palette,
                     )
                 val drawn = week.map { rows.render(it, rowPx, scale, palette) }
-                write(header, drawn, palette, File(output, name))
+                write(header, drawn, palette, File(output, name), rowPx)
                 assertEquals(7, drawn.size)
             }
+        }
+    }
+
+    /** At 2 cells wide (130 dp, design.md's table), narrower than "Woche" may be made, to judge whether it reads. */
+    @Test
+    fun `renders the sample week's rows at 2 cells wide, dark and light, to PNG files`() {
+        val widthDp = 130
+        val headerPx = scale.px(widthDp - 2 * PhoneMonth.CARD_INSET).roundToInt()
+        val narrowPx = scale.px(widthDp - 2 * PhoneMonth.CARD_BORDER).roundToInt()
+        val dates = WeekDays.MONDAY_TO_SUNDAY.dates(today)
+        val week = WeekLayout.build(dates, SampleData.entries, today)
+        Probe.renderDir.mkdirs()
+        for ((mode, palette) in modes) {
+            val file = File(Probe.renderDir, "woche-2cells-monday-$mode.png")
+            file.delete()
+            val title = context.getString(WeekDays.MONDAY_TO_SUNDAY.title)
+            val header =
+                chrome.weekHeader(
+                    title,
+                    WeekLayout.range(dates.first(), dates.last()),
+                    null,
+                    headerPx,
+                    scale,
+                    palette,
+                )
+            val drawn = week.map { rows.render(it, narrowPx, scale, palette) }
+            write(header, drawn, palette, file, narrowPx)
+            assertTrue(file.isFile)
         }
     }
 
@@ -148,15 +176,15 @@ class DayRowRenderTest {
         return Color.rgb(mix(Color::red), mix(Color::green), mix(Color::blue))
     }
 
-    /** The header above the rows, on the card's colour, as the widget shows them inside its border and padding. */
+    /** The header above the rows, on the card's colour, as the widget shows them inside its border, width px wide. */
     private fun write(
         header: Bitmap,
         drawn: List<Bitmap>,
         palette: Palette,
         file: File,
+        width: Int,
     ) {
         val side = scale.px(PhoneMonth.CARD_SIDE)
-        val width = rowPx
         val height = header.height + drawn.sumOf { it.height }
         val sheet = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         sheet.density = header.density
