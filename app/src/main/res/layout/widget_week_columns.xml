@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The week widget "Woche quer" (WeekColumnsWidget.kt): the month widget's
+     layout with one drawn row, the seven days as a week of the month, and a
+     fixed fade at the bottom of the list. Its measures are PhoneMonth's in
+     dp; WeekColumnsWidgetTest checks that they fit the drawn parts. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_card">
+
+    <!-- Inside the card's 1 dp border, its padding of 10 dp at the top and
+         bottom and 12 dp at the sides. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingHorizontal="13dp"
+        android:paddingVertical="11dp">
+
+        <FrameLayout
+            android:id="@+id/header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:id="@+id/header_light"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:importantForAccessibility="no"
+                android:scaleType="fitStart"
+                android:visibility="@integer/light_visibility" />
+
+            <ImageView
+                android:id="@+id/header_dark"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:importantForAccessibility="no"
+                android:scaleType="fitStart"
+                android:visibility="@integer/dark_visibility" />
+        </FrameLayout>
+
+        <ListView
+            android:id="@+id/list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:listSelector="@android:color/transparent"
+            android:scrollbars="none" />
+    </LinearLayout>
+
+    <!-- The fade above the list's bottom edge, shown only when the drawn row
+         is taller than the list (WeekColumnsWidget.FADE_DP); its own layer,
+         since a widget cannot know how far its list is scrolled. -->
+    <FrameLayout
+        android:id="@+id/fade"
+        android:layout_width="match_parent"
+        android:layout_height="24dp"
+        android:layout_gravity="bottom"
+        android:layout_marginHorizontal="13dp"
+        android:layout_marginBottom="11dp"
+        android:background="@drawable/widget_fade"
+        android:importantForAccessibility="no"
+        android:visibility="gone" />
+
+    <!-- "+": its drawing, with room for the shadow, and its 40 dp tap area. -->
+    <ImageView
+        android:id="@+id/fab_light"
+        android:layout_width="66dp"
+        android:layout_height="66dp"
+        android:layout_gravity="bottom|end"
+        android:importantForAccessibility="no"
+        android:visibility="@integer/light_visibility" />
+
+    <ImageView
+        android:id="@+id/fab_dark"
+        android:layout_width="66dp"
+        android:layout_height="66dp"
+        android:layout_gravity="bottom|end"
+        android:importantForAccessibility="no"
+        android:visibility="@integer/dark_visibility" />
+
+    <FrameLayout
+        android:id="@+id/fab"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="13dp"
+        android:contentDescription="@string/new_entry" />
+</FrameLayout>

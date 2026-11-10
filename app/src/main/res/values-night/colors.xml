@@ -3,6 +3,7 @@
     <!-- The sample dark palette's card and card border (SampleData.dark). -->
     <color name="widget_card">#FF1A1F25</color>
     <color name="widget_card_border">#FF262C34</color>
+    <color name="widget_card_clear">#001A1F25</color>
     <!-- The launcher icon: its background and its sheet. -->
     <color name="ic_launcher_background">#FF2B3245</color>
     <color name="ic_launcher_sheet">#FFD8E2FF</color>

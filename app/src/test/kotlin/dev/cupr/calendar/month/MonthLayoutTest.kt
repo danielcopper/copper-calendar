@@ -417,4 +417,55 @@ class MonthLayoutTest {
         assertEquals(listOf("halloween.svg"), view.day(date(10, 31)).marks.map { it.drawing })
         assertEquals(listOf("Schwimmkurs Anna"), view.day(date(10, 26)).shown.map { it.title })
     }
+
+    // MonthLayout.week: seven days from any day as one week of the month, with every entry ("Woche quer", D19).
+
+    private fun week(
+        first: LocalDate,
+        vararg entries: Entry,
+    ) = MonthLayout.week(List(7) { first.plusDays(it.toLong()) }, entries.toList(), today)
+
+    @Test
+    fun `a week shows every entry of a day, with no +N`() {
+        val entries = List(5) { timed(date(11, 12).atTime(8 + it, 0), date(11, 12).atTime(9 + it, 0), "T$it") }
+        val day = week(date(11, 9), *entries.toTypedArray()).days[3]
+        assertEquals(listOf("T0", "T1", "T2", "T3", "T4"), day.shown.map { it.title })
+        assertEquals(0, day.more)
+    }
+
+    @Test
+    fun `a week shows a marked entry with no room beside the number as a line, in the day's order`() {
+        val day =
+            week(
+                date(11, 9),
+                allDay(date(11, 11), kind = "special", title = "B", drawing = "lantern.svg"),
+                allDay(date(11, 11), kind = "special", title = "A", drawing = "boot.svg"),
+                allDay(date(11, 11), title = "C"),
+            ).days[2]
+        assertEquals(listOf("A"), day.marks.map { it.title })
+        assertEquals(listOf("B", "C"), day.shown.map { it.title })
+        assertEquals(0, day.more)
+    }
+
+    @Test
+    fun `a week starts on any day, has no day of another month, and dims the days before today`() {
+        val week = week(date(10, 28), allDay(date(11, 1), days = 3, title = "Lang"))
+        assertEquals(date(10, 28), week.days.first().date)
+        assertTrue(week.days.none { it.otherMonth })
+        assertEquals(listOf(true, true, true, true, true, true, true), week.days.map { it.past })
+        val bar = week.bars.single()
+        assertEquals(4 to 6, bar.from to bar.to)
+        val fromToday = week(today)
+        assertTrue(fromToday.days.first().today)
+        assertTrue(fromToday.days.none { it.past })
+    }
+
+    @Test
+    fun `a week has seven days`() {
+        val error =
+            assertThrows(IllegalArgumentException::class.java) {
+                MonthLayout.week(listOf(today), emptyList(), today)
+            }
+        assertEquals("A week has 7 days, not 1", error.message)
+    }
 }

@@ -56,20 +56,23 @@ import kotlin.math.max
 /**
  * Draws one week of the month as a bitmap (D8), at phone size
  * ([PhoneMonth]): the week's top divider, seven cells and the bars over
- * them. The bitmap is transparent where the card shows.
+ * them; "Woche quer" draws its seven days as one such week. The bitmap is
+ * transparent where the card shows.
  */
 class WeekRowRenderer(
     private val fonts: Fonts,
     private val icons: Icons,
     private val drawings: Drawings,
 ) {
+    /** The week at widthPx; blankDp: room left blank below its cells, their columns running on through it. */
     fun render(
         week: Week,
         widthPx: Int,
         scale: Scale,
         palette: Palette,
+        blankDp: Float = 0f,
     ): Bitmap {
-        val heightPx = ceil(scale.hairline + scale.px(heightDp(week))).toInt()
+        val heightPx = ceil(scale.hairline + scale.px(heightDp(week) + blankDp)).toInt()
         val bitmap = createBitmap(widthPx, heightPx)
         bitmap.density = scale.dpi
         val canvas = Canvas(bitmap)

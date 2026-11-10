@@ -48,6 +48,19 @@
                 android:resource="@xml/widget_week_info" />
         </receiver>
 
+        <receiver
+            android:name=".widget.WeekColumnsWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_week_columns_label"
+            android:permission="android.permission.BIND_APPWIDGET">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_week_columns_info" />
+        </receiver>
+
         <!-- Shows nothing: opens a tapped element's target and finishes (D23). -->
         <activity
             android:name=".tap.TapActivity"

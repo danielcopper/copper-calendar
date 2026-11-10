@@ -115,11 +115,37 @@ object MonthLayout {
         month: YearMonth,
         entries: List<Entry>,
         today: LocalDate,
-    ): MonthView {
-        val dates = grid(month)
+    ): MonthView = MonthView(month, weeks(grid(month), entries, today, month, every = false))
+
+    /**
+     * Seven days from any day on drawn as one week of the month ("Woche
+     * quer", D19): no day of another month, and every entry of a day shown
+     * instead of [MOST_ENTRIES] and "+N"; a marked entry with no room beside
+     * the number is shown as a line among them.
+     */
+    fun week(
+        dates: List<LocalDate>,
+        entries: List<Entry>,
+        today: LocalDate,
+    ): Week {
+        require(dates.size == DAYS_IN_WEEK) { "A week has $DAYS_IN_WEEK days, not ${dates.size}" }
+        return weeks(dates, entries, today, month = null, every = true).single()
+    }
+
+    /** The weeks of dates; month: the days of any other month are drawn faint; every: no limit of entries. */
+    private fun weeks(
+        dates: List<LocalDate>,
+        entries: List<Entry>,
+        today: LocalDate,
+        month: YearMonth?,
+        every: Boolean,
+    ): List<Week> {
         val placed = place(dates, entries)
         val days =
-            dates.mapIndexed { index, date -> day(date, month, today, placed[index]) }
+            dates.mapIndexed { index, date ->
+                val otherMonth = month != null && YearMonth.from(date) != month
+                day(date, otherMonth, today, placed[index], every)
+            }
         val bars =
             placed.flatMapIndexed { index, rows ->
                 rows.filter { it.multi }.map { row ->
@@ -127,11 +153,9 @@ object MonthLayout {
                     Span(row, index, to)
                 }
             }
-        val weeks =
-            dates.indices.step(DAYS_IN_WEEK).map { start ->
-                Week(days.subList(start, start + DAYS_IN_WEEK).toList(), lanes(bars, dates, start))
-            }
-        return MonthView(month, weeks)
+        return dates.indices.step(DAYS_IN_WEEK).map { start ->
+            Week(days.subList(start, start + DAYS_IN_WEEK).toList(), lanes(bars, dates, start))
+        }
     }
 
     /** An entry as placed on a day of the grid (`calendar_days`' row). */
@@ -190,38 +214,49 @@ object MonthLayout {
      * shows only as its red number. The day draws the first [MOST_DRAWINGS];
      * "+N" counts the rest.
      */
-    private fun marks(rows: List<Row>): List<Entry> =
+    private fun marks(rows: List<Row>): List<Row> =
         rows
             .filter(::marked)
             .filter { it.entry.drawing != null || it.entry.kind == Kinds.SPECIAL }
             .sortedBy { it.entry.drawing == null }
-            .map { it.entry }
 
     /**
      * A day's cell. `holiday` sees only the entries placed on the day, so a
      * public holiday over several days reds its first day, as on the dashboard.
+     * every: all of its entries shown, the marks with no room beside the
+     * number among them in the day's order, and no "+N".
      */
     private fun day(
         date: LocalDate,
-        month: YearMonth,
+        otherMonth: Boolean,
         today: LocalDate,
         rows: List<Row>,
+        every: Boolean,
     ): Day {
-        val singles = rows.filter { !it.multi && !marked(it) }.map { it.entry }
         val marks = marks(rows)
-        // Marks with no room beside the number go into "+N", so at most one of the day's own entries is shown.
-        val overflow = (marks.size - MOST_DRAWINGS).coerceAtLeast(0)
-        val shown = if (singles.size <= MOST_ENTRIES && overflow == 0) singles else singles.take(MOST_ENTRIES - 1)
-        val otherMonth = YearMonth.from(date) != month
+        val beside = marks.take(MOST_DRAWINGS)
+        val shown: List<Entry>
+        val more: Int
+        if (every) {
+            val lines = marks.drop(MOST_DRAWINGS)
+            shown = rows.filter { row -> !row.multi && (!marked(row) || lines.any { it === row }) }.map { it.entry }
+            more = 0
+        } else {
+            val singles = rows.filter { !it.multi && !marked(it) }.map { it.entry }
+            // Marks with no room beside the number go into "+N", so at most one of the day's own entries is shown.
+            val overflow = marks.size - beside.size
+            shown = if (singles.size <= MOST_ENTRIES && overflow == 0) singles else singles.take(MOST_ENTRIES - 1)
+            more = singles.size - shown.size + overflow
+        }
         return Day(
             date = date,
             otherMonth = otherMonth,
             past = !otherMonth && date.isBefore(today),
             today = date == today,
             holiday = rows.any { it.entry.kind == Kinds.HOLIDAY },
-            marks = marks.take(MOST_DRAWINGS),
+            marks = beside.map { it.entry },
             shown = shown,
-            more = singles.size - shown.size + overflow,
+            more = more,
         )
     }
 
