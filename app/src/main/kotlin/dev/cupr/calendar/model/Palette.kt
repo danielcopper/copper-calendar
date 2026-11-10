@@ -23,6 +23,8 @@ data class Palette(
     @param:ColorInt val accent: Int,
     /** `text-primary-color`, text and icons on the accent */
     @param:ColorInt val onAccent: Int,
+    /** `zuhause-accent-soft`, the tint behind today's row of the week */
+    @param:ColorInt val accentSoft: Int,
     /** `zuhause-calendar-holiday`, a public holiday's day number */
     @param:ColorInt val holiday: Int,
     /** `zuhause-sheet-shadow`, the shadow under "+" */
