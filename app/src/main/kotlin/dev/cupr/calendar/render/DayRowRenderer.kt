@@ -233,7 +233,7 @@ class DayRowRenderer(
                         "tnum"
                 }
             val number = "${day.date.dayOfMonth}."
-            val name = (if (day.today) texts.today else texts.weekdays[day.date.dayOfWeek.value - 1])
+            val name = if (day.today) texts.today else texts.weekdays[day.date.dayOfWeek.value - 1]
             val upper = name.uppercase(Locale.GERMAN)
             if (day.today || stacked) {
                 val line = scale.px(TODAY_LINE)
@@ -393,7 +393,7 @@ class DayRowRenderer(
          * Android's least width for 4 cells, 70 × 4 − 30 dp, as the widget's
          * provider info asks for (D34). Narrower, the rows stack (D39).
          */
-        const val STACKED_BELOW_DP = 250
+        private const val STACKED_BELOW_DP = 250
 
         /** Whether a widget widthDp wide draws its rows stacked. */
         fun stacksAt(widthDp: Int): Boolean = widthDp < STACKED_BELOW_DP
