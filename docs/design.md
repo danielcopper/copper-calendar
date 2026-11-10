@@ -12,7 +12,7 @@ Three widgets in the widget picker, under the app's name "Copper Calendar" (D31)
 |---|---|---|
 | "Woche" | tile "Kalender · diese Woche" (template `calendar`) | Monday to Sunday, or today and the six days after it (D20), one row per day: weekday and date at the left ("HEUTE" for today), the day's entries at the right, an empty day "frei"; days before today dimmed; from 3 cells wide |
 | "Woche quer" (D19) | a week row of the month below, with every entry of a day | the same days as "Woche", seven columns; per entry its mark and title on one line at 10 px |
-| "Monat" | month of the calendar page at phone size (`calendar_month_view`, `.s-phone`) | weeks from the Monday before the first to the Sunday after the last; per day its number, special days as drawings (one without a drawing as its icon or a dot, D24), up to two entries or one and "+N"; entries over several days as bars |
+| "Monat" | month of the calendar page at phone size (`calendar_month_view`, `.s-phone`) | weeks from the Monday before the first to the Sunday after the last; per day its number, special days as drawings (one without a drawing as its icon or a dot, D24), up to two entries or one and "+N", which also counts the special days with no room beside the number (D24); entries over several days as bars |
 
 All follow the system's dark or light mode with the theme's two palettes. "Woche" and "Monat" are a vertically scrolling list of drawn rows (D8): "Woche" a day per row, "Monat" a week per row. Once the app fetches from Home Assistant, each update brings today's row to the top by default: the week's current day, the month's current week (D27). Sizes are resizable; the mockups use 4×2 and 4×4 cells (276 × 220 and 276 × 456 dp by Android's table for a Pixel 4).
 

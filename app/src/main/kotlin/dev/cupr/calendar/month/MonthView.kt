@@ -62,7 +62,7 @@ data class Day internal constructor(
     val marks: List<Entry>,
     /** Its own entries shown in the cell, in order. */
     val shown: List<Entry>,
-    /** How many of its own entries "+N" counts, 0 for none. */
+    /** How many of its entries "+N" counts, 0 for none: its own not shown and the marks with no room (D24). */
     val more: Int,
 ) {
     init {
@@ -183,12 +183,12 @@ object MonthLayout {
     private fun marked(row: Row) = row.entry.kind in setOf(Kinds.SPECIAL, Kinds.HOLIDAY) && !row.multi
 
     /**
-     * The marks beside a day's number, at most [MOST_DRAWINGS] (D24): the
-     * marked entries with a drawing first, as the dashboard draws them, then a
-     * special day without one, which the dashboard leaves out but the widget
-     * draws as its icon or a dot, so it does not disappear. A public holiday
-     * without a drawing shows only as its red number. Each group keeps the
-     * day's order.
+     * The marked entries that stand beside a day's number (D24): those with a
+     * drawing first, as the dashboard draws them, then special days without
+     * one, which the dashboard leaves out but the widget draws as its icon or
+     * a dot; each group in the day's order. A public holiday without a drawing
+     * shows only as its red number. The day draws the first [MOST_DRAWINGS];
+     * "+N" counts the rest.
      */
     private fun marks(rows: List<Row>): List<Entry> =
         rows
@@ -196,7 +196,6 @@ object MonthLayout {
             .filter { it.entry.drawing != null || it.entry.kind == Kinds.SPECIAL }
             .sortedBy { it.entry.drawing == null }
             .map { it.entry }
-            .take(MOST_DRAWINGS)
 
     /**
      * A day's cell. `holiday` sees only the entries placed on the day, so a
@@ -209,7 +208,10 @@ object MonthLayout {
         rows: List<Row>,
     ): Day {
         val singles = rows.filter { !it.multi && !marked(it) }.map { it.entry }
-        val shown = if (singles.size <= MOST_ENTRIES) singles else singles.take(MOST_ENTRIES - 1)
+        val marks = marks(rows)
+        // Marks with no room beside the number go into "+N", which then takes the place of the cell's second line.
+        val overflow = (marks.size - MOST_DRAWINGS).coerceAtLeast(0)
+        val shown = if (singles.size <= MOST_ENTRIES && overflow == 0) singles else singles.take(MOST_ENTRIES - 1)
         val otherMonth = YearMonth.from(date) != month
         return Day(
             date = date,
@@ -217,9 +219,9 @@ object MonthLayout {
             past = !otherMonth && date.isBefore(today),
             today = date == today,
             holiday = rows.any { it.entry.kind == Kinds.HOLIDAY },
-            marks = marks(rows),
+            marks = marks.take(MOST_DRAWINGS),
             shown = shown,
-            more = singles.size - shown.size,
+            more = singles.size - shown.size + overflow,
         )
     }
 
