@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Values of the android:visibility attribute: the index of its enum
+         (0 visible, 1 invisible, 2 gone), not the View constants. The light
+         drawings show outside night mode, the dark ones in it (values-night). -->
+    <integer name="light_visibility">0</integer>
+    <integer name="dark_visibility">2</integer>
+</resources>

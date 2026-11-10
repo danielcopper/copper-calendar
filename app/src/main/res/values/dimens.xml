@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The card's border, PhoneMonth.CARD_BORDER (a test keeps them equal). -->
+    <dimen name="widget_card_border">1dp</dimen>
+</resources>

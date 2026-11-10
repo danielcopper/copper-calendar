@@ -1,0 +1,69 @@
+[tools]
+java = "temurin-21.0.11+10.0.LTS"  # runs Gradle; AGP 9.5 needs JDK 17 or newer
+
+[vars]
+# The Android SDK lives under $HOME, installed by `setup` without root.
+sdk = "{{ env.HOME }}/Android/Sdk"
+
+[tasks.setup]
+description = "Install the Android command-line tools and SDK packages into $HOME/Android/Sdk and point local.properties at them"
+# The command-line tools archive is pinned by its file name and checked
+# against the SHA-1 Google's repository index (repository2-3.xml) publishes
+# for it. The packages are the ones the build needs: platform 37 (compileSdk),
+# the build tools AGP 9.5 defaults to (36.0.0), and platform-tools for adb.
+run = """
+set -eu
+sdk="{{ vars.sdk }}"
+tools="$sdk/cmdline-tools/latest"
+if [ ! -x "$tools/bin/sdkmanager" ]; then
+  archive=commandlinetools-linux-16111833_latest.zip
+  download="$sdk/.download"
+  mkdir -p "$download"
+  curl -fsSL -o "$download/$archive" "https://dl.google.com/android/repository/$archive"
+  echo "e025545c62a8e64c7559119566a569fb1dec5f60  $download/$archive" | sha1sum -c -
+  rm -rf "$download/cmdline-tools" "$tools"
+  unzip -q "$download/$archive" -d "$download"
+  mkdir -p "$sdk/cmdline-tools"
+  mv "$download/cmdline-tools" "$tools"
+  rm -rf "$download"
+fi
+yes | "$tools/bin/sdkmanager" --sdk_root="$sdk" --licenses > /dev/null
+"$tools/bin/sdkmanager" --sdk_root="$sdk" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+if [ -f local.properties ]; then
+  echo "local.properties kept: $(grep '^sdk.dir=' local.properties || echo 'no sdk.dir')"
+else
+  echo "sdk.dir=$sdk" > local.properties
+fi
+"""
+
+[tasks.build]
+description = "Build the debug APK"
+run = "./gradlew assembleDebug"
+
+[tasks.test]
+description = "Run the unit and render tests"
+run = "./gradlew testDebugUnitTest"
+
+[tasks.lint]
+description = "Run Android Lint, ktlint and detekt, warnings as errors"
+run = "./gradlew lint ktlintCheck detekt"
+
+[tasks.render]
+description = "Render every week row of the sample month, dark and light, to PNG files"
+# The render test runs again even when nothing changed (--rerun), so this call
+# writes the PNGs; then their paths and the bitmaps' total size.
+run = """
+set -eu
+./gradlew testDebugUnitTest --tests 'dev.cupr.calendar.render.WeekRowRenderTest' --rerun
+ls -1 "$PWD"/app/build/render/*.png
+cat app/build/render/budget.txt
+"""
+
+[tasks.gate]
+description = "What CI checks, less the SonarQube Cloud gate, CodeQL and the PR title: build, unit and render tests with coverage, Android Lint, ktlint, detekt"
+run = "./gradlew assembleDebug testDebugUnitTest createDebugUnitTestCoverageReport lint ktlintCheck detekt"
+
+[tasks.install]
+description = "Build the debug APK and install it on the device adb is connected to"
+# Connect the phone first, as README.md describes; this task does not.
+run = "./gradlew installDebug"

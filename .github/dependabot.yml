@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # Held at the wrapper's version; gradle-wrapper.properties says why and
+      # until when.
+      - dependency-name: gradle-wrapper

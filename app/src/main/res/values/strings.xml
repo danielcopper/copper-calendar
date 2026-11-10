@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kalender</string>
+    <string name="widget_month_label">Monat</string>
+    <string name="widget_month_description">Der Monat Woche für Woche, wie im Home-Assistant-Dashboard</string>
+    <string name="new_entry">Neuer Eintrag</string>
+    <!-- A tap's target cannot be opened (D25): one the Home Assistant app would open, any other. -->
+    <string name="target_home_assistant_missing">Home-Assistant-App nicht gefunden</string>
+    <string name="target_not_openable">Ziel lässt sich nicht öffnen</string>
+    <!-- The month widget's weekday heads, Monday to Sunday. -->
+    <string-array name="weekday_heads">
+        <item>Mo</item>
+        <item>Di</item>
+        <item>Mi</item>
+        <item>Do</item>
+        <item>Fr</item>
+        <item>Sa</item>
+        <item>So</item>
+    </string-array>
+</resources>
