@@ -1,7 +1,7 @@
 [versions]
 agp = "9.5.1"
 # 2.4.20 is the newest Kotlin CodeQL's extractor supports (codeql.yml).
-kotlin = "2.4.20"
+kotlin = "2.4.21"
 androidx-core = "1.19.1"
 androidsvg = "1.4"
 junit = "4.13.2"
