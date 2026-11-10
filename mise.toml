@@ -6,6 +6,10 @@ java = "temurin-21.0.11+10.0.LTS"  # runs Gradle; AGP 9.5 needs JDK 17 or newer
 sdk = "{{ env.HOME }}/Android/Sdk"
 # What `gate` runs; `deps-refresh` runs it too.
 gate_tasks = "assembleDebug testDebugUnitTest createDebugUnitTestCoverageReport lint ktlintCheck detekt"
+# The test that renders the widget picker's preview, and the file it writes;
+# `render` and `preview` run it.
+preview_test = "dev.cupr.calendar.widget.MonthWidgetPreviewTest.renders*"
+preview_png = "app/build/render/widget_month_preview.png"
 
 [tasks.setup]
 description = "Install the Android command-line tools and SDK packages into $HOME/Android/Sdk and point local.properties at them"
@@ -53,13 +57,18 @@ run = "./gradlew lint ktlintCheck detekt"
 [tasks.render]
 description = "Render every week row of the sample month, dark and light, and the widget picker's preview to PNG files"
 # The render tests run again even when nothing changed (--rerun), so this call
-# writes the PNGs; then their paths and the bitmaps' total size. Of the
+# writes the PNGs; then their paths and the total size of the week rows',
+# header's and "+"'s bitmaps (budget.txt, without the preview). Of the
 # preview's tests only the one that renders it, so a changed drawing still
-# renders before `preview` has written the preview anew.
+# renders before `preview` has written the preview anew. The old preview goes
+# first, so a filter that no longer matches the test leaves none and the check
+# after Gradle fails.
 run = """
 set -eu
+rm -f {{ vars.preview_png }}
 ./gradlew testDebugUnitTest --tests 'dev.cupr.calendar.render.WeekRowRenderTest' \
-  --tests 'dev.cupr.calendar.widget.MonthWidgetPreviewTest.renders*' --rerun
+  --tests '{{ vars.preview_test }}' --rerun
+test -f {{ vars.preview_png }} || { echo "{{ vars.preview_png }} was not rendered" >&2; exit 1; }
 ls -1 "$PWD"/app/build/render/*.png
 cat app/build/render/budget.txt
 """
@@ -70,8 +79,9 @@ description = "Render the month widget's preview for the widget picker and write
 # fresh render fails until this task has run.
 run = """
 set -eu
-./gradlew testDebugUnitTest --tests 'dev.cupr.calendar.widget.MonthWidgetPreviewTest.renders*' --rerun
-cp app/build/render/widget_month_preview.png app/src/main/res/drawable-nodpi/widget_month_preview.png
+rm -f {{ vars.preview_png }}
+./gradlew testDebugUnitTest --tests '{{ vars.preview_test }}' --rerun
+cp {{ vars.preview_png }} app/src/main/res/drawable-nodpi/widget_month_preview.png
 """
 
 [tasks.gate]
