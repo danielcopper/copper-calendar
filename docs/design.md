@@ -6,15 +6,23 @@ More configuration than the calendar widgets on the market is a goal: what a per
 
 ## Widgets
 
+Three widgets in the widget picker, under the app's name "Copper Calendar" (D31); the user picks one when adding it (D19).
+
 | Widget | Model in Home Assistant | Content |
 |---|---|---|
-| Week | tile "Kalender · diese Woche" (template `calendar`) | Monday to Sunday, or today and the six days after it (D20), one row per day: weekday and date at the left ("HEUTE" for today), the day's entries at the right, an empty day "frei"; days before today dimmed |
-| Week, columns (optional layout, D19) | a week row of the month below, with every entry of a day | the same days as the rows, seven columns; per entry its mark and title on one line at 10 px |
-| Month | month of the calendar page at phone size (`calendar_month_view`, `.s-phone`) | weeks from the Monday before the first to the Sunday after the last; per day its number, special days as drawings, up to two entries or one and "+N"; entries over several days as bars |
+| "Woche" | tile "Kalender · diese Woche" (template `calendar`) | Monday to Sunday, or today and the six days after it (D20), one row per day: weekday and date at the left ("HEUTE" for today), the day's entries at the right, an empty day "frei"; days before today dimmed; from 3 cells wide |
+| "Woche quer" (D19) | a week row of the month below, with every entry of a day | the same days as "Woche", seven columns; per entry its mark and title on one line at 10 px |
+| "Monat" | month of the calendar page at phone size (`calendar_month_view`, `.s-phone`) | weeks from the Monday before the first to the Sunday after the last; per day its number, special days as drawings, up to two entries or one and "+N"; entries over several days as bars |
 
-Both follow the system's dark or light mode with the theme's two palettes. Both are a vertically scrolling list of drawn rows (D8): the week a day per row, the month a week per row. Once the app fetches from Home Assistant, each update brings today's row to the top by default: the week's current day, the month's current week (D27). Sizes are resizable; the mockups use 4×2 and 4×4 cells (276 × 220 and 276 × 456 dp by Android's table for a Pixel 4).
+All follow the system's dark or light mode with the theme's two palettes. "Woche" and "Monat" are a vertically scrolling list of drawn rows (D8): "Woche" a day per row, "Monat" a week per row. Once the app fetches from Home Assistant, each update brings today's row to the top by default: the week's current day, the month's current week (D27). Sizes are resizable; the mockups use 4×2 and 4×4 cells (276 × 220 and 276 × 456 dp by Android's table for a Pixel 4).
 
 A round "+" button (40 dp, accent colour, as the calendar page's 56 px button) floats above the list at the bottom right; its corner is configurable per widget.
+
+In the widget picker, "Monat" shows a fixed image of itself drawn from the sample month in light mode (D33).
+
+## Launcher icon
+
+A calendar sheet with two binder rings and a grid of days, today marked, in one colour: dark blue on light blue in light mode, light on dark blue in dark mode, and the sheet with the days cut out for themed icons (D32).
 
 ## Taps
 
@@ -29,6 +37,8 @@ Each widget has its own tap targets. A target is a Home Assistant path opened th
 
 The `?day=` and `?new=` parameters do not exist yet; see [ha-additions.md](ha-additions.md).
 
+A target opens in a new task that replaces the Home Assistant app's (D30): back then leaves Home Assistant instead of stepping through the pages of earlier taps, and whatever was open in the app before the tap is gone.
+
 ## Setup app
 
-Per widget: which calendars it shows (D11), the tap targets above, the corner of "+", and for the week its layout, rows or columns (D19), and its days, Monday to Sunday or from today (D20), and when it returns to today (D27). Once for the app: sign-in with Home Assistant (D9, D10).
+Per widget: which calendars it shows (D11), the tap targets above, the corner of "+", for the week widgets their days, Monday to Sunday or from today (D20), and when it returns to today (D27). The week's layout is not a setting: rows and columns are two widgets (D19). Once for the app: sign-in with Home Assistant (D9, D10).
