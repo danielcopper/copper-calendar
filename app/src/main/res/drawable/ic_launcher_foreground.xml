@@ -1,18 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- MDI 7.4.47 calendar-month (Apache-2.0), 48 dp in the middle of the
-     108 dp adaptive icon. -->
+<!-- A calendar sheet with two binder rings, in the 108 dp adaptive icon's
+     viewport (inside its 66 dp safe zone): the sheet, then its day grid in
+     the background colour at 45 % opacity, today at full colour. The colours
+     follow night mode (values-night/colors.xml). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group
-        android:scaleX="2"
-        android:scaleY="2"
-        android:translateX="30"
-        android:translateY="30">
-        <path
-            android:fillColor="#FFFFFFFF"
-            android:pathData="M9,10V12H7V10H9M13,10V12H11V10H13M17,10V12H15V10H17M19,3A2,2 0 0,1 21,5V19A2,2 0 0,1 19,21H5C3.89,21 3,20.1 3,19V5A2,2 0 0,1 5,3H6V1H8V3H16V1H18V3H19M19,19V8H5V19H19M9,14V16H7V14H9M13,14V16H11V14H13M17,14V16H15V14H17Z" />
-    </group>
+    <path
+        android:fillColor="@color/ic_launcher_sheet"
+        android:pathData="M39,37H69A5,5 0,0 1 74,42V70A5,5 0,0 1 69,75H39A5,5 0,0 1 34,70V42A5,5 0,0 1 39,37ZM44,32H44A2,2 0,0 1 46,34V40A2,2 0,0 1 44,42H44A2,2 0,0 1 42,40V34A2,2 0,0 1 44,32ZM64,32H64A2,2 0,0 1 66,34V40A2,2 0,0 1 64,42H64A2,2 0,0 1 62,40V34A2,2 0,0 1 64,32Z" />
+    <path
+        android:fillAlpha="0.45"
+        android:fillColor="@color/ic_launcher_background"
+        android:pathData="M40,52H43A1,1 0,0 1 44,53V56A1,1 0,0 1 43,57H40A1,1 0,0 1 39,56V53A1,1 0,0 1 40,52ZM49,52H52A1,1 0,0 1 53,53V56A1,1 0,0 1 52,57H49A1,1 0,0 1 48,56V53A1,1 0,0 1 49,52ZM58,52H61A1,1 0,0 1 62,53V56A1,1 0,0 1 61,57H58A1,1 0,0 1 57,56V53A1,1 0,0 1 58,52ZM67,52H70A1,1 0,0 1 71,53V56A1,1 0,0 1 70,57H67A1,1 0,0 1 66,56V53A1,1 0,0 1 67,52ZM40,60H43A1,1 0,0 1 44,61V64A1,1 0,0 1 43,65H40A1,1 0,0 1 39,64V61A1,1 0,0 1 40,60ZM49,60H52A1,1 0,0 1 53,61V64A1,1 0,0 1 52,65H49A1,1 0,0 1 48,64V61A1,1 0,0 1 49,60ZM67,60H70A1,1 0,0 1 71,61V64A1,1 0,0 1 70,65H67A1,1 0,0 1 66,64V61A1,1 0,0 1 67,60ZM40,68H43A1,1 0,0 1 44,69V70A1,1 0,0 1 43,71H40A1,1 0,0 1 39,70V69A1,1 0,0 1 40,68ZM49,68H52A1,1 0,0 1 53,69V70A1,1 0,0 1 52,71H49A1,1 0,0 1 48,70V69A1,1 0,0 1 49,68Z" />
+    <path
+        android:fillColor="@color/ic_launcher_background"
+        android:pathData="M58,60H61A1,1 0,0 1 62,61V64A1,1 0,0 1 61,65H58A1,1 0,0 1 57,64V61A1,1 0,0 1 58,60Z" />
 </vector>
