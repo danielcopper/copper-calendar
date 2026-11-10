@@ -110,9 +110,10 @@ object WeekWidget {
     /**
      * A day's row: the drawn row as the day's tap area, and over each entry's
      * line a tap area of its own, which opens the entry by its UID, or its
-     * day when it has none (D37).
+     * day when it has none (D37). Internal for the test that applies it again
+     * as a launcher does.
      */
-    private fun row(
+    internal fun row(
         context: Context,
         rows: DayRowRenderer,
         day: WeekDay,
@@ -125,6 +126,9 @@ object WeekWidget {
         row.setImageViewBitmap(R.id.day_dark, dark)
         row.setOnClickFillInIntent(R.id.day_row, Taps.fillIn(Tap.Day(day.date)))
         row.setContentDescription(R.id.day_row, day.date.format(dayLabel))
+        // A launcher applies a row's views again to the views it shows (on each update, and to a row its list
+        // recycles); views added before would stay and pile up, growing the row by blank lines below its drawing.
+        row.removeAllViews(R.id.entries)
         val areas = rows.entryAreas(day, light.width, scale)
         val first = areas.firstOrNull() ?: return row
         row.setViewPadding(

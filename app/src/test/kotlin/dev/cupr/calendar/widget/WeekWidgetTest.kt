@@ -7,16 +7,22 @@ import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.ListView
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.R
+import dev.cupr.calendar.render.DayRowRenderer
 import dev.cupr.calendar.render.PhoneMonth
+import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
+import dev.cupr.calendar.render.WeekTexts
+import dev.cupr.calendar.sample.SampleData
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.TapActivity
 import dev.cupr.calendar.tap.Taps
 import dev.cupr.calendar.week.WeekDays
+import dev.cupr.calendar.week.WeekLayout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -33,6 +39,10 @@ import kotlin.math.roundToInt
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class WeekWidgetTest {
+    private companion object {
+        const val ROW_PX = 600
+    }
+
     private val application = ApplicationProvider.getApplicationContext<Application>()
     private val manager = AppWidgetManager.getInstance(application)
     private val week: (android.content.Context, Int) -> android.widget.RemoteViews =
@@ -115,6 +125,32 @@ class WeekWidgetTest {
         assertEquals(scale.px(PhoneMonth.CARD_SIDE + 44f + 8f), (entries.left + first.left).toFloat(), 1f)
         assertEquals(scale.px(21f), entries.getChildAt(1).top.toFloat() - first.top, 1f)
     }
+
+    @Test
+    fun `a row filled anew for another day holds only that day's entry areas`() {
+        // On each update, and for a row its list recycles, a launcher applies a row's views again to the views it
+        // shows; entry areas added there before must not pile up, or the row grows by blank lines below its drawing.
+        val assets = RenderAssets.of(application)
+        val rows = DayRowRenderer(assets.fonts, assets.icons, assets.drawings, WeekTexts.of(application.resources))
+        val scale = Scale(application.resources.displayMetrics.density)
+        val week = WeekLayout.build(WeekDays.MONDAY_TO_SUNDAY.dates(wednesday), SampleData.entries, wednesday)
+        val views = { index: Int ->
+            val drawn = rows.render(week[index], ROW_PX, scale, SampleData.light)
+            WeekWidget.row(application, rows, week[index], drawn, drawn, scale)
+        }
+        val row = views(5).apply(application, FrameLayout(application))
+        val entries = row.findViewById<ViewGroup>(R.id.entries)
+        assertEquals(8, entries.childCount)
+        views(5).reapply(application, row)
+        assertEquals(8, entries.childCount)
+        views(1).reapply(application, row)
+        assertEquals(listOf("07:45–08:15 Elterngespräch Schule", "15:30–16:15 Zahnarzt Ben"), entries.descriptions())
+        views(6).reapply(application, row)
+        assertEquals(0, entries.childCount)
+    }
+
+    private fun ViewGroup.descriptions() =
+        (0 until childCount).map { getChildAt(it).findViewById<View>(R.id.entry).contentDescription }
 
     @Test
     fun `the list opens scrolled to today`() {
