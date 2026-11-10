@@ -4,5 +4,7 @@
          card border (SampleData.light; a test keeps them equal). -->
     <color name="widget_card">#FFFFFFFF</color>
     <color name="widget_card_border">#FFDDE2E9</color>
-    <color name="ic_launcher_background">#FF1F6FD6</color>
+    <!-- The launcher icon: its background and its sheet (night: values-night). -->
+    <color name="ic_launcher_background">#FFD8E2F7</color>
+    <color name="ic_launcher_sheet">#FF1E2B45</color>
 </resources>

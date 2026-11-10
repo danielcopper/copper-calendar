@@ -30,34 +30,31 @@ import java.time.LocalDate
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class WeekRowRenderTest {
-    private val assets = ApplicationProvider.getApplicationContext<Context>().assets
+    private val context = ApplicationProvider.getApplicationContext<Context>()
+    private val assets = context.assets
     private val fonts = Fonts(assets)
     private val icons = Icons(assets)
     private val rows = WeekRowRenderer(fonts, icons, Drawings(assets))
-    private val weekdays =
-        ApplicationProvider
-            .getApplicationContext<Context>()
-            .resources
-            .getStringArray(
-                R.array.weekday_heads,
-            ).toList()
+    private val weekdays = context.resources.getStringArray(R.array.weekday_heads).toList()
     private val chrome = ChromeRenderer(fonts, icons, weekdays)
     private val scale = Probe.scale
     private val widthPx = Probe.widthPx
     private val view: MonthView =
         MonthLayout.build(SampleData.month, SampleData.entries, LocalDate.now(SampleData.clock))
-    private val output = File(System.getProperty("render.dir") ?: "build/render")
+    private val output = Probe.renderDir
     private val modes = listOf("dark" to SampleData.dark, "light" to SampleData.light)
+
+    /** The files the render writes: a week row, the header and "+" per mode, and the bitmaps' size. */
+    private val written =
+        modes.flatMap { (mode, _) ->
+            view.weeks.indices.map { "week-$it-$mode.png" } + listOf("header-$mode.png", "fab-$mode.png")
+        } + BUDGET
 
     @Test
     fun `renders every week row of the sample month, dark and light, to PNG files`() {
         // Only this test's own files, so a render.dir pointed elsewhere loses nothing else.
         output.mkdirs()
-        output
-            .listFiles { file ->
-                file.extension == "png" || file.name == "budget.txt"
-            }.orEmpty()
-            .forEach { it.delete() }
+        written.forEach { File(output, it).delete() }
         var bytes = 0L
         for ((mode, palette) in modes) {
             val heights =
@@ -75,13 +72,12 @@ class WeekRowRenderTest {
             write(header, palette, "header-$mode.png")
             write(fab, palette, "fab-$mode.png")
         }
-        val pngs = output.listFiles { file -> file.extension == "png" }.orEmpty()
-        assertEquals(2 * (view.weeks.size + 2), pngs.size)
         val budget =
             "bitmap: ${view.weeks.size} weeks x 2 modes + header and fab x 2 at ${widthPx}px wide, " +
                 "density ${Probe.DENSITY}: $bytes bytes"
-        File(output, "budget.txt").writeText(budget + "\n")
+        File(output, BUDGET).writeText(budget + "\n")
         println(budget)
+        assertEquals("missing files", emptyList<String>(), written.filterNot { File(output, it).isFile })
         assertTrue("$bytes bytes are more than half the bitmap budget", bytes <= BITMAP_BUDGET / 2)
     }
 
@@ -162,16 +158,11 @@ class WeekRowRenderTest {
             drawColor(palette.card)
             drawBitmap(bitmap, 0f, 0f, null)
         }
-        val written =
-            File(
-                output,
-                name,
-            ).outputStream().use { onCard.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, it) }
-        assertTrue("$name was not written", written)
+        File(output, name).writeBytes(Probe.png(onCard))
     }
 
     private companion object {
-        const val PNG_QUALITY = 100
+        const val BUDGET = "budget.txt"
 
         /** Android 17's limit for a widget's bitmaps, 6 × width × height bytes, at 1080 × 2400 (research.md, 6). */
         const val BITMAP_BUDGET = 6L * 1080 * 2400

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launcher icon's monochrome layer for themed icons: the sheet and its
+     rings, the day grid cut out as holes. The launcher tints it; only the
+     shape counts, so the colour is any opaque one. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FF000000"
+        android:fillType="evenOdd"
+        android:pathData="M39,37H69A5,5 0,0 1 74,42V70A5,5 0,0 1 69,75H39A5,5 0,0 1 34,70V42A5,5 0,0 1 39,37ZM40,52H43A1,1 0,0 1 44,53V56A1,1 0,0 1 43,57H40A1,1 0,0 1 39,56V53A1,1 0,0 1 40,52ZM49,52H52A1,1 0,0 1 53,53V56A1,1 0,0 1 52,57H49A1,1 0,0 1 48,56V53A1,1 0,0 1 49,52ZM58,52H61A1,1 0,0 1 62,53V56A1,1 0,0 1 61,57H58A1,1 0,0 1 57,56V53A1,1 0,0 1 58,52ZM67,52H70A1,1 0,0 1 71,53V56A1,1 0,0 1 70,57H67A1,1 0,0 1 66,56V53A1,1 0,0 1 67,52ZM40,60H43A1,1 0,0 1 44,61V64A1,1 0,0 1 43,65H40A1,1 0,0 1 39,64V61A1,1 0,0 1 40,60ZM49,60H52A1,1 0,0 1 53,61V64A1,1 0,0 1 52,65H49A1,1 0,0 1 48,64V61A1,1 0,0 1 49,60ZM58,60H61A1,1 0,0 1 62,61V64A1,1 0,0 1 61,65H58A1,1 0,0 1 57,64V61A1,1 0,0 1 58,60ZM67,60H70A1,1 0,0 1 71,61V64A1,1 0,0 1 70,65H67A1,1 0,0 1 66,64V61A1,1 0,0 1 67,60ZM40,68H43A1,1 0,0 1 44,69V70A1,1 0,0 1 43,71H40A1,1 0,0 1 39,70V69A1,1 0,0 1 40,68ZM49,68H52A1,1 0,0 1 53,69V70A1,1 0,0 1 52,71H49A1,1 0,0 1 48,70V69A1,1 0,0 1 49,68Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M44,32H44A2,2 0,0 1 46,34V40A2,2 0,0 1 44,42H44A2,2 0,0 1 42,40V34A2,2 0,0 1 44,32ZM64,32H64A2,2 0,0 1 66,34V40A2,2 0,0 1 64,42H64A2,2 0,0 1 62,40V34A2,2 0,0 1 64,32Z" />
+</vector>

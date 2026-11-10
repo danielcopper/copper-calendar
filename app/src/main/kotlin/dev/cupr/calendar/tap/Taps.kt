@@ -42,7 +42,10 @@ sealed interface Tap {
  * targets become configurable per widget later (D23).
  */
 object TapTargets {
-    private const val CALENDAR = "homeassistant://navigate/dashboard-zuhause/kalender"
+    /** The scheme of the links the Home Assistant app opens. */
+    const val HOME_ASSISTANT_SCHEME = "homeassistant"
+
+    private const val CALENDAR = "$HOME_ASSISTANT_SCHEME://navigate/dashboard-zuhause/kalender"
     private const val DAY_SLOT = "{day}"
 
     val defaults: Map<TapElement, String> =

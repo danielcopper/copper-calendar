@@ -26,4 +26,4 @@ Open point on colour: the fixed calendar colours live in the theme, which a temp
 - `?entry=<uid>&day=YYYY-MM-DD` opens that entry's sheet on that day.
 - `?new=YYYY-MM-DD` opens the form for a new entry on that day.
 
-Not verified: whether the Android app passes the query string through to the page's card (`LinkHandler.kt` keeps it; see [research.md](research.md), section 3).
+Checked on the phone (2026-11-10): all three reach the page's card through the Android app's `homeassistant://navigate/…` links.

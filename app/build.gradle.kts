@@ -1,7 +1,8 @@
 import org.gradle.process.CommandLineArgumentProvider
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+import org.sonarqube.gradle.SonarExtension
 
-/** Passes the render test's output directory as a system property, as a declared output of the test task. */
+/** Passes the render tests' output directory as a system property, as a declared output of the test task. */
 class RenderDir(
     @get:OutputDirectory val dir: DirectoryProperty,
 ) : CommandLineArgumentProvider {
@@ -48,7 +49,7 @@ android {
                 test.maxHeapSize = "1536m"
                 // Robolectric sets up API 37's shared memory through JDK internals.
                 test.jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED")
-                // Where the render test writes its PNGs (`mise run render`): an
+                // Where the render tests write their PNGs (`mise run render`): an
                 // output of the task, so a result from the build cache brings them
                 // too, and keyed by its place in the project, not its absolute path.
                 test.jvmArgumentProviders.add(
@@ -71,8 +72,8 @@ android {
 }
 
 // The unit and render tests' coverage, written by `createDebugUnitTestCoverageReport`. Set on this
-// module with an absolute path: the scanner resolves a relative one against the module's directory.
-extensions.configure<org.sonarqube.gradle.SonarExtension>("sonar") {
+// module, not in the root `sonar` block: the scanner resolves a relative path against the module's directory.
+extensions.configure<SonarExtension> {
     properties {
         property(
             "sonar.coverage.jacoco.xmlReportPaths",

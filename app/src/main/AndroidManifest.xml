@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- The apps that open Home Assistant's navigate links, so a tap can
+         start the one that handles its target as its icon does (D30). The
+         host is needed: a query intent without one matches no filter that
+         names a host, and the Home Assistant app's filter names "navigate". -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data
+                android:host="navigate"
+                android:scheme="homeassistant" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -8,7 +21,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true">
 
-        <!-- Only the system sends a widget's broadcasts, and only it holds BIND_APPWIDGET. -->
+        <!-- Widget broadcasts come from the system; BIND_APPWIDGET is held only by the system and its privileged apps. -->
         <receiver
             android:name=".widget.MonthWidgetProvider"
             android:exported="true"

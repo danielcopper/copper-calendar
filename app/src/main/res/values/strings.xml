@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Kalender</string>
+    <!-- A name, English and not translated (D31). -->
+    <string name="app_name" translatable="false">Copper Calendar</string>
     <string name="widget_month_label">Monat</string>
     <string name="widget_month_description">Der Monat Woche für Woche, wie im Home-Assistant-Dashboard</string>
     <string name="new_entry">Neuer Eintrag</string>
-    <!-- A tap's target cannot be opened (D25): one the Home Assistant app would open, any other. -->
+    <!-- A tap's target cannot be opened (D25): no app handles a target the Home Assistant app would open; any other case, also one this app may not start. -->
     <string name="target_home_assistant_missing">Home-Assistant-App nicht gefunden</string>
     <string name="target_not_openable">Ziel lässt sich nicht öffnen</string>
     <!-- The month widget's weekday heads, Monday to Sunday. -->

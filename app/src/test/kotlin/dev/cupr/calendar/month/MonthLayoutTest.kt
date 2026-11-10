@@ -130,6 +130,48 @@ class MonthLayoutTest {
     }
 
     @Test
+    fun `a special day of one day without a drawing still stands beside the number, for its dot`() {
+        val day = build(allDay(date(11, 11), kind = "special", title = "Ohne Bild")).day(date(11, 11))
+        assertEquals(listOf("Ohne Bild"), day.marks.map { it.title })
+        assertTrue(day.shown.isEmpty())
+    }
+
+    @Test
+    fun `a special day with a drawing goes before one without, so the phone shows the dashboard's drawing`() {
+        val day =
+            build(
+                allDay(date(11, 11), kind = "special", title = "A ohne Bild"),
+                allDay(date(11, 11), kind = "special", drawing = "lantern.svg", title = "B mit Bild"),
+            ).day(date(11, 11))
+        assertEquals(listOf("B mit Bild"), day.marks.map { it.title })
+    }
+
+    @Test
+    fun `a marked entry with no room beside the number counts into +N, so none is lost`() {
+        val day =
+            build(
+                allDay(date(11, 11), kind = "special", drawing = "lantern.svg", title = "Mit Bild"),
+                allDay(date(11, 11), kind = "special", title = "Ohne Bild"),
+            ).day(date(11, 11))
+        assertEquals(listOf("Mit Bild"), day.marks.map { it.title })
+        assertTrue(day.shown.isEmpty())
+        assertEquals(1, day.more)
+    }
+
+    @Test
+    fun `two entries and a marked entry with no room show as one entry and +2`() {
+        val day =
+            build(
+                allDay(date(11, 11), kind = "special", drawing = "lantern.svg", title = "Mit Bild"),
+                allDay(date(11, 11), kind = "special", drawing = "candles-1.svg", title = "Noch ein Bild"),
+                allDay(date(11, 11), title = "A"),
+                allDay(date(11, 11), title = "B"),
+            ).day(date(11, 11))
+        assertEquals(listOf("A"), day.shown.map { it.title })
+        assertEquals(2, day.more)
+    }
+
+    @Test
     fun `calendar_marked leaves a special day over several days to the bars`() {
         val view = build(allDay(date(11, 18), days = 2, kind = "special", drawing = "tree.svg"))
         assertTrue(view.day(date(11, 18)).marks.isEmpty())
@@ -324,6 +366,8 @@ class MonthLayoutTest {
             ).weeks[3]
         assertEquals(listOf("Alpha" to 0, "Beta" to 1), week.bars.map { it.entry.title to it.lane })
     }
+
+    // Checks on days, weeks and bars.
 
     @Test
     fun `a week has seven days and a bar stays inside its week`() {
