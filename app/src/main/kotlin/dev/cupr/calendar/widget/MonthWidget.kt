@@ -32,7 +32,7 @@ import kotlin.math.roundToInt
  */
 object MonthWidget {
     /** The widget's width before the launcher reports one: 4 cells (design.md). */
-    private const val DEFAULT_WIDTH_DP = 276
+    internal const val DEFAULT_WIDTH_DP = 276
     private const val TAG = "MonthWidget"
 
     private val dayIds =

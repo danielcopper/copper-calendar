@@ -1,17 +1,14 @@
 package dev.cupr.calendar.widget
 
 import android.app.Application
-import android.appwidget.AppWidgetHostView
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.pm.ApplicationInfo
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
-import android.os.Parcel
 import android.view.View
 import android.widget.ImageView
 import android.widget.ListView
-import android.widget.RemoteViews
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.R
 import dev.cupr.calendar.render.ChromeRenderer
@@ -41,42 +38,19 @@ class MonthWidgetTest {
     private val application = ApplicationProvider.getApplicationContext<Application>()
     private val manager = AppWidgetManager.getInstance(application)
 
-    /** The widget as a launcher gets it: parcelled, then applied in a widget host's view. */
-    private fun applied(widthDp: Int = 276): View {
-        val parcel = Parcel.obtain()
-        try {
-            MonthWidget.views(application, widthDp).writeToParcel(parcel, 0)
-            parcel.setDataPosition(0)
-            return RemoteViews.CREATOR.createFromParcel(parcel).apply(application, AppWidgetHostView(application))
-        } finally {
-            parcel.recycle()
-        }
-    }
-
-    /** The widget laid out at 4 cells wide and heightDp high, so its list holds rows. */
-    private fun laidOut(heightDp: Int = 456): View {
-        val widget = applied()
-        val density = application.resources.displayMetrics.density
-        val width = View.MeasureSpec.makeMeasureSpec((276 * density).toInt(), View.MeasureSpec.EXACTLY)
-        val height = View.MeasureSpec.makeMeasureSpec((heightDp * density).toInt(), View.MeasureSpec.EXACTLY)
-        widget.measure(width, height)
-        widget.layout(0, 0, widget.measuredWidth, widget.measuredHeight)
-        return widget
-    }
-
     @Test
     fun `the list has one row per week of the month`() {
-        val list = applied().findViewById<ListView>(R.id.list)
+        val list = WidgetHost.applied(application).findViewById<ListView>(R.id.list)
         assertEquals(6, list.adapter.count)
     }
 
     @Test
     fun `the header draws the weekday heads from the string resource`() {
-        val header = applied().findViewById<ImageView>(R.id.header_light)
+        val header = WidgetHost.applied(application).findViewById<ImageView>(R.id.header_light)
         val assets = RenderAssets.of(application)
         val weekdays = application.resources.getStringArray(R.array.weekday_heads).toList()
         val scale = Scale(application.resources.displayMetrics.density)
-        val widthPx = scale.px(276 - 2 * PhoneMonth.CARD_INSET).roundToInt()
+        val widthPx = scale.px(WidgetHost.WIDTH_DP - 2 * PhoneMonth.CARD_INSET).roundToInt()
         val expected =
             ChromeRenderer(assets.fonts, assets.icons, weekdays)
                 .header(SampleData.month, widthPx, scale, SampleData.light)
@@ -85,12 +59,12 @@ class MonthWidgetTest {
 
     @Test
     fun `the header names the month`() {
-        assertEquals("November 2026", applied().findViewById<View>(R.id.header).contentDescription)
+        assertEquals("November 2026", WidgetHost.applied(application).findViewById<View>(R.id.header).contentDescription)
     }
 
     @Test
     fun `a day's tap area names its day and sends that day to the tap activity`() {
-        val list = laidOut().findViewById<ListView>(R.id.list)
+        val list = WidgetHost.laidOut(application).findViewById<ListView>(R.id.list)
         val row = list.getChildAt(2 - list.firstVisiblePosition)
         val wednesday = row.findViewById<View>(R.id.day_2)
         assertEquals("Mittwoch, 11. November", wednesday.contentDescription)
@@ -103,13 +77,13 @@ class MonthWidgetTest {
     @Test
     fun `the list opens scrolled to the current week`() {
         // Robolectric runs no smooth scroll; its shadow records where the list was asked to scroll.
-        val list = applied().findViewById<ListView>(R.id.list)
+        val list = WidgetHost.applied(application).findViewById<ListView>(R.id.list)
         assertEquals(2, shadowOf(list).smoothScrolledPosition)
     }
 
     @Test
     fun `the header and plus send their tap to the tap activity, plus with today`() {
-        val widget = applied()
+        val widget = WidgetHost.applied(application)
         widget.findViewById<View>(R.id.header).performClick()
         val header = shadowOf(application).nextStartedActivity
         assertNotNull("the header started nothing", header)
@@ -122,7 +96,7 @@ class MonthWidgetTest {
 
     @Test
     fun `outside night mode the light drawings show`() {
-        val widget = applied()
+        val widget = WidgetHost.applied(application)
         assertEquals(View.VISIBLE, widget.findViewById<View>(R.id.header_light).visibility)
         assertEquals(View.GONE, widget.findViewById<View>(R.id.header_dark).visibility)
         assertEquals(View.VISIBLE, widget.findViewById<View>(R.id.fab_light).visibility)
@@ -136,7 +110,7 @@ class MonthWidgetTest {
     @Test
     @Config(qualifiers = "+night")
     fun `in night mode the dark drawings show`() {
-        val widget = applied()
+        val widget = WidgetHost.applied(application)
         assertEquals(View.GONE, widget.findViewById<View>(R.id.header_light).visibility)
         assertEquals(View.VISIBLE, widget.findViewById<View>(R.id.header_dark).visibility)
         assertEquals(View.GONE, widget.findViewById<View>(R.id.fab_light).visibility)
@@ -201,7 +175,7 @@ class MonthWidgetTest {
         val widthPx = scale.px(180 - 2 * PhoneMonth.CARD_INSET).roundToInt()
         assertEquals(widthPx, (header.drawable as BitmapDrawable).bitmap.width)
         // The rows at that width: Robolectric's widget host shows no list, so they are read from the views for it.
-        val list = applied(180).findViewById<ListView>(R.id.list)
+        val list = WidgetHost.applied(application, 180).findViewById<ListView>(R.id.list)
         val row = list.adapter.getView(0, null, list)
         assertEquals(widthPx, (row.findViewById<ImageView>(R.id.week_light).drawable as BitmapDrawable).bitmap.width)
     }
@@ -209,9 +183,9 @@ class MonthWidgetTest {
     @Test
     @Config(qualifiers = "xxhdpi")
     fun `the layout's measures fit the drawn parts`() {
-        val density = application.resources.displayMetrics.density
-        val px = { dp: Float -> (dp * density).roundToInt() }
-        val widget = laidOut()
+        val scale = Scale(application.resources.displayMetrics.density)
+        val px = { dp: Float -> scale.px(dp).roundToInt() }
+        val widget = WidgetHost.laidOut(application)
         val list = widget.findViewById<ListView>(R.id.list)
         val header = widget.findViewById<View>(R.id.header)
         val side = px(PhoneMonth.CARD_INSET)

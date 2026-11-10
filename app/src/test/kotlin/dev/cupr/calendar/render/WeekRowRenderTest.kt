@@ -41,7 +41,7 @@ class WeekRowRenderTest {
     private val widthPx = Probe.widthPx
     private val view: MonthView =
         MonthLayout.build(SampleData.month, SampleData.entries, LocalDate.now(SampleData.clock))
-    private val output = File(System.getProperty("render.dir") ?: "build/render")
+    private val output = Probe.renderDir
     private val modes = listOf("dark" to SampleData.dark, "light" to SampleData.light)
 
     /** The files the render writes: a week row, the header and "+" per mode, and the bitmaps' size. */
@@ -158,16 +158,10 @@ class WeekRowRenderTest {
             drawColor(palette.card)
             drawBitmap(bitmap, 0f, 0f, null)
         }
-        val written =
-            File(
-                output,
-                name,
-            ).outputStream().use { onCard.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, it) }
-        assertTrue("$name was not written", written)
+        File(output, name).writeBytes(Probe.png(onCard))
     }
 
     private companion object {
-        const val PNG_QUALITY = 100
         const val BUDGET = "budget.txt"
 
         /** Android 17's limit for a widget's bitmaps, 6 × width × height bytes, at 1080 × 2400 (research.md, 6). */

@@ -19,18 +19,33 @@ import dev.cupr.calendar.render.PhoneMonth.MARK
 import dev.cupr.calendar.render.PhoneMonth.NUMBER_ROW
 import dev.cupr.calendar.render.PhoneMonth.TIMED_SIDE
 import dev.cupr.calendar.sample.SampleData
+import dev.cupr.calendar.widget.WidgetHost
+import org.junit.Assert.assertTrue
+import java.io.ByteArrayOutputStream
+import java.io.File
 import java.time.LocalDate
 import kotlin.math.roundToInt
 
 /**
  * Where to look in a drawn week row, from the same measures the renderer
  * uses ([PhoneMonth]), at a Pixel 6's density (2.625, 420 dpi) and a
- * 4-cell-wide widget.
+ * 4-cell-wide widget; and where the render tests write their PNGs.
  */
 internal object Probe {
     const val DENSITY = 2.625f
     val scale = Scale(DENSITY)
-    val widthPx = scale.px(276 - 2 * CARD_INSET).roundToInt()
+    val widthPx = scale.px(WidgetHost.WIDTH_DP - 2 * CARD_INSET).roundToInt()
+
+    /** Where the render tests write their PNGs (`mise run render`). */
+    val renderDir = File(System.getProperty("render.dir") ?: "build/render")
+
+    /** A bitmap as PNG bytes. */
+    fun png(bitmap: Bitmap): ByteArray =
+        ByteArrayOutputStream()
+            .also { assertTrue("the PNG was not written", bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, it)) }
+            .toByteArray()
+
+    private const val PNG_QUALITY = 100
 
     /** The entries' own colour in these tests. */
     const val RED = 0xFFFF0000.toInt()
