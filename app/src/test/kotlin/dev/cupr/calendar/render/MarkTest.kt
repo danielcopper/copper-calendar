@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.model.Kinds
+import dev.cupr.calendar.month.MonthLayout
 import dev.cupr.calendar.render.Probe.RED
 import dev.cupr.calendar.render.Probe.at
 import dev.cupr.calendar.sample.SampleData
@@ -17,6 +18,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.GraphicsMode
 import java.time.LocalDate
+import java.time.YearMonth
 
 /**
  * An entry's mark wherever one stands (a timed line, an all-day chip that
@@ -103,6 +105,16 @@ class MarkTest {
     @Test
     fun `a mark beside the number with a drawing the app does not ship draws a dot in its colour`() {
         val bitmap = renderMark(Probe.allDay(monday, drawing = "not-shipped.svg"))
+        val half = scale.px(PhoneMonth.DRAWING) / 2
+        assertEquals(RED, bitmap.at(numberMarkX + half, numberMarkY + half))
+    }
+
+    @Test
+    fun `a special day of one day without a drawing draws a dot in its colour beside the number`() {
+        val special = Probe.allDay(monday).copy(kind = Kinds.SPECIAL)
+        val view = MonthLayout.build(YearMonth.from(monday), listOf(special), monday.withDayOfMonth(1))
+        val week = view.weeks.single { it.days.first().date == monday }
+        val bitmap = rows.render(week, Probe.widthPx, scale, SampleData.dark)
         val half = scale.px(PhoneMonth.DRAWING) / 2
         assertEquals(RED, bitmap.at(numberMarkX + half, numberMarkY + half))
     }

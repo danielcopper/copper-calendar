@@ -130,6 +130,23 @@ class MonthLayoutTest {
     }
 
     @Test
+    fun `a special day of one day without a drawing still stands beside the number, for its dot`() {
+        val day = build(allDay(date(11, 11), kind = "special", title = "Ohne Bild")).day(date(11, 11))
+        assertEquals(listOf("Ohne Bild"), day.marks.map { it.title })
+        assertTrue(day.shown.isEmpty())
+    }
+
+    @Test
+    fun `a special day with a drawing goes before one without, so the phone shows the dashboard's drawing`() {
+        val day =
+            build(
+                allDay(date(11, 11), kind = "special", title = "A ohne Bild"),
+                allDay(date(11, 11), kind = "special", drawing = "lantern.svg", title = "B mit Bild"),
+            ).day(date(11, 11))
+        assertEquals(listOf("B mit Bild"), day.marks.map { it.title })
+    }
+
+    @Test
     fun `calendar_marked leaves a special day over several days to the bars`() {
         val view = build(allDay(date(11, 18), days = 2, kind = "special", drawing = "tree.svg"))
         assertTrue(view.day(date(11, 18)).marks.isEmpty())
