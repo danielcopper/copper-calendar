@@ -59,7 +59,8 @@ class MonthWidgetTest {
 
     @Test
     fun `the header names the month`() {
-        assertEquals("November 2026", WidgetHost.applied(application).findViewById<View>(R.id.header).contentDescription)
+        val header = WidgetHost.applied(application).findViewById<View>(R.id.header)
+        assertEquals("November 2026", header.contentDescription)
     }
 
     @Test

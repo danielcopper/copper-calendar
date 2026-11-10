@@ -59,7 +59,10 @@ class AppIdentityTest {
         assertIcon(background = 0xFF2B3245.toInt(), sheet = 0xFFD8E2FF.toInt())
     }
 
-    /** The background's colour, and the foreground's sheet, ring, a day (the background at 45 % on the sheet) and today. */
+    /**
+     * The background's colour, and the foreground's sheet, ring, a day (the
+     * background at 45 % on the sheet) and today.
+     */
     private fun assertIcon(
         background: Int,
         sheet: Int,
