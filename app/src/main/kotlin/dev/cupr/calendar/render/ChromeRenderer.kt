@@ -27,8 +27,8 @@ import kotlin.math.ceil
 
 /**
  * Draws the month widget's fixed parts: the header (month title, chevron,
- * weekday heads) and the round "+". The weekday heads, Monday to Sunday,
- * come from the string resource `weekday_heads`.
+ * weekday heads) and the round "+". It is given the weekday heads, Monday to
+ * Sunday.
  */
 class ChromeRenderer(
     private val fonts: Fonts,
