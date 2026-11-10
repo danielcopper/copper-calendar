@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -80,9 +81,30 @@ class TapTest {
     }
 
     @Test
-    fun `without an app for Home Assistant links, the target is started alone`() {
+    fun `without an app for Home Assistant links, the target is started alone in a new task and the log says so`() {
         launch(Taps.fillIn(Tap.Day(day)))
-        assertEquals(listOf("$calendar?day=2026-11-12"), started().map { it.dataString })
+        val opened = started().single()
+        assertEquals("$calendar?day=2026-11-12", opened.dataString)
+        assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, opened.flags)
+        assertEquals(
+            listOf("No app is seen to open $calendar?day=2026-11-12; opening the link alone"),
+            ShadowLog.getLogsForTag("TapActivity").map { it.msg },
+        )
+    }
+
+    @Test
+    fun `when two apps open Home Assistant links and none is the default, the target opens alone in a new task`() {
+        installHomeAssistant()
+        installHomeAssistant(app = "io.homeassistant.companion.android")
+        shadowOf(application.packageManager).setShouldShowActivityChooser(true)
+        launch(Taps.fillIn(Tap.Header))
+        val opened = started().single()
+        assertEquals(calendar, opened.dataString)
+        assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, opened.flags)
+        assertEquals(
+            listOf("2 apps open $calendar and none is the default; opening the link alone"),
+            ShadowLog.getLogsForTag("TapActivity").map { it.msg },
+        )
     }
 
     @Test
@@ -91,7 +113,7 @@ class TapTest {
         launch(Taps.fillIn(Tap.Header))
         val opened = started().single()
         assertEquals(calendar, opened.dataString)
-        assertEquals(0, opened.flags)
+        assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, opened.flags)
         assertEquals(
             listOf("$homeAssistant opens $calendar but has no launcher entry; opening the link alone"),
             ShadowLog.getLogsForTag("TapActivity").map { it.msg },
@@ -124,16 +146,26 @@ class TapTest {
     }
 
     @Test
-    fun `the manifest may see the apps that open Home Assistant links`() {
-        // Without this query, Android 11 and later hide the Home Assistant app, and a tap would open the link alone.
+    fun `the manifest's query matches the Home Assistant app's filter for navigate links`() {
+        // Android 11 and later show this app another app only when a query matches one of its filters; without that,
+        // the Home Assistant app stays hidden and every tap opens its link alone. Android turns a query's <intent>
+        // into an intent with the data scheme://host/* (ParsingPackageUtils.parseQueries) and matches it against the
+        // filters (AppsFilterUtils), as built here.
         val manifest =
             DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(File("src/main/AndroidManifest.xml"))
         val queries = manifest.getElementsByTagName("queries").item(0) as Element
         val intent = queries.getElementsByTagName("intent").item(0) as Element
-        val action = intent.getElementsByTagName("action").item(0) as Element
+        val action = (intent.getElementsByTagName("action").item(0) as Element).getAttribute("android:name")
         val data = intent.getElementsByTagName("data").item(0) as Element
-        assertEquals(Intent.ACTION_VIEW, action.getAttribute("android:name"))
-        assertEquals(TapTargets.HOME_ASSISTANT_SCHEME, data.getAttribute("android:scheme"))
+        val uri =
+            Uri
+                .Builder()
+                .scheme(data.getAttribute("android:scheme"))
+                .authority(data.getAttribute("android:host").ifEmpty { null })
+                .path("*")
+                .build()
+        val match = linkFilter().match(action, null, uri.scheme, uri, null, "TapTest")
+        assertTrue("the query $action $uri matches no filter of the Home Assistant app", match > 0)
     }
 
     @Test
@@ -206,7 +238,10 @@ class TapTest {
     fun `a target no app handles is logged and shown, not thrown`() {
         openTarget(application, "$calendar?day=2026-11-12") { throw ActivityNotFoundException("none") }
         assertEquals(
-            listOf("No app opens $calendar?day=2026-11-12"),
+            listOf(
+                "No app is seen to open $calendar?day=2026-11-12; opening the link alone",
+                "No app opens $calendar?day=2026-11-12",
+            ),
             ShadowLog.getLogsForTag("TapActivity").map { it.msg },
         )
         assertEquals("Home-Assistant-App nicht gefunden", ShadowToast.getTextOfLatestToast())
@@ -215,7 +250,10 @@ class TapTest {
     @Test
     fun `a Home Assistant target this app may not start says it does not open, not that the app is missing`() {
         openTarget(application, calendar) { throw SecurityException("denied") }
-        assertEquals(listOf("Not allowed to open $calendar"), ShadowLog.getLogsForTag("TapActivity").map { it.msg })
+        assertEquals(
+            listOf("No app is seen to open $calendar; opening the link alone", "Not allowed to open $calendar"),
+            ShadowLog.getLogsForTag("TapActivity").map { it.msg },
+        )
         assertEquals("Ziel lässt sich nicht öffnen", ShadowToast.getTextOfLatestToast())
     }
 
@@ -236,25 +274,32 @@ class TapTest {
      * Installs the Home Assistant app as far as a tap sees it: an activity for
      * its links and, unless told otherwise, its launcher entry.
      */
-    private fun installHomeAssistant(launcher: Boolean = true) {
+    private fun installHomeAssistant(
+        app: String = homeAssistant,
+        launcher: Boolean = true,
+    ) {
         val packageManager = shadowOf(application.packageManager)
-        val links = ComponentName(homeAssistant, "io.homeassistant.companion.android.launch.link.LinkActivity")
+        val links = ComponentName(app, "io.homeassistant.companion.android.launch.link.LinkActivity")
         packageManager.addActivityIfNotPresent(links)
-        packageManager.addIntentFilterForActivity(
-            links,
-            IntentFilter(Intent.ACTION_VIEW).apply {
-                addCategory(Intent.CATEGORY_DEFAULT)
-                addDataScheme(TapTargets.HOME_ASSISTANT_SCHEME)
-            },
-        )
+        packageManager.addIntentFilterForActivity(links, linkFilter())
         if (launcher) {
-            packageManager.addActivityIfNotPresent(launchActivity)
+            val launch = ComponentName(app, launchActivity.className)
+            packageManager.addActivityIfNotPresent(launch)
             packageManager.addIntentFilterForActivity(
-                launchActivity,
+                launch,
                 IntentFilter(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) },
             )
         }
     }
+
+    /** The Home Assistant app's filter for navigate links, as its manifest has it (home-assistant/android c6eb57c). */
+    private fun linkFilter() =
+        IntentFilter(Intent.ACTION_VIEW).apply {
+            addCategory(Intent.CATEGORY_DEFAULT)
+            addCategory(Intent.CATEGORY_BROWSABLE)
+            addDataScheme(TapTargets.HOME_ASSISTANT_SCHEME)
+            addDataAuthority("navigate", null)
+        }
 
     private fun tapExtras(
         element: String,

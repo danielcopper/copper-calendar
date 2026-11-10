@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- The apps that open Home Assistant links, so a tap can start the one
-         that handles its target as its icon does (D30). -->
+    <!-- The apps that open Home Assistant's navigate links, so a tap can
+         start the one that handles its target as its icon does (D30). The
+         host is needed: a query intent without one matches no filter that
+         names a host, and the Home Assistant app's filter names "navigate". -->
     <queries>
         <intent>
             <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="homeassistant" />
+            <data
+                android:host="navigate"
+                android:scheme="homeassistant" />
         </intent>
     </queries>
 

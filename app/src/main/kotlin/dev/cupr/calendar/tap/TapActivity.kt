@@ -37,8 +37,9 @@ class TapActivity : Activity() {
  *
  * A Home Assistant target ([forHomeAssistant]) opens on top of the Home
  * Assistant app started as its icon starts it, in a cleared task (D30); when
- * no single app handles the link or that app has no launcher entry, the link
- * opens alone. Any other target opens alone in a new task. When no app
+ * no single app is seen to handle the link or that app has no launcher entry,
+ * the link opens alone in a new task, and the log says why. Any other target
+ * opens alone in a new task. When no app
  * handles a link or this app may not start it, the rest is not started, and
  * the log and a short Toast say so (D25): that the Home Assistant app is
  * missing when no app handles a Home Assistant target, otherwise that the
@@ -54,12 +55,8 @@ internal fun openTarget(
     // two different activities of the Home Assistant app, so the second link cannot land in the first one's instance
     // (D30). Back to the target alone, without clearing, once that app opens navigate links in place
     // (home-assistant/android issue 5381, pull request 7163).
-    val links =
-        if (view.forHomeAssistant) {
-            listOfNotNull(launcherStart(context, view, target), view)
-        } else {
-            listOf(view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        }
+    val app = if (view.forHomeAssistant) launcherStart(context, view, target) else null
+    val links = if (app != null) listOf(app, view) else listOf(view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     links.forEachIndexed { index, link ->
         val first = index == 0
         val name = if (link === view) target else "${link.component?.flattenToShortString()} (tapped $target)"
@@ -73,9 +70,9 @@ private val Intent.forHomeAssistant: Boolean get() = data?.scheme == TapTargets.
 /**
  * The app that handles link started the way its icon starts it, in a cleared
  * task: its launch intent from the package manager, which sees that app
- * through the manifest's `<queries>`. None when no single app handles the link
- * (none installed, or a chooser between several) or that app has no launcher
- * entry; the second is logged, since the link then opens without clearing.
+ * through the manifest's `<queries>`. None, and a log line why, when no app is
+ * seen to handle the link, when several do and none is the default (the link
+ * resolves to the chooser), or when the one that does has no launcher entry.
  */
 private fun launcherStart(
     context: Context,
@@ -83,11 +80,19 @@ private fun launcherStart(
     target: String,
 ): Intent? {
     val packageManager = context.packageManager
-    val app =
-        packageManager.resolveActivity(link, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
-            ?: return null
-    val launch = packageManager.getLaunchIntentForPackage(app)
-    if (launch == null) Log.w(TAG, "$app opens $target but has no launcher entry; opening the link alone")
+    val resolved = packageManager.resolveActivity(link, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
+    val handlers =
+        packageManager
+            .queryIntentActivities(link, PackageManager.MATCH_DEFAULT_ONLY)
+            .map { it.activityInfo.packageName }
+            .distinct()
+    val launch = resolved?.takeIf { it in handlers }?.let(packageManager::getLaunchIntentForPackage)
+    when {
+        resolved == null -> Log.w(TAG, "No app is seen to open $target; opening the link alone")
+        resolved !in handlers ->
+            Log.w(TAG, "${handlers.size} apps open $target and none is the default; opening the link alone")
+        launch == null -> Log.w(TAG, "$resolved opens $target but has no launcher entry; opening the link alone")
+    }
     return launch?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
 }
 
