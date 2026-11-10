@@ -21,7 +21,5 @@ sonar {
         // The scanner polls the quality gate and fails when it fails, so the CI
         // job that runs the scan fails with it.
         property("sonar.qualitygate.wait", "true")
-        // The unit and render tests' coverage, written by `createDebugUnitTestCoverageReport`.
-        property("sonar.coverage.jacoco.xmlReportPaths", "app/build/reports/coverage/test/debug/report.xml")
     }
 }

@@ -70,6 +70,20 @@ android {
     }
 }
 
+// The unit and render tests' coverage, written by `createDebugUnitTestCoverageReport`. Set on this
+// module with an absolute path: the scanner resolves a relative one against the module's directory.
+extensions.configure<org.sonarqube.gradle.SonarExtension>("sonar") {
+    properties {
+        property(
+            "sonar.coverage.jacoco.xmlReportPaths",
+            layout.buildDirectory
+                .file("reports/coverage/test/debug/report.xml")
+                .get()
+                .asFile.absolutePath,
+        )
+    }
+}
+
 kotlin {
     compilerOptions {
         allWarningsAsErrors = true
