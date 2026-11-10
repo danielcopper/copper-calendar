@@ -21,6 +21,7 @@ class TapTest {
     private val application = ApplicationProvider.getApplicationContext<Application>()
     private val day = LocalDate.of(2026, 11, 12)
     private val calendar = "homeassistant://navigate/dashboard-zuhause/kalender"
+    private val startPage = "homeassistant://navigate/dashboard-zuhause/start"
 
     @Test
     fun `the header opens the calendar page`() {
@@ -46,7 +47,7 @@ class TapTest {
     @Test
     fun `the tap activity opens the tapped day's target and finishes`() {
         val activity = launch(Taps.fillIn(Tap.Day(day)))
-        val opened = shadowOf(application).nextStartedActivity
+        val opened = started().last()
         assertEquals(Intent.ACTION_VIEW, opened.action)
         assertEquals("$calendar?day=2026-11-12", opened.dataString)
         assertTrue(activity.isFinishing)
@@ -54,11 +55,36 @@ class TapTest {
     }
 
     @Test
-    fun `a target opens in a new, cleared task, so Home Assistant keeps one calendar page`() {
-        launch(Taps.fillIn(Tap.Header))
-        val flags = shadowOf(application).nextStartedActivity.flags
-        assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, flags and Intent.FLAG_ACTIVITY_NEW_TASK)
-        assertEquals(Intent.FLAG_ACTIVITY_CLEAR_TASK, flags and Intent.FLAG_ACTIVITY_CLEAR_TASK)
+    fun `a Home Assistant target opens on top of the start page, which opens in a cleared task`() {
+        launch(Taps.fillIn(Tap.Day(day)))
+        val opened = started()
+        assertEquals(2, opened.size)
+        val (home, target) = opened
+        assertEquals(startPage, home.dataString)
+        assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, home.flags and Intent.FLAG_ACTIVITY_NEW_TASK)
+        assertEquals(Intent.FLAG_ACTIVITY_CLEAR_TASK, home.flags and Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        assertEquals("$calendar?day=2026-11-12", target.dataString)
+        assertEquals(0, target.flags)
+    }
+
+    @Test
+    fun `a target outside the Home Assistant app opens alone, in no new task`() {
+        val opened = mutableListOf<Intent>()
+        openTarget(application, "other://x/2026-11-12") { opened += it }
+        assertEquals(listOf("other://x/2026-11-12"), opened.map { it.dataString })
+        assertEquals(0, opened.single().flags)
+    }
+
+    @Test
+    fun `when the start page does not open, the target is not started either`() {
+        val opened = mutableListOf<Intent>()
+        openTarget(application, calendar) {
+            if (it.dataString == startPage) throw ActivityNotFoundException("none")
+            opened += it
+        }
+        assertEquals(emptyList<Intent>(), opened)
+        assertEquals(listOf("No app opens $startPage"), ShadowLog.getLogsForTag("TapActivity").map { it.msg })
+        assertEquals("Home-Assistant-App nicht gefunden", ShadowToast.getTextOfLatestToast())
     }
 
     @Test
@@ -129,7 +155,7 @@ class TapTest {
 
     @Test
     fun `a target no app handles is logged and shown, not thrown`() {
-        openTarget(application, "$calendar?day=2026-11-12") { throw ActivityNotFoundException("none") }
+        openTarget(application, "$calendar?day=2026-11-12") { failOnTarget(it, ActivityNotFoundException("none")) }
         assertEquals(
             listOf("No app opens $calendar?day=2026-11-12"),
             ShadowLog.getLogsForTag("TapActivity").map { it.msg },
@@ -139,7 +165,7 @@ class TapTest {
 
     @Test
     fun `a Home Assistant target this app may not start says it does not open, not that the app is missing`() {
-        openTarget(application, calendar) { throw SecurityException("denied") }
+        openTarget(application, calendar) { failOnTarget(it, SecurityException("denied")) }
         assertEquals(listOf("Not allowed to open $calendar"), ShadowLog.getLogsForTag("TapActivity").map { it.msg })
         assertEquals("Ziel lässt sich nicht öffnen", ShadowToast.getTextOfLatestToast())
     }
@@ -151,6 +177,18 @@ class TapTest {
         openTarget(application, "other://x/2026-11-12") { throw SecurityException("denied") }
         assertEquals("Ziel lässt sich nicht öffnen", ShadowToast.getTextOfLatestToast())
         assertEquals(2, ShadowToast.shownToastCount())
+    }
+
+    /** Every intent started since the last call, oldest first (Robolectric hands out the newest first). */
+    private fun started(): List<Intent> =
+        generateSequence { shadowOf(application).nextStartedActivity }.toList().asReversed()
+
+    /** Fails the start of the tapped target with error; the start page opens. */
+    private fun failOnTarget(
+        intent: Intent,
+        error: RuntimeException,
+    ) {
+        if (intent.dataString != startPage) throw error
     }
 
     private fun tapExtras(

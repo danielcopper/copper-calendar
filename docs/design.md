@@ -35,9 +35,9 @@ Each widget has its own tap targets. A target is a Home Assistant path opened th
 | Entry (week only) | `/dashboard-zuhause/kalender?entry={uid}&day={day}` | needs the UID in the sensor data (D16); month cells have no entry areas |
 | "+" | `/dashboard-zuhause/kalender?new={day}` | `{day}` is today |
 
-The `?day=` and `?new=` parameters do not exist yet; see [ha-additions.md](ha-additions.md).
+The calendar page reads `?day=`, `?entry=…&day=` and `?new=`, and all three work through the Home Assistant app (checked on the phone, 2026-11-10); see [ha-additions.md](ha-additions.md).
 
-A target opens in a new task that replaces the Home Assistant app's (D30): back then leaves Home Assistant instead of stepping through the pages of earlier taps, and whatever was open in the app before the tap is gone.
+A tap on a Home Assistant target opens the dashboard's start page first, in a new task that replaces the Home Assistant app's, and the target on top of it (D30): back from the target returns to the start page instead of stepping through the pages of earlier taps, and whatever was open in the app before the tap is gone. A target in another app opens alone.
 
 ## Setup app
 
