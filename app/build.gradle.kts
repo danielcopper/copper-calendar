@@ -102,6 +102,11 @@ detekt {
     source.setFrom("src/main/kotlin", "src/test/kotlin")
 }
 
+// Every configuration's resolved versions are locked in gradle.lockfile (`mise run deps-refresh`).
+dependencyLocking {
+    lockAllConfigurations()
+}
+
 dependencies {
     implementation(libs.androidx.core)
     implementation(libs.androidsvg)

@@ -4,6 +4,11 @@ buildscript {
         // AGP 9.5); this pins the one in the version catalog instead.
         classpath(libs.kotlin.gradle.plugin)
     }
+    // The plugins below land on this classpath too; its versions are locked in
+    // buildscript-gradle.lockfile (`mise run deps-refresh` writes it).
+    configurations.classpath {
+        resolutionStrategy.activateDependencyLocking()
+    }
 }
 
 plugins {
