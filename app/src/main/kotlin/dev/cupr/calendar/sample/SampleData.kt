@@ -51,7 +51,7 @@ object SampleData {
             accent = 0xFF6FB1FF.toInt(),
             onAccent = 0xFF0D1A2A.toInt(),
             holiday = 0xFFFF7A7A.toInt(),
-            // rgba(0, 0, 0, 0.5)
+            // Black at half opacity.
             shadow = 0x80000000.toInt(),
             calendars =
                 mapOf(
@@ -74,7 +74,7 @@ object SampleData {
             accent = 0xFF1F6FD6.toInt(),
             onAccent = 0xFFFFFFFF.toInt(),
             holiday = 0xFFB52222.toInt(),
-            // rgba(22, 27, 34, 0.18)
+            // The light text colour at 18 % opacity.
             shadow = 0x2E161B22,
             calendars =
                 mapOf(
