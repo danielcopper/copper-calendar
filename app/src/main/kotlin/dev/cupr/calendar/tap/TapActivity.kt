@@ -55,9 +55,9 @@ internal fun openTarget(
 ) {
     val view = Intent(Intent.ACTION_VIEW, target.toUri())
     // Two starts, not startActivities, whose documentation leaves the task undefined when one of its intents finds no
-    // app: two starts fail one at a time, each with its own log line and Toast. Back to the target alone, without
-    // clearing, once the Home Assistant app opens navigate links in place (home-assistant/android issue 5381, pull
-    // request 7163).
+    // app: with two starts the failing one is logged by name, its Toast says whether the Home Assistant app is
+    // missing, and the rest is not started. Back to the target alone, without clearing, once the Home Assistant app
+    // opens navigate links in place (home-assistant/android issue 5381, pull request 7163).
     val app = if (view.forHomeAssistant) launcherStart(context, view) else null
     val links = if (app != null) listOf(app, view) else listOf(view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     links.forEachIndexed { index, link ->
