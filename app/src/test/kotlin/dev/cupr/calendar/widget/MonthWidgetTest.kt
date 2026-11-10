@@ -3,6 +3,7 @@ package dev.cupr.calendar.widget
 import android.app.Application
 import android.appwidget.AppWidgetHostView
 import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.pm.ApplicationInfo
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
@@ -168,6 +169,14 @@ class MonthWidgetTest {
         }
         val log = ShadowLog.getLogsForTag("MonthWidget").single().msg
         assertTrue(log, log.startsWith("Widget $id: drew 16 bitmaps at "))
+    }
+
+    @Test
+    fun `only the system may send the widget's broadcasts`() {
+        val receiver =
+            application.packageManager.getReceiverInfo(ComponentName(application, MonthWidgetProvider::class.java), 0)
+        assertTrue(receiver.exported)
+        assertEquals("android.permission.BIND_APPWIDGET", receiver.permission)
     }
 
     @Test
