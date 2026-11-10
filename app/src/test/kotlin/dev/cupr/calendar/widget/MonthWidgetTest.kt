@@ -75,11 +75,11 @@ class MonthWidgetTest {
         val header = applied().findViewById<ImageView>(R.id.header_light)
         val assets = RenderAssets.of(application)
         val weekdays = application.resources.getStringArray(R.array.weekday_heads).toList()
-        val density = application.resources.displayMetrics.density
-        val widthPx = ((276 - 2 * PhoneMonth.CARD_INSET) * density).roundToInt()
+        val scale = Scale(application.resources.displayMetrics.density)
+        val widthPx = scale.px(276 - 2 * PhoneMonth.CARD_INSET).roundToInt()
         val expected =
             ChromeRenderer(assets.fonts, assets.icons, weekdays)
-                .header(SampleData.month, widthPx, Scale(density), SampleData.light)
+                .header(SampleData.month, widthPx, scale, SampleData.light)
         assertTrue((header.drawable as BitmapDrawable).bitmap.sameAs(expected))
     }
 
@@ -197,8 +197,8 @@ class MonthWidgetTest {
         manager.updateAppWidgetOptions(id, options)
         MonthWidgetProvider().onAppWidgetOptionsChanged(application, manager, id, options)
         val header = shadowOf(manager).getViewFor(id).findViewById<ImageView>(R.id.header_light)
-        val density = application.resources.displayMetrics.density
-        val widthPx = ((180 - 2 * PhoneMonth.CARD_INSET) * density).toInt()
+        val scale = Scale(application.resources.displayMetrics.density)
+        val widthPx = scale.px(180 - 2 * PhoneMonth.CARD_INSET).roundToInt()
         assertEquals(widthPx, (header.drawable as BitmapDrawable).bitmap.width)
         // The rows at that width: Robolectric's widget host shows no list, so they are read from the views for it.
         val list = applied(180).findViewById<ListView>(R.id.list)
