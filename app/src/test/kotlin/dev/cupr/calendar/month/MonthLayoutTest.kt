@@ -325,6 +325,8 @@ class MonthLayoutTest {
         assertEquals(listOf("Alpha" to 0, "Beta" to 1), week.bars.map { it.entry.title to it.lane })
     }
 
+    // Checks on days, weeks and bars.
+
     @Test
     fun `a week has seven days and a bar stays inside its week`() {
         val day = build().weeks[0].days[0]
