@@ -49,6 +49,43 @@ class TapTest {
     }
 
     @Test
+    fun `an entry opens the calendar page on that entry and its day`() {
+        assertEquals("$calendar?entry=abc-123&day=2026-11-12", TapTargets.uri(Tap.Entry("abc-123", day)))
+    }
+
+    @Test
+    fun `an entry's UID is encoded for the link`() {
+        assertEquals(
+            "$calendar?entry=a%2Fb%26day%3D1%40x%20y&day=2026-11-12",
+            TapTargets.uri(Tap.Entry("a/b&day=1@x y", day)),
+        )
+    }
+
+    @Test
+    fun `an entry's tap carries its UID and day to the tap activity`() {
+        val tap = Tap.Entry("abc-123", day)
+        assertEquals(tap, Taps.read(Taps.fillIn(tap)))
+        val activity = launch(Taps.fillIn(tap))
+        assertEquals("$calendar?entry=abc-123&day=2026-11-12", started().last().dataString)
+        assertTrue(activity.isFinishing)
+    }
+
+    @Test
+    fun `an entry without a UID or a day opens nothing`() {
+        assertNull(Taps.read(tapExtras("ENTRY", "2026-11-12")))
+        assertNull(Taps.read(tapExtras("ENTRY", "2026-11-12").putExtra("dev.cupr.calendar.tap.UID", "")))
+        assertNull(
+            Taps.read(
+                Intent()
+                    .putExtra(
+                        "dev.cupr.calendar.tap.ELEMENT",
+                        "ENTRY",
+                    ).putExtra("dev.cupr.calendar.tap.UID", "abc"),
+            ),
+        )
+    }
+
+    @Test
     fun `a target is its element's template with the day filled in`() {
         assertEquals("$calendar?day={day}", TapTargets.defaults[TapElement.DAY])
         assertEquals("other://x/2026-11-12/y", TapTargets.uri(Tap.New(day), "other://x/{day}/y"))
