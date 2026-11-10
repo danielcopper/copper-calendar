@@ -11,10 +11,10 @@ permissions:
 env:
   JAVA_VERSION: "21.0.11+10"  # mise.toml's JDK
 
-# The build and lint jobs run what `mise run gate` runs locally, split so each
-# check reports on its own. The runner's preinstalled Android SDK
-# (ANDROID_HOME) stands in for `mise run setup`; AGP installs a missing SDK
-# package itself.
+# The build and lint jobs, with the SonarQube Cloud job's coverage report, run
+# what `mise run gate` runs locally, split so each check reports on its own.
+# The runner's preinstalled Android SDK (ANDROID_HOME) stands in for
+# `mise run setup`; AGP installs a missing SDK package itself.
 jobs:
   build:
     name: Build and tests

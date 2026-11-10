@@ -4,8 +4,7 @@ java = "temurin-21.0.11+10.0.LTS"  # runs Gradle; AGP 9.5 needs JDK 17 or newer
 [vars]
 # The Android SDK lives under $HOME, installed by `setup` without root.
 sdk = "{{ env.HOME }}/Android/Sdk"
-# What `gate` runs; `deps-refresh` runs it too, for what only a running task
-# resolves.
+# What `gate` runs; `deps-refresh` runs it too.
 gate_tasks = "assembleDebug testDebugUnitTest createDebugUnitTestCoverageReport lint ktlintCheck detekt"
 
 [tasks.setup]
