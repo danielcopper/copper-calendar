@@ -66,7 +66,7 @@ class TapTest {
 
     @Test
     fun `a Home Assistant target opens on top of that app started as its icon starts it, in a cleared task`() {
-        installHomeAssistant()
+        installLinkApp()
         launch(Taps.fillIn(Tap.Day(day)))
         val opened = started()
         assertEquals(2, opened.size)
@@ -94,8 +94,8 @@ class TapTest {
 
     @Test
     fun `when two apps open Home Assistant links and none is the default, the target opens alone in a new task`() {
-        installHomeAssistant()
-        installHomeAssistant(app = "io.homeassistant.companion.android")
+        installLinkApp()
+        installLinkApp(app = "io.homeassistant.companion.android")
         shadowOf(application.packageManager).setShouldShowActivityChooser(true)
         launch(Taps.fillIn(Tap.Header))
         val opened = started().single()
@@ -109,7 +109,7 @@ class TapTest {
 
     @Test
     fun `when the app for Home Assistant links has no launcher entry, the target opens alone and the log says so`() {
-        installHomeAssistant(launcher = false)
+        installLinkApp(launcher = false)
         launch(Taps.fillIn(Tap.Header))
         val opened = started().single()
         assertEquals(calendar, opened.dataString)
@@ -122,7 +122,7 @@ class TapTest {
 
     @Test
     fun `when starting the Home Assistant app is not allowed, the target is not started and the toast says so`() {
-        installHomeAssistant()
+        installLinkApp()
         val opened = mutableListOf<Intent>()
         openTarget(application, calendar) {
             if (it.component == launchActivity) throw SecurityException("denied")
@@ -137,8 +137,45 @@ class TapTest {
     }
 
     @Test
+    fun `when the link finds no app after the Home Assistant app started, the toast says the target does not open`() {
+        installLinkApp()
+        val opened = mutableListOf<Intent>()
+        openTarget(application, calendar) {
+            if (it.component != launchActivity) throw ActivityNotFoundException("none")
+            opened += it
+        }
+        assertEquals(listOf(launchActivity), opened.map { it.component })
+        assertEquals(listOf("No app opens $calendar"), ShadowLog.getLogsForTag("TapActivity").map { it.msg })
+        assertEquals("Ziel lässt sich nicht öffnen", ShadowToast.getTextOfLatestToast())
+    }
+
+    @Test
+    fun `when the Home Assistant app's launcher start finds no app, the toast says it is missing`() {
+        installLinkApp()
+        val opened = mutableListOf<Intent>()
+        openTarget(application, calendar) {
+            if (it.component == launchActivity) throw ActivityNotFoundException("none")
+            opened += it
+        }
+        assertEquals(emptyList<Intent>(), opened)
+        assertEquals(
+            listOf("No app opens ${launchActivity.flattenToShortString()} (tapped $calendar)"),
+            ShadowLog.getLogsForTag("TapActivity").map { it.msg },
+        )
+        assertEquals("Home-Assistant-App nicht gefunden", ShadowToast.getTextOfLatestToast())
+    }
+
+    @Test
     fun `a target outside the Home Assistant app opens alone, in a new task it does not clear`() {
-        installHomeAssistant()
+        // An app that opens the target and has a launcher entry: it is still not started as its icon does.
+        installLinkApp(
+            app = "x.other.app",
+            links =
+                IntentFilter(Intent.ACTION_VIEW).apply {
+                    addCategory(Intent.CATEGORY_DEFAULT)
+                    addDataScheme("other")
+                },
+        )
         val opened = mutableListOf<Intent>()
         openTarget(application, "other://x/2026-11-12") { opened += it }
         assertEquals(listOf("other://x/2026-11-12"), opened.map { it.dataString })
@@ -271,17 +308,19 @@ class TapTest {
         generateSequence { shadowOf(application).nextStartedActivity }.toList().asReversed()
 
     /**
-     * Installs the Home Assistant app as far as a tap sees it: an activity for
-     * its links and, unless told otherwise, its launcher entry.
+     * Installs an app as far as a tap sees it: an activity for its links, by
+     * default the Home Assistant app's navigate links, and, unless told
+     * otherwise, its launcher entry.
      */
-    private fun installHomeAssistant(
+    private fun installLinkApp(
         app: String = homeAssistant,
         launcher: Boolean = true,
+        links: IntentFilter = linkFilter(),
     ) {
         val packageManager = shadowOf(application.packageManager)
-        val links = ComponentName(app, "io.homeassistant.companion.android.launch.link.LinkActivity")
-        packageManager.addActivityIfNotPresent(links)
-        packageManager.addIntentFilterForActivity(links, linkFilter())
+        val linkActivity = ComponentName(app, "io.homeassistant.companion.android.launch.link.LinkActivity")
+        packageManager.addActivityIfNotPresent(linkActivity)
+        packageManager.addIntentFilterForActivity(linkActivity, links)
         if (launcher) {
             val launch = ComponentName(app, launchActivity.className)
             packageManager.addActivityIfNotPresent(launch)
