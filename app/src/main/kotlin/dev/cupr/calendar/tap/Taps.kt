@@ -45,13 +45,6 @@ object TapTargets {
     /** The scheme of the links the Home Assistant app opens. */
     const val HOME_ASSISTANT_SCHEME = "homeassistant"
 
-    /**
-     * The page a tap on a Home Assistant target opens first, beneath the
-     * target, so back from the target returns to it (D30): the dashboard's
-     * start page, fixed until targets become configurable (D23).
-     */
-    const val START = "$HOME_ASSISTANT_SCHEME://navigate/dashboard-zuhause/start"
-
     private const val CALENDAR = "$HOME_ASSISTANT_SCHEME://navigate/dashboard-zuhause/kalender"
     private const val DAY_SLOT = "{day}"
 

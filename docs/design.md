@@ -37,7 +37,7 @@ Each widget has its own tap targets. A target is a Home Assistant path opened th
 
 The calendar page reads `?day=`, `?entry=…&day=` and `?new=`, and all three work through the Home Assistant app (checked on the phone, 2026-11-10); see [ha-additions.md](ha-additions.md).
 
-A tap on a Home Assistant target opens the dashboard's start page first, in a new task that replaces the Home Assistant app's, and the target on top of it (D30): back from the target returns to the start page instead of stepping through the pages of earlier taps, and whatever was open in the app before the tap is gone. A target in another app opens alone.
+A tap on a Home Assistant target first starts the Home Assistant app as its icon does, in a new task that replaces its old one, and then opens the target on top of it (D30): back from the target returns to the page the app itself opens with, instead of stepping through the pages of earlier taps, and whatever was open in the app before the tap is gone. A target in another app opens alone, in a new task.
 
 ## Setup app
 

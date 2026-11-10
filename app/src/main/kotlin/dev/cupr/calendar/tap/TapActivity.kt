@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -31,12 +32,17 @@ class TapActivity : Activity() {
 }
 
 /**
- * Opens target with start. A Home Assistant target (its scheme,
- * [TapTargets.HOME_ASSISTANT_SCHEME]) opens on top of [TapTargets.START] in a
- * cleared task (D30); any other target opens alone. When no app handles a
- * link or this app may not start it, the rest is not started, and the log and
- * a short Toast say so (D25): that the Home Assistant app is missing when no
- * app handles a link of its scheme, otherwise that the target does not open.
+ * Opens target with start, an Activity's startActivity (another context's
+ * would need a new task for every link).
+ *
+ * A Home Assistant target ([forHomeAssistant]) opens on top of the Home
+ * Assistant app started as its icon starts it, in a cleared task (D30); when
+ * no single app handles the link or that app has no launcher entry, the link
+ * opens alone. Any other target opens alone in a new task. When no app
+ * handles a link or this app may not start it, the rest is not started, and
+ * the log and a short Toast say so (D25): that the Home Assistant app is
+ * missing when no app handles a Home Assistant target, otherwise that the
+ * target does not open.
  */
 internal fun openTarget(
     context: Context,
@@ -44,42 +50,72 @@ internal fun openTarget(
     start: (Intent) -> Unit,
 ) {
     val view = Intent(Intent.ACTION_VIEW, target.toUri())
-    // The Home Assistant app opens each link as one more page in its task (D30). Clearing that task and opening the
-    // start page beneath the target leaves two pages, and back from the target returns to the start page. Two starts,
-    // not startActivities, which creates the lower activity only once the user returns to it: the Home Assistant
-    // app's link activity has to run to open its page. Back to the target alone, without clearing, once that app
-    // opens navigate links in place (home-assistant/android issue 5381, pull request 7163).
+    // Two starts, not startActivities, which creates the lower activity only once the user returns to it. They reach
+    // two different activities of the Home Assistant app, so the second link cannot land in the first one's instance
+    // (D30). Back to the target alone, without clearing, once that app opens navigate links in place
+    // (home-assistant/android issue 5381, pull request 7163).
     val links =
-        if (view.data?.scheme == TapTargets.HOME_ASSISTANT_SCHEME) {
-            val home =
-                Intent(Intent.ACTION_VIEW, TapTargets.START.toUri())
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-            listOf(home, view)
+        if (view.forHomeAssistant) {
+            listOfNotNull(launcherStart(context, view, target), view)
         } else {
-            listOf(view)
+            listOf(view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
-    for (link in links) {
-        if (!opened(context, link, start)) return
+    links.forEachIndexed { index, link ->
+        val first = index == 0
+        val name = if (link === view) target else "${link.component?.flattenToShortString()} (tapped $target)"
+        if (!opened(context, link, name, missing = first && view.forHomeAssistant, start = start)) return
     }
 }
 
-/** Starts one link with start; when that fails, logs and toasts it and answers false. */
+/** A link the Home Assistant app opens: its scheme, [TapTargets.HOME_ASSISTANT_SCHEME]. */
+private val Intent.forHomeAssistant: Boolean get() = data?.scheme == TapTargets.HOME_ASSISTANT_SCHEME
+
+/**
+ * The app that handles link started the way its icon starts it, in a cleared
+ * task: its launch intent from the package manager, which sees that app
+ * through the manifest's `<queries>`. None when no single app handles the link
+ * (none installed, or a chooser between several) or that app has no launcher
+ * entry; the second is logged, since the link then opens without clearing.
+ */
+private fun launcherStart(
+    context: Context,
+    link: Intent,
+    target: String,
+): Intent? {
+    val packageManager = context.packageManager
+    val app =
+        packageManager.resolveActivity(link, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
+            ?: return null
+    val launch = packageManager.getLaunchIntentForPackage(app)
+    if (launch == null) {
+        Log.w(TAG, "$app opens $target but has no launcher entry; opening the link alone")
+        return null
+    }
+    return launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+}
+
+/**
+ * Starts one link with start; when that fails, logs and toasts it under name
+ * and answers false. missing: no app handling it means the Home Assistant app
+ * is missing.
+ */
 private fun opened(
     context: Context,
     link: Intent,
+    name: String,
+    missing: Boolean,
     start: (Intent) -> Unit,
 ): Boolean =
     try {
         start(link)
         true
     } catch (e: ActivityNotFoundException) {
-        Log.w(TAG, "No app opens ${link.dataString}", e)
-        val homeAssistant = link.data?.scheme == TapTargets.HOME_ASSISTANT_SCHEME
-        toast(context, if (homeAssistant) R.string.target_home_assistant_missing else R.string.target_not_openable)
+        Log.w(TAG, "No app opens $name", e)
+        toast(context, if (missing) R.string.target_home_assistant_missing else R.string.target_not_openable)
         false
     } catch (e: SecurityException) {
         // An app that handles it is there, so even for Home Assistant's scheme the app is not missing.
-        Log.w(TAG, "Not allowed to open ${link.dataString}", e)
+        Log.w(TAG, "Not allowed to open $name", e)
         toast(context, R.string.target_not_openable)
         false
     }
