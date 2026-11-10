@@ -102,7 +102,7 @@ detekt {
     source.setFrom("src/main/kotlin", "src/test/kotlin")
 }
 
-// Every configuration's resolved versions are locked in gradle.lockfile (`mise run deps-refresh`).
+// The resolved versions of this module's configurations are locked in gradle.lockfile (`mise run deps-refresh`).
 dependencyLocking {
     lockAllConfigurations()
 }
