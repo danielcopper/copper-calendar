@@ -60,7 +60,7 @@ cat app/build/render/budget.txt
 """
 
 [tasks.gate]
-description = "What CI checks, less the SonarQube Cloud gate, CodeQL and the PR title: build, unit and render tests with coverage, Android Lint, ktlint, detekt"
+description = "What CI checks, less the SonarQube Cloud gate, CodeQL, the check of the lock files and checksums, and the PR title: build, unit and render tests with coverage, Android Lint, ktlint, detekt"
 run = "./gradlew assembleDebug testDebugUnitTest createDebugUnitTestCoverageReport lint ktlintCheck detekt"
 
 [tasks.deps-refresh]

@@ -11,8 +11,8 @@ permissions:
 env:
   JAVA_VERSION: "21.0.11+10"  # mise.toml's JDK
 
-# The jobs run what `mise run gate` runs locally, split so each check reports
-# on its own. The runner's preinstalled Android SDK (ANDROID_HOME) stands in
+# The build and lint jobs run what `mise run gate` runs locally, split so each
+# check reports on its own. The runner's preinstalled Android SDK (ANDROID_HOME) stands in
 # for `mise run setup`; AGP installs a missing SDK package itself.
 jobs:
   build:

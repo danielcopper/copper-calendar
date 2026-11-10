@@ -4,7 +4,7 @@ An Android app with home-screen widgets that draw the family calendar like the H
 
 ## Pipeline
 
-- **Gate**: `mise run gate` (build, unit and render tests with coverage, Android Lint, ktlint, detekt): what CI checks, less the SonarQube Cloud gate, CodeQL and the PR title. On a fresh machine `mise run setup` first.
+- **Gate**: `mise run gate` (build, unit and render tests with coverage, Android Lint, ktlint, detekt): what CI checks, less the SonarQube Cloud gate, CodeQL, the check of the lock files and checksums, and the PR title. On a fresh machine `mise run setup` first.
 - **Review checks**: `mise run lint`; ktlint, detekt and Android Lint run on the whole module, not on single files.
 - **Dependency change**: `mise run deps-refresh` rewrites the lock files (`*.lockfile`) and `gradle/verification-metadata.xml`, which every build checks; commit them with the change after reading the diff.
 - **Worktree task**: `mise run worktree-new`
