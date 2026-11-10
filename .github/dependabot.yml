@@ -12,3 +12,7 @@ updates:
       # Held at the wrapper's version; gradle-wrapper.properties says why and
       # until when.
       - dependency-name: gradle-wrapper
+      # Held at the catalog's Kotlin; gradle/libs.versions.toml says why and
+      # until when.
+      - dependency-name: org.jetbrains.kotlin:kotlin-gradle-plugin
+        versions: [">2.4.20"]
