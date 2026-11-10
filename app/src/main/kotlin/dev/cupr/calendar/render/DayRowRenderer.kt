@@ -178,7 +178,7 @@ class DayRowRenderer(
             canvas.restoreToCount(saved)
         }
 
-        /** Today's tint: from nothing at its left, reaching into the card's padding, to full at the row and out again. */
+        /** Today's tint: clear at its left in the card's padding, full where the row begins, clear again further on. */
         private fun tint() {
             val from = left - scale.px(TODAY_REACH)
             val soft = palette.accentSoft

@@ -109,23 +109,10 @@ object WeekLayout {
         val end = dates.last()
         val placed = mutableMapOf<LocalDate, MutableList<Placed>>()
         val spans = mutableListOf<Span>()
-        for (entry in entries) {
-            val last = entry.end.minusNanos(1).toLocalDate()
-            // Ended before the first day.
-            if (!entry.end.isAfter(begin.atStartOfDay())) continue
-            val first = entry.start.toLocalDate()
-            val date = maxOf(first, begin)
-            if (date.isAfter(end)) continue
-            val multi = last.isAfter(first)
-            val span = entry.allDay && entry.kind in SPAN_KINDS && multi
-            val row = placedRow(entry, date, first, last, multi)
-            if (multi) {
-                spans +=
-                    Span(if (span) first else date, last, entry.title, row, listed = !span || !first.isBefore(begin))
-            }
-            if (span && first.isBefore(begin)) continue
-            placed.getOrPut(date) { mutableListOf() } += row
-        }
+        entries
+            // Left out: ended before the first day, or begins after the last.
+            .filter { it.end.isAfter(begin.atStartOfDay()) && !maxOf(it.start.toLocalDate(), begin).isAfter(end) }
+            .forEach { place(it, begin, placed, spans) }
         val running = mutableMapOf<LocalDate, MutableList<String>>()
         for (span in spans) {
             var listed = span.listed
@@ -152,6 +139,31 @@ object WeekLayout {
                 running = running[date].orEmpty(),
             )
         }
+    }
+
+    /**
+     * Puts an entry on the day it stands on, its first or else the first day
+     * begin, and an entry over several days into spans; school holidays and
+     * vacations that began before begin only into spans, which list them on
+     * the first day shown.
+     */
+    private fun place(
+        entry: Entry,
+        begin: LocalDate,
+        placed: MutableMap<LocalDate, MutableList<Placed>>,
+        spans: MutableList<Span>,
+    ) {
+        val first = entry.start.toLocalDate()
+        val last = entry.end.minusNanos(1).toLocalDate()
+        val date = maxOf(first, begin)
+        val multi = last.isAfter(first)
+        val span = entry.allDay && entry.kind in SPAN_KINDS && multi
+        val row = placedRow(entry, date, first, last, multi)
+        if (multi) {
+            spans +=
+                Span(if (span) first else date, last, entry.title, row, listed = !span || !first.isBefore(begin))
+        }
+        if (!span || !first.isBefore(begin)) placed.getOrPut(date) { mutableListOf() } += row
     }
 
     /**
