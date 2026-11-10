@@ -12,7 +12,7 @@ More configuration than the calendar widgets on the market is a goal: what a per
 | Week, columns (optional layout, D19) | a week row of the month below, with every entry of a day | the same days as the rows, seven columns; per entry its mark and title on one line at 10 px |
 | Month | month of the calendar page at phone size (`calendar_month_view`, `.s-phone`) | weeks from the Monday before the first to the Sunday after the last; per day its number, special days as drawings, up to two entries or one and "+N"; entries over several days as bars |
 
-Both follow the system's dark or light mode with the theme's two palettes. Both are a vertically scrolling list of drawn rows (D8): the week a day per row, the month a week per row. The week opens scrolled to today, the month to the current week. Sizes are resizable; the mockups use 4×2 and 4×4 cells (276 × 220 and 276 × 456 dp by Android's table for a Pixel 4).
+Both follow the system's dark or light mode with the theme's two palettes. Both are a vertically scrolling list of drawn rows (D8): the week a day per row, the month a week per row. Once the app fetches from Home Assistant, each update brings today's row to the top by default: the week's current day, the month's current week (D27). Sizes are resizable; the mockups use 4×2 and 4×4 cells (276 × 220 and 276 × 456 dp by Android's table for a Pixel 4).
 
 A round "+" button (40 dp, accent colour, as the calendar page's 56 px button) floats above the list at the bottom right; its corner is configurable per widget.
 
@@ -31,4 +31,4 @@ The `?day=` and `?new=` parameters do not exist yet; see [ha-additions.md](ha-ad
 
 ## Setup app
 
-Per widget: which calendars it shows (D11), the tap targets above, the corner of "+", and for the week its layout, rows or columns (D19), and its days, Monday to Sunday or from today (D20). Once for the app: sign-in with Home Assistant (D9, D10).
+Per widget: which calendars it shows (D11), the tap targets above, the corner of "+", and for the week its layout, rows or columns (D19), and its days, Monday to Sunday or from today (D20), and when it returns to today (D27). Once for the app: sign-in with Home Assistant (D9, D10).
