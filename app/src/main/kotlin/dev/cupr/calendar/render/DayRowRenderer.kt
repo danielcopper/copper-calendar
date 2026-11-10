@@ -96,13 +96,21 @@ data class WeekTexts(
  * border; the row stands inside the card's side padding, and only today's
  * tint reaches into the padding at the left. It is transparent where the card
  * shows.
+ *
+ * A [stacked] row, for a widget narrower than 4 cells ([stacksAt]), puts the
+ * weekday above the date in a narrower column, and a timed entry's time on a
+ * line of its own above its mark and title; chips, "frei" and the running
+ * titles keep their one line.
  */
 class DayRowRenderer(
     private val fonts: Fonts,
     private val icons: Icons,
     private val drawings: Drawings,
     private val texts: WeekTexts,
+    private val stacked: Boolean = false,
 ) {
+    private val column = if (stacked) STACKED_COLUMN else DAY_COLUMN
+
     fun render(
         day: WeekDay,
         widthPx: Int,
@@ -118,33 +126,35 @@ class DayRowRenderer(
 
     /** The row's height below its divider: its padding, and the taller of its date and its lines. */
     fun heightDp(day: WeekDay): Float {
-        val head = if (day.today) 2 * TODAY_LINE else HEAD_LINE
-        val count = lines(day)
-        return 2 * ROW_PAD + max(head, count * LINE + (count - 1) * LINE_GAP)
+        val head = if (day.today || stacked) 2 * TODAY_LINE else HEAD_LINE
+        val quiet = if (day.entries.isEmpty() || day.running.isNotEmpty()) 1 else 0
+        val count = quiet + day.entries.size
+        val lines = quiet * LINE + day.entries.sumOf { entryDp(it).toDouble() }.toFloat()
+        return 2 * ROW_PAD + max(head, lines + (count - 1) * LINE_GAP)
     }
 
     /**
      * Where each of the day's entries is drawn, in the bitmap's pixels, in
-     * the order of [WeekDay.entries]: its line, from the entries' column to
-     * the row's right edge, and down to the next line.
+     * the order of [WeekDay.entries]: its lines, from the entries' column to
+     * the row's right edge, and down to the next entry.
      */
     fun entryAreas(
         day: WeekDay,
         widthPx: Int,
         scale: Scale,
     ): List<RectF> {
-        val left = scale.px(CARD_SIDE + DAY_COLUMN + COLUMN_GAP)
+        val left = scale.px(CARD_SIDE + column + COLUMN_GAP)
         val right = widthPx - scale.px(CARD_SIDE)
-        val first = if (day.running.isNotEmpty()) 1 else 0
-        return day.entries.indices.map { index ->
-            val top = scale.hairline + scale.px(ROW_PAD + (first + index) * (LINE + LINE_GAP))
-            RectF(left, top, right, top + scale.px(LINE + LINE_GAP))
+        var y = ROW_PAD + if (day.running.isNotEmpty()) LINE + LINE_GAP else 0f
+        return day.entries.map { entry ->
+            val top = scale.hairline + scale.px(y)
+            y += entryDp(entry) + LINE_GAP
+            RectF(left, top, right, scale.hairline + scale.px(y))
         }
     }
 
-    /** Its lines: the running titles' line above entries, each entry, or the empty day's one. */
-    private fun lines(day: WeekDay): Int =
-        if (day.entries.isEmpty()) 1 else day.entries.size + if (day.running.isNotEmpty()) 1 else 0
+    /** An entry's height: a stacked timed entry has its time's line above its title's, any other one line. */
+    private fun entryDp(entry: DayEntry): Float = if (stacked && entry.time != null) TIME_LINE + LINE else LINE
 
     private inner class Row(
         val canvas: Canvas,
@@ -162,7 +172,7 @@ class DayRowRenderer(
             canvas.fill(left, 0f, right, scale.hairline, palette.divider)
             if (day.today) tint()
             head(day)
-            val x = left + scale.px(DAY_COLUMN + COLUMN_GAP)
+            val x = left + scale.px(column + COLUMN_GAP)
             var y = top
             val running = day.running.joinToString(SEPARATOR)
             if (day.entries.isEmpty()) {
@@ -173,7 +183,7 @@ class DayRowRenderer(
             }
             for (entry in day.entries) {
                 line(entry, x, y)
-                y += scale.px(LINE + LINE_GAP)
+                y += scale.px(entryDp(entry) + LINE_GAP)
             }
             canvas.restoreToCount(saved)
         }
@@ -200,7 +210,10 @@ class DayRowRenderer(
             canvas.drawRoundRect(RectF(from, scale.hairline, right, height), radius, radius, paint)
         }
 
-        /** The weekday and the date beside it on one baseline; today "Heute" above its date, both in the accent. */
+        /**
+         * The weekday and the date beside it on one baseline, or stacked above
+         * it; today "Heute" above its date, both in the accent.
+         */
         private fun head(day: WeekDay) {
             val accentOr = { color: Int -> if (day.today) palette.accent else color }
             val weekday =
@@ -220,15 +233,16 @@ class DayRowRenderer(
                         "tnum"
                 }
             val number = "${day.date.dayOfMonth}."
-            if (day.today) {
+            val name = (if (day.today) texts.today else texts.weekdays[day.date.dayOfWeek.value - 1])
+            val upper = name.uppercase(Locale.GERMAN)
+            if (day.today || stacked) {
                 val line = scale.px(TODAY_LINE)
-                canvas.drawText(texts.today.uppercase(Locale.GERMAN), left, weekday.baselineIn(top, line), weekday)
+                canvas.drawText(upper, left, weekday.baselineIn(top, line), weekday)
                 canvas.drawText(number, left, date.baselineIn(top + line, line), date)
             } else {
-                val name = texts.weekdays[day.date.dayOfWeek.value - 1].uppercase(Locale.GERMAN)
                 val baseline = date.baselineIn(top, scale.px(HEAD_LINE))
-                canvas.drawText(name, left, baseline, weekday)
-                canvas.drawText(number, left + weekday.measureText(name) + scale.px(HEAD_GAP), baseline, date)
+                canvas.drawText(upper, left, baseline, weekday)
+                canvas.drawText(number, left + weekday.measureText(upper) + scale.px(HEAD_GAP), baseline, date)
             }
         }
 
@@ -242,14 +256,14 @@ class DayRowRenderer(
             canvas.drawCut(text, x, paint.baselineIn(y, scale.px(LINE)), right - x, paint)
         }
 
-        /** An entry's line: the bar in its colour, then a timed entry's time, mark and title, or any other's chip. */
+        /** An entry's lines: the bar in its colour, then a timed entry's time, mark and title, or any other's chip. */
         private fun line(
             day: DayEntry,
             x: Float,
             y: Float,
         ) {
             val color = palette.colorOf(day.entry)
-            val lineHeight = scale.px(LINE)
+            val lineHeight = scale.px(entryDp(day))
             val bar = scale.px(BAR_RADIUS)
             canvas.drawRoundRect(RectF(x, y, x + scale.px(BAR), y + lineHeight), bar, bar, solid(color))
             val start = x + scale.px(BAR + PART_GAP)
@@ -272,13 +286,18 @@ class DayRowRenderer(
                         FontWeight.REGULAR,
                         palette.secondaryText,
                     ).apply { fontFeatureSettings = "tnum" }
-            canvas.drawCut(time, x, timePaint.baselineIn(y, lineHeight), scale.px(TIME), timePaint)
-            val markX = x + scale.px(TIME + PART_GAP)
+            // Stacked, the time has a line of its own above the title's, as wide as the row.
+            val timeLine = if (stacked) scale.px(TIME_LINE) else lineHeight
+            val timeWidth = if (stacked) right - x else scale.px(TIME)
+            canvas.drawCut(time, x, timePaint.baselineIn(y, timeLine), timeWidth, timePaint)
+            val markX = if (stacked) x else x + scale.px(TIME + PART_GAP)
+            val titleY = if (stacked) y + timeLine else y
             val mark = scale.px(MARK)
-            canvas.drawMark(day.entry, color, markX, y + (lineHeight - mark) / 2, mark, scale.px(DOT), icons, drawings)
+            val markY = titleY + (lineHeight - mark) / 2
+            canvas.drawMark(day.entry, color, markX, markY, mark, scale.px(DOT), icons, drawings)
             val textX = markX + mark + scale.px(PART_GAP)
             val title = fonts.paint(scale, FONT, FontWeight.MEDIUM, palette.text)
-            title(day, textX, title.baselineIn(y, lineHeight), right - textX, title, FONT)
+            title(day, textX, title.baselineIn(titleY, lineHeight), right - textX, title, FONT)
         }
 
         /** An all-day chip, as wide as its content up to the row's edge: tinted, its mark if it has one, its title. */
@@ -368,7 +387,23 @@ class DayRowRenderer(
         ) = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
     }
 
-    private companion object {
-        const val SEPARATOR = " · "
+    companion object {
+        /**
+         * The least width in dp at which a row keeps its one line per entry:
+         * Android's least width for 4 cells, 70 × 4 − 30 dp, as the widget's
+         * provider info asks for (D34). Narrower, the rows stack (D39).
+         */
+        const val STACKED_BELOW_DP = 250
+
+        /** Whether a widget widthDp wide draws its rows stacked. */
+        fun stacksAt(widthDp: Int): Boolean = widthDp < STACKED_BELOW_DP
+
+        private const val SEPARATOR = " · "
+
+        /** A stacked row's day column, the weekday above the date: as wide as "HEUTE" in the weekday's font. */
+        internal const val STACKED_COLUMN = 36f
+
+        /** A stacked timed entry's time line, above its title's. */
+        internal const val TIME_LINE = 16f
     }
 }

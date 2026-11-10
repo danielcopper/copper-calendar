@@ -27,8 +27,9 @@ import kotlin.math.roundToInt
 /**
  * The week widget "Woche" (D14, D19), after the dashboard's tile: the month
  * widget's header and "+", and a list of drawn day rows, each the day's tap
- * area with a tap area per entry over it. Each drawn part comes twice, light
- * and dark, as in [MonthWidget].
+ * area with a tap area per entry over it, stacked when the widget is
+ * narrower than 4 cells ([DayRowRenderer.stacksAt]). Each drawn part comes
+ * twice, light and dark, as in [MonthWidget].
  */
 object WeekWidget {
     private const val TAG = "WeekWidget"
@@ -69,7 +70,9 @@ object WeekWidget {
         val assets = RenderAssets.of(context)
         val chrome =
             ChromeRenderer(assets.fonts, assets.icons, context.resources.getStringArray(R.array.weekday_heads).toList())
-        val rows = DayRowRenderer(assets.fonts, assets.icons, assets.drawings, WeekTexts.of(context.resources))
+        val texts = WeekTexts.of(context.resources)
+        val rows =
+            DayRowRenderer(assets.fonts, assets.icons, assets.drawings, texts, DayRowRenderer.stacksAt(widthDp))
         val drawn = mutableListOf<Bitmap>()
 
         fun Bitmap.kept(): Bitmap = also { drawn += it }

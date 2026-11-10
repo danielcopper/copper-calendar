@@ -16,6 +16,7 @@ import dev.cupr.calendar.render.DayRowRenderer
 import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
+import dev.cupr.calendar.render.TileWeek
 import dev.cupr.calendar.render.WeekTexts
 import dev.cupr.calendar.sample.SampleData
 import dev.cupr.calendar.tap.Tap
@@ -124,6 +125,24 @@ class WeekWidgetTest {
         assertEquals(scale.hairline + scale.px(5f), (entries.top + first.top).toFloat(), 1f)
         assertEquals(scale.px(PhoneMonth.CARD_SIDE + 44f + 8f), (entries.left + first.left).toFloat(), 1f)
         assertEquals(scale.px(21f), entries.getChildAt(1).top.toFloat() - first.top, 1f)
+    }
+
+    @Test
+    fun `narrower than 4 cells the rows stack, and each timed entry's tap area spans its two lines`() {
+        val scale = Scale(application.resources.displayMetrics.density)
+        // Saturday's entries are all timed: stacked, each takes its time's line above its title's.
+        val oneLine = scale.px(TileWeek.LINE + TileWeek.LINE_GAP)
+        val twoLines = scale.px(DayRowRenderer.TIME_LINE + TileWeek.LINE + TileWeek.LINE_GAP)
+        // 203 dp is 3 cells by Android's table, 276 dp 4; 250 dp is its least width for 4 cells (70 × 4 − 30).
+        for ((widthDp, height) in listOf(203 to twoLines, 249 to twoLines, 250 to oneLine, 276 to oneLine)) {
+            val list = WidgetHost.applied(application, widthDp, week).findViewById<ListView>(R.id.list)
+            val entries = list.adapter.getView(5, null, list).findViewById<ViewGroup>(R.id.entries)
+            assertEquals(8, entries.childCount)
+            for (index in 0 until entries.childCount) {
+                val slot = entries.getChildAt(index).layoutParams.height
+                assertEquals("$widthDp dp, entry $index", height, slot.toFloat(), 1f)
+            }
+        }
     }
 
     @Test
