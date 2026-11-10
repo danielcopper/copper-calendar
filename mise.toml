@@ -63,6 +63,24 @@ cat app/build/render/budget.txt
 description = "What CI checks, less the SonarQube Cloud gate, CodeQL and the PR title: build, unit and render tests with coverage, Android Lint, ktlint, detekt"
 run = "./gradlew assembleDebug testDebugUnitTest createDebugUnitTestCoverageReport lint ktlintCheck detekt"
 
+[tasks.deps-refresh]
+description = "Rewrite the lock files and the dependency verification metadata after a dependency change"
+# The metadata is written from scratch, so entries of dependencies the build no
+# longer uses go; Gradle only ever adds to an existing file. The dependency
+# reports resolve every configuration (lock state and checksums); the gate's
+# tasks add what is resolved only while a task runs (aapt2).
+# --refresh-dependencies reads every POM and module file again, as on a machine
+# with an empty cache: from a warm cache Gradle skips parent POMs and BOMs it
+# parsed before, and CI would then fail on them. Review the diff before
+# committing it.
+run = """
+set -eu
+rm -f gradle/verification-metadata.xml
+./gradlew --refresh-dependencies --write-locks --write-verification-metadata sha256 \
+  dependencies :app:dependencies buildEnvironment \
+  assembleDebug testDebugUnitTest createDebugUnitTestCoverageReport lint ktlintCheck detekt
+"""
+
 [tasks.install]
 description = "Build the debug APK and install it on the device adb is connected to"
 # Connect the phone first, as README.md describes; this task does not.
