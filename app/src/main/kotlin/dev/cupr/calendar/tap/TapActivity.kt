@@ -87,11 +87,8 @@ private fun launcherStart(
         packageManager.resolveActivity(link, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
             ?: return null
     val launch = packageManager.getLaunchIntentForPackage(app)
-    if (launch == null) {
-        Log.w(TAG, "$app opens $target but has no launcher entry; opening the link alone")
-        return null
-    }
-    return launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+    if (launch == null) Log.w(TAG, "$app opens $target but has no launcher entry; opening the link alone")
+    return launch?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
 }
 
 /**
