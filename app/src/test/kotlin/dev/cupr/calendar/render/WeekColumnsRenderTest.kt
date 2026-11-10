@@ -40,6 +40,7 @@ class WeekColumnsRenderTest {
     private val drawings = Drawings(assets)
     private val rows = WeekRowRenderer(fonts, icons, drawings)
     private val dayRows = DayRowRenderer(fonts, icons, drawings, WeekTexts.of(context.resources))
+    private val stackedRows = DayRowRenderer(fonts, icons, drawings, WeekTexts.of(context.resources), stacked = true)
     private val chrome = ChromeRenderer(fonts, icons, context.resources.getStringArray(R.array.weekday_heads).toList())
     private val scale = Probe.scale
     private val today = LocalDate.now(SampleData.clock)
@@ -69,8 +70,9 @@ class WeekColumnsRenderTest {
     /**
      * Both week widgets' bitmaps (header, "+" and rows, light and dark) for
      * the sample week and for a week with a very full Saturday, at the
-     * default and a full-width size, against Android 17's limit at a Pixel
-     * 6's screen ([BITMAP_LIMIT]).
+     * default and a full-width size, and "Woche" also stacked at 2 and 3
+     * cells wide, against Android 17's limit at a Pixel 6's screen
+     * ([BITMAP_LIMIT]).
      */
     @Test
     fun `measures the week widgets' bitmaps against Android's limit`() {
@@ -86,6 +88,11 @@ class WeekColumnsRenderTest {
                 lines += "Woche, $label, $widthDp dp: $woche bytes, ${percent(woche)} % of the limit"
                 lines += "Woche quer, $label, $widthDp dp: $quer bytes, ${percent(quer)} % of the limit"
                 if (entries === SampleData.entries) sample += listOf(woche, quer)
+            }
+            for (widthDp in listOf(TWO_CELLS_DP, THREE_CELLS_DP)) {
+                val woche = wocheBytes(dates, entries, widthDp)
+                lines += "Woche, $label, $widthDp dp, stacked: $woche bytes, ${percent(woche)} % of the limit"
+                if (entries === SampleData.entries) sample += woche
             }
         }
         val text =
@@ -104,10 +111,11 @@ class WeekColumnsRenderTest {
         val week = WeekLayout.build(dates, entries, today)
         val headerPx = scale.px(widthDp - 2 * PhoneMonth.CARD_INSET).roundToInt()
         val rowPx = scale.px(widthDp - 2 * PhoneMonth.CARD_BORDER).roundToInt()
+        val renderer = if (DayRowRenderer.stacksAt(widthDp)) stackedRows else dayRows
         return modes.sumOf { (_, palette) ->
             chrome.weekHeader("Diese Woche", "9.–15. Nov.", null, headerPx, scale, palette).allocationByteCount +
                 chrome.fab(scale, palette).allocationByteCount +
-                week.sumOf { dayRows.render(it, rowPx, scale, palette).allocationByteCount }.toLong()
+                week.sumOf { renderer.render(it, rowPx, scale, palette).allocationByteCount }.toLong()
         }
     }
 
@@ -185,6 +193,10 @@ class WeekColumnsRenderTest {
         const val FULL_DAY = 30
 
         const val DEFAULT_DP = 276
+
+        /** "Woche" at 2 and 3 cells wide (design.md's table), where its rows stack. */
+        const val TWO_CELLS_DP = 130
+        const val THREE_CELLS_DP = 203
 
         /** A widget as wide as a Pixel 6's screen (412 dp). */
         const val LARGE_DP = 412
