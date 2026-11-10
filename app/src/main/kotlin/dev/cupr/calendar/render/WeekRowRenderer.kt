@@ -201,13 +201,7 @@ class WeekRowRenderer(
             canvas.restoreToCount(saved)
         }
 
-        /**
-         * An entry's mark in a size × size box, wherever a mark stands (a timed
-         * line, an all-day chip with a drawing, beside the day's number): its
-         * drawing, else its icon in its colour, else a dot in its colour, also
-         * for a drawing or icon the app does not ship (D22, D24). The icon is
-         * looked up only when no drawing is drawn.
-         */
+        /** An entry's mark in a size × size box, wherever a mark stands in a cell ([drawMark]). */
         private fun mark(
             entry: Entry,
             @ColorInt color: Int,
@@ -215,18 +209,7 @@ class WeekRowRenderer(
             y: Float,
             size: Float,
         ) {
-            val drawing = entry.drawing?.let(drawings::get)
-            if (drawing != null) {
-                canvas.drawDrawing(drawing, x, y, size)
-                return
-            }
-            val icon = entry.icon?.let(icons::path)
-            if (icon != null) {
-                canvas.drawIcon(icon, x, y, size, color)
-            } else {
-                val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
-                canvas.drawCircle(x + size / 2, y + size / 2, scale.px(DOT) / 2, dot)
-            }
+            canvas.drawMark(entry, color, x, y, size, scale.px(DOT), icons, drawings)
         }
 
         /** An entry over several days across the columns it covers, in its lane. */

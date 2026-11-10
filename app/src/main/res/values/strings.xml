@@ -4,6 +4,19 @@
     <string name="app_name" translatable="false">Copper Calendar</string>
     <string name="widget_month_label">Monat</string>
     <string name="widget_month_description">Der Monat Woche für Woche, wie im Home-Assistant-Dashboard</string>
+    <string name="widget_week_label">Woche</string>
+    <string name="widget_week_description">Die Woche Tag für Tag, wie die Kachel im Home-Assistant-Dashboard</string>
+    <string name="widget_week_columns_label">Woche quer</string>
+    <string name="widget_week_columns_description">Die Woche in sieben Spalten, wie eine Woche des Monats</string>
+    <!-- A week widget's header: Monday to Sunday, or today and the six days after it (D20). -->
+    <string name="week_this_week">Diese Woche</string>
+    <string name="week_next_days">Nächste 7 Tage</string>
+    <!-- The week's rows: today's row, an empty day, and the additions after an entry's title (D18). -->
+    <string name="week_today">Heute</string>
+    <string name="week_free">frei</string>
+    <string name="week_holiday">Feiertag</string>
+    <string name="week_turns">wird %1$d</string>
+    <string name="week_until">bis %1$s</string>
     <string name="new_entry">Neuer Eintrag</string>
     <!-- A tap's target cannot be opened (D25): no app handles a target the Home Assistant app would open; any other case, also one this app may not start. -->
     <string name="target_home_assistant_missing">Home-Assistant-App nicht gefunden</string>

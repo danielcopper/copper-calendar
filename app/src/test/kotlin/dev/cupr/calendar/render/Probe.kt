@@ -34,7 +34,10 @@ import kotlin.math.roundToInt
 internal object Probe {
     const val DENSITY = 2.625f
     val scale = Scale(DENSITY)
-    val widthPx = scale.px(WidgetHost.WIDTH_DP - 2 * CARD_INSET).roundToInt()
+
+    /** A 4-cell-wide widget's width. */
+    const val WIDTH_DP = WidgetHost.WIDTH_DP
+    val widthPx = scale.px(WIDTH_DP - 2 * CARD_INSET).roundToInt()
 
     /** Where the render tests write their PNGs (`mise run render`). */
     val renderDir = File(System.getProperty("render.dir") ?: "build/render")
