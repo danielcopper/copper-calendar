@@ -4,6 +4,8 @@ java = "temurin-21.0.11+10.0.LTS"  # runs Gradle; AGP 9.5 needs JDK 17 or newer
 [vars]
 # The Android SDK lives under $HOME, installed by `setup` without root.
 sdk = "{{ env.HOME }}/Android/Sdk"
+# What `gate` runs; `deps-refresh` runs it too, for what only a running task resolves.
+gate_tasks = "assembleDebug testDebugUnitTest createDebugUnitTestCoverageReport lint ktlintCheck detekt"
 
 [tasks.setup]
 description = "Install the Android command-line tools and SDK packages into $HOME/Android/Sdk and point local.properties at them"
@@ -61,24 +63,24 @@ cat app/build/render/budget.txt
 
 [tasks.gate]
 description = "What CI checks, less the SonarQube Cloud gate, CodeQL, the check of the lock files and checksums, and the PR title: build, unit and render tests with coverage, Android Lint, ktlint, detekt"
-run = "./gradlew assembleDebug testDebugUnitTest createDebugUnitTestCoverageReport lint ktlintCheck detekt"
+run = "./gradlew {{ vars.gate_tasks }}"
 
 [tasks.deps-refresh]
 description = "Rewrite the lock files and the dependency verification metadata after a dependency change"
 # The metadata is written from scratch, so entries of dependencies the build no
-# longer uses go; Gradle only ever adds to an existing file. The dependency
-# reports resolve every configuration (lock state and checksums); the gate's
-# tasks add what is resolved only while a task runs (aapt2).
-# --refresh-dependencies reads every POM and module file again, as on a machine
-# with an empty cache: from a warm cache Gradle skips parent POMs and BOMs it
-# parsed before, and CI would then fail on them. Review the diff before
-# committing it.
+# longer uses go; Gradle only ever adds to an existing file. Anything written
+# into the file by hand goes with it. The dependency reports resolve every
+# configuration, so --write-locks writes its lock state; the gate's tasks add
+# what is resolved only while a task runs (aapt2). --refresh-dependencies reads
+# every POM and module file again, as on a machine with an empty cache: from a
+# warm cache Gradle skips parent POMs and BOMs it parsed before, and CI would
+# then fail on them. CI's lock file check (ci.yml) runs the same resolution
+# without the gate's tasks.
 run = """
 set -eu
 rm -f gradle/verification-metadata.xml
 ./gradlew --refresh-dependencies --write-locks --write-verification-metadata sha256 \
-  dependencies :app:dependencies buildEnvironment \
-  assembleDebug testDebugUnitTest createDebugUnitTestCoverageReport lint ktlintCheck detekt
+  dependencies :app:dependencies buildEnvironment {{ vars.gate_tasks }}
 """
 
 [tasks.install]
