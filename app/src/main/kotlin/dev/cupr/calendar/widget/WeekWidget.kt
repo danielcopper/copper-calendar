@@ -158,5 +158,8 @@ object WeekWidget {
     internal fun tap(
         entry: DayEntry,
         date: LocalDate,
-    ): Tap = entry.entry.uid?.takeIf { it.isNotBlank() }?.let { Tap.Entry(it, date) } ?: Tap.Day(date)
+    ): Tap =
+        entry.entry.uid
+            ?.takeIf { it.isNotBlank() }
+            ?.let { Tap.Entry(it, date) } ?: Tap.Day(date)
 }
