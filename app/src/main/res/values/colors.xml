@@ -4,7 +4,7 @@
          card border (SampleData.light; a test keeps them equal). -->
     <color name="widget_card">#FFFFFFFF</color>
     <color name="widget_card_border">#FFDDE2E9</color>
-    <!-- The text of a widget too full to draw (widget_too_full.xml): the palette's text. -->
+    <!-- The plain text a widget shows instead of its drawing (widget_plain.xml): the palette's text. -->
     <color name="widget_text">#FF161B22</color>
     <!-- The card's colour, clear: where the fade at the bottom of "Woche quer"
          begins (widget_fade.xml). -->

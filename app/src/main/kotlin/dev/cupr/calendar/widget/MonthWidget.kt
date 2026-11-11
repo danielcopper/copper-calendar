@@ -74,8 +74,8 @@ object MonthWidget {
             chrome.header(view.month, widthPx, scale, it)
         }
         val needed = kept.bytes + view.weeks.sumOf { BitmapLimit.bytes(widthPx, rows.heightPx(it, scale)) }
-        BitmapLimit.warnOver(TAG, id, needed, limit, left = 0, after = needed)
-        BitmapLimit.warnMarks(
+        BitmapLimit.warnOver(TAG, id, needed = needed, limit = limit, left = 0, after = needed)
+        DrawnWidget.warnMarks(
             TAG,
             id,
             view.weeks.flatMap { rows.marksWithoutRoom(it, widthPx, scale).toList() }.toMap(),

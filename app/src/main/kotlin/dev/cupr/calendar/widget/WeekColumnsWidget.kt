@@ -111,10 +111,18 @@ object WeekColumnsWidget {
         // Room for the fade's blank room counted in, as a row that has to be capped is taller than its list.
         val fadeDp = FADE_DP.toFloat()
         val bytesOf = { week: Week -> BitmapLimit.bytes(widthPx, rows.heightPx(week, scale, fadeDp)) }
-        val week = BitmapLimit.capped(full, limit - kept.bytes, bytesOf, ::leaveOutOne)
+        val capped = BitmapLimit.capped(full, limit - kept.bytes, bytesOf, ::leaveOutOne)
+        val week = capped.drawn
         val fixed = kept.bytes
-        BitmapLimit.warnOver(TAG, id, fixed + bytesOf(full), limit, week.days.sumOf { it.more }, fixed + bytesOf(week))
-        BitmapLimit.warnMarks(TAG, id, rows.marksWithoutRoom(week, widthPx, scale))
+        BitmapLimit.warnOver(
+            TAG,
+            id,
+            needed = fixed + bytesOf(full),
+            limit = limit,
+            left = capped.left,
+            after = fixed + bytesOf(week),
+        )
+        DrawnWidget.warnMarks(TAG, id, rows.marksWithoutRoom(week, widthPx, scale))
         val faded = overflows(rows, week, scale, heightDp, headerPx)
         val blank = if (faded) fadeDp else 0f
         views.setViewVisibility(R.id.fade, if (faded) View.VISIBLE else View.GONE)

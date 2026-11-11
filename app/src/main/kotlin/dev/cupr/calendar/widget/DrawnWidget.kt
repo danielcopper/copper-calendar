@@ -164,15 +164,28 @@ internal object DrawnWidget {
         limit: Long,
         extra: String = "",
     ) {
-        Log.i(tag, "Widget $id: drew ${kept.count} bitmaps at ${widthPx}px wide, ${kept.bytes} bytes of $limit$extra")
+        val of = BitmapLimit.describe(limit)
+        Log.i(tag, "Widget $id: drew ${kept.count} bitmaps at ${widthPx}px wide, ${kept.bytes} bytes of $of$extra")
+    }
+
+    /** Warns once per drawing for each day whose marks beside its number have no room, and how many. */
+    fun warnMarks(
+        tag: String,
+        id: Int,
+        withoutRoom: Map<LocalDate, Int>,
+    ) {
+        for ((date, count) in withoutRoom) {
+            Log.w(tag, "Widget $id: $date has no room beside its number for $count of its marks")
+        }
     }
 
     /**
      * Hands drawn to the launcher through update. When the system refuses it
      * for its bitmaps, which it does by throwing an IllegalArgumentException
-     * (see [BitmapLimit.limitBytes]), the log says so and the widget shows the plain
-     * tooFull text instead, which opens the calendar page. Only that
-     * exception, and only from update, is caught here.
+     * (see [BitmapLimit.limitBytes]), the log says so and the widget shows
+     * the plain tooFull text instead, which opens the calendar page. Only
+     * that exception, and only from update, is caught here; when the system
+     * refuses the plain text too, that exception propagates.
      */
     fun push(
         context: Context,
@@ -188,7 +201,7 @@ internal object DrawnWidget {
             Log.e(
                 tag,
                 "Widget $id: the system refused its views; the app counted ${drawn.bytes} bytes of bitmaps " +
-                    "against ${drawn.limit}, the limit it read from the display",
+                    "against ${BitmapLimit.describe(drawn.limit)}, the limit it read from the display",
                 e,
             )
             update(plainViews(context, tooFull))
@@ -200,9 +213,9 @@ internal object DrawnWidget {
         context: Context,
         @StringRes text: Int,
     ): RemoteViews {
-        val views = RemoteViews(context.packageName, R.layout.widget_too_full)
-        views.setTextViewText(R.id.too_full, context.getString(text))
-        views.setOnClickPendingIntent(R.id.too_full, Taps.pendingIntent(context, Tap.Header))
+        val views = RemoteViews(context.packageName, R.layout.widget_plain)
+        views.setTextViewText(R.id.plain_text, context.getString(text))
+        views.setOnClickPendingIntent(R.id.plain_text, Taps.pendingIntent(context, Tap.Header))
         return views
     }
 }
@@ -211,10 +224,10 @@ internal object DrawnWidget {
  * A provider of a drawn widget: drawn anew on each update and whenever its
  * size changes. Each widget is updated on its own: when its update throws an
  * IllegalArgumentException or an IllegalStateException, which a check in
- * the drawing throws, or which a refused fallback of [DrawnWidget.push]
- * would, the log says so and the widget shows "Kalender konnte nicht
- * gezeichnet werden", which opens the calendar page; the others are updated
- * all the same. No other exception is caught.
+ * the drawing throws, the log says so and the widget shows the plain text
+ * [R.string.widget_failed], which opens the calendar page; the others are
+ * updated all the same. No other exception is caught, and a plain text the
+ * system refuses here is not caught again: its exception propagates (D40).
  */
 abstract class DrawnWidgetProvider : AppWidgetProvider() {
     /** The log's tag. */

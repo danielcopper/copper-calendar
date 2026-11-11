@@ -90,9 +90,17 @@ object WeekWidget {
         }
         val full = WeekLayout.build(dates, entries, today)
         val bytesOf = { days: List<WeekDay> -> days.sumOf { BitmapLimit.bytes(rowPx, rows.heightPx(it, scale)) } }
-        val week = BitmapLimit.capped(full, limit - kept.bytes, bytesOf, ::leaveOutOne)
+        val capped = BitmapLimit.capped(full, limit - kept.bytes, bytesOf, ::leaveOutOne)
+        val week = capped.drawn
         val fixed = kept.bytes
-        BitmapLimit.warnOver(TAG, id, fixed + bytesOf(full), limit, week.sumOf { it.more }, fixed + bytesOf(week))
+        BitmapLimit.warnOver(
+            TAG,
+            id,
+            needed = fixed + bytesOf(full),
+            limit = limit,
+            left = capped.left,
+            after = fixed + bytesOf(week),
+        )
         val items =
             week.map { day ->
                 val light = kept.keep(rows.render(day, rowPx, scale, SampleData.light))

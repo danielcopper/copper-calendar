@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A widget the system refused for its bitmaps (DrawnWidget.push): the
-     card with a plain text, which opens the calendar page. -->
+<!-- A widget that shows a plain text instead of its drawing (D40), too full
+     for its bitmaps or failed to draw (DrawnWidget.plainViews): the card
+     with the text, which opens the calendar page. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_card">
 
     <TextView
-        android:id="@+id/too_full"
+        android:id="@+id/plain_text"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"

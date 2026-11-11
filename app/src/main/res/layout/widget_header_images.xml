@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The drawn header, light and dark, as each widget's header includes it. -->
+<!-- The drawn header, light and dark, scaled to the header's width, as the
+     month and "Woche quer" include it; "Woche" shows its header unscaled
+     (widget_header_images_unscaled.xml). -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android">
 
     <ImageView

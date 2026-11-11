@@ -2,6 +2,7 @@ package dev.cupr.calendar.widget
 
 import android.app.Application
 import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.util.Log
 import android.view.View
@@ -121,28 +122,40 @@ class DrawnWidgetTest {
         val drawn = WeekColumnsWidget.draw(application, 276, 220, WeekDays.MONDAY_TO_SUNDAY, 8, limit, full)
         assertTrue("${drawn.bytes} of $limit", drawn.bytes <= limit)
         val warning = ShadowLog.getLogsForTag("WeekColumnsWidget").single { it.type == Log.WARN }.msg
-        assertTrue(warning, warning.startsWith("Widget 8: its bitmaps take ${unlimited.bytes} bytes, over the limit"))
+        val expected =
+            Regex(
+                "Widget 8: its bitmaps take ${unlimited.bytes} bytes, over the limit of $limit; " +
+                    "(\\d+) entries left out",
+            )
+        val left = checkNotNull(expected.matchEntire(warning)) { warning }.groupValues[1].toInt()
+        assertTrue("$left", left > 0)
         val week = MonthLayout.week(WeekDays.MONDAY_TO_SUNDAY.dates(wednesday), full, wednesday)
         val capped = BitmapLimit.capped(week, 0, { 1L }, WeekColumnsWidget::leaveOutOne)
-        assertTrue(capped.days.all { it.shown.isEmpty() })
-        assertEquals(week.days.map { it.shown.size }, capped.days.map { it.more })
+        assertTrue(capped.drawn.days.all { it.shown.isEmpty() })
+        assertEquals(week.days.map { it.shown.size }, capped.drawn.days.map { it.more })
+        assertEquals(week.days.sumOf { it.shown.size }, capped.left)
         val one = BitmapLimit.capped(week, 0, { if (it.days[5].more == 0) 1L else 0L }, WeekColumnsWidget::leaveOutOne)
-        assertEquals(1, one.days[5].more)
-        assertEquals(week.days[5].shown.dropLast(1), one.days[5].shown)
+        assertEquals(1, one.drawn.days[5].more)
+        assertEquals(1, one.left)
+        assertEquals(week.days[5].shown.dropLast(1), one.drawn.days[5].shown)
     }
 
     @Test
     fun `the cap takes from the day showing the most entries, one at a time, until the week fits`() {
         val days = WeekLayout.build(WeekDays.MONDAY_TO_SUNDAY.dates(wednesday), full, wednesday)
-        assertEquals(days, BitmapLimit.capped(days, Long.MAX_VALUE, { 1L }, WeekWidget::leaveOutOne))
+        val untouched = BitmapLimit.capped(days, Long.MAX_VALUE, { 1L }, WeekWidget::leaveOutOne)
+        assertEquals(days, untouched.drawn)
+        assertEquals(0, untouched.left)
         // A day costs as many bytes as it shows entries; room for 8 fewer than all.
         val total = days.sumOf { it.entries.size }
         val shownCount = { week: List<WeekDay> -> week.sumOf { it.shown.size }.toLong() }
         val capped = BitmapLimit.capped(days, total - 8L, shownCount, WeekWidget::leaveOutOne)
-        assertEquals(listOf(0, 0, 0, 0, 0, 8, 0), capped.map { it.more })
+        assertEquals(listOf(0, 0, 0, 0, 0, 8, 0), capped.drawn.map { it.more })
+        assertEquals(8, capped.left)
         // With no room at all, every day leaves out all of its entries, and the cap ends.
         val none = BitmapLimit.capped(days, -1, shownCount, WeekWidget::leaveOutOne)
-        assertEquals(days.map { it.entries.size }, none.map { it.more })
+        assertEquals(days.map { it.entries.size }, none.drawn.map { it.more })
+        assertEquals(total, none.left)
     }
 
     @Test
@@ -175,6 +188,13 @@ class DrawnWidgetTest {
         assertEquals(listOf(4, 3), less.days.take(2).map { it.shown.size })
         assertEquals(listOf(0, 2), less.days.take(2).map { it.more })
         assertThrows(IllegalStateException::class.java) { Probe.day(monday).leaveOutLast() }
+        // Two days with as many lines: the first of them.
+        val tie =
+            Probe.week(
+                monday,
+                mapOf(0 to Probe.day(monday, shown = four), 1 to Probe.day(monday.plusDays(1), shown = four)),
+            )
+        assertEquals(listOf(3, 4), checkNotNull(WeekColumnsWidget.leaveOutOne(tie)).days.take(2).map { it.shown.size })
     }
 
     @Test
@@ -207,10 +227,40 @@ class DrawnWidgetTest {
     }
 
     @Test
+    fun `a drawing exactly at the limit does not warn, one byte over does`() {
+        BitmapLimit.warnOver("Test", 1, needed = 10, limit = 10, left = 0, after = 10)
+        assertTrue(ShadowLog.getLogsForTag("Test").isEmpty())
+        BitmapLimit.warnOver("Test", 1, needed = 11, limit = 10, left = 1, after = 9)
+        assertEquals(
+            listOf("Widget 1: its bitmaps take 11 bytes, over the limit of 10; 1 entries left out"),
+            ShadowLog.getLogsForTag("Test").map { it.msg },
+        )
+    }
+
+    @Test
+    fun `without a limit the log says no limit`() {
+        val kept = Kept()
+        DrawnWidget.logDrawn("Test", 1, kept, 100, Long.MAX_VALUE)
+        assertEquals(
+            "Widget 1: drew 0 bitmaps at 100px wide, 0 bytes of no limit",
+            ShadowLog.getLogsForTag("Test").single().msg,
+        )
+    }
+
+    @Test
     fun `marks with no room beside their number are logged once per drawing`() {
         WeekColumnsWidget.draw(application, 150, 220, WeekDays.MONDAY_TO_SUNDAY, 9, Long.MAX_VALUE)
         val marks = ShadowLog.getLogsForTag("WeekColumnsWidget").map { it.msg }.filter { "no room" in it }
         assertEquals(listOf("Widget 9: 2026-11-11 has no room beside its number for 1 of its marks"), marks)
+    }
+
+    @Test
+    fun `the month logs its marks with no room once per drawing too`() {
+        MonthWidget.draw(application, 150, 4, Long.MAX_VALUE)
+        val marks = ShadowLog.getLogsForTag("MonthWidget").map { it.msg }.filter { "no room" in it }
+        assertTrue(marks.isNotEmpty())
+        assertEquals(marks.distinct(), marks)
+        assertTrue(marks.toString(), marks.all { it.startsWith("Widget 4: 2026-") })
     }
 
     @Test
@@ -230,7 +280,7 @@ class DrawnWidgetTest {
         }
         assertEquals(2, pushed.size)
         val shown = pushed[1].apply(application, FrameLayout(application))
-        val text = shown.findViewById<TextView>(R.id.too_full)
+        val text = shown.findViewById<TextView>(R.id.plain_text)
         assertEquals("Woche zu voll – im Kalender öffnen", text.text.toString())
         text.performClick()
         assertEquals(Tap.Header, Taps.read(checkNotNull(shadowOf(application).nextStartedActivity)))
@@ -239,6 +289,18 @@ class DrawnWidgetTest {
                 "the limit it read from the display",
             ShadowLog.getLogsForTag("Test").single { it.type == Log.ERROR }.msg,
         )
+    }
+
+    @Test
+    fun `a plain text the system refuses as well is not caught again`() {
+        val drawn = Drawn(RemoteViews(application.packageName, R.layout.widget_week), 42, 41)
+        val error =
+            assertThrows(IllegalArgumentException::class.java) {
+                DrawnWidget.push(application, 5, drawn, R.string.widget_week_too_full, "Test") {
+                    throw IllegalArgumentException("refused")
+                }
+            }
+        assertEquals("refused", error.message)
     }
 
     @Test
@@ -252,7 +314,10 @@ class DrawnWidgetTest {
     @Test
     fun `a widget whose drawing fails shows that it could not be drawn, and the others still update`() {
         val shadow = shadowOf(manager)
-        val ids = List(3) { shadow.createWidget(WeekWidgetProvider::class.java, R.layout.widget_week) }
+        // Created by a provider that draws nothing, in a layout without a list, so only the update below gives the
+        // fine one its list.
+        val ids = List(3) { shadow.createWidget(AppWidgetProvider::class.java, R.layout.widget_plain) }
+        assertTrue(ids.all { shadow.getViewFor(it).findViewById<View>(R.id.list) == null })
         val (argument, state, fine) = ids
         val updated = mutableListOf<Int>()
         val provider =
@@ -274,7 +339,7 @@ class DrawnWidgetTest {
         provider.onUpdate(application, manager, ids.toIntArray())
         assertEquals(ids, updated)
         for (id in listOf(argument, state)) {
-            val text = shadow.getViewFor(id).findViewById<TextView>(R.id.too_full)
+            val text = shadow.getViewFor(id).findViewById<TextView>(R.id.plain_text)
             assertEquals("Kalender konnte nicht gezeichnet werden – im Kalender öffnen", text.text.toString())
             text.performClick()
             assertEquals(Tap.Header, Taps.read(checkNotNull(shadowOf(application).nextStartedActivity)))
@@ -292,18 +357,40 @@ class DrawnWidgetTest {
     }
 
     @Test
+    fun `any other exception is not caught by the provider`() {
+        val provider =
+            object : DrawnWidgetProvider() {
+                override val tag = "Test"
+
+                override fun update(
+                    context: Context,
+                    manager: AppWidgetManager,
+                    id: Int,
+                ): Unit = throw UnsupportedOperationException("not caught")
+            }
+        val id = shadowOf(manager).createWidget(AppWidgetProvider::class.java, R.layout.widget_plain)
+        assertThrows(
+            UnsupportedOperationException::class.java,
+        ) { provider.onUpdate(application, manager, intArrayOf(id)) }
+    }
+
+    @Test
     fun `the too-full text is the palette's text on the card`() {
         assertEquals(SampleData.light.text, application.getColor(R.color.widget_text))
         val views = DrawnWidget.plainViews(application, R.string.widget_month_too_full)
-        val text = views.apply(application, FrameLayout(application)).findViewById<TextView>(R.id.too_full)
+        val text = views.apply(application, FrameLayout(application)).findViewById<TextView>(R.id.plain_text)
         assertEquals("Monat zu voll – im Kalender öffnen", text.text.toString())
         assertEquals(View.VISIBLE, text.visibility)
+        assertEquals(SampleData.light.text, text.currentTextColor)
     }
 
     @Test
     @Config(qualifiers = "+night")
     fun `in night mode the too-full text is the dark palette's text`() {
         assertEquals(SampleData.dark.text, application.getColor(R.color.widget_text))
+        val views = DrawnWidget.plainViews(application, R.string.widget_month_too_full)
+        val text = views.apply(application, FrameLayout(application)).findViewById<TextView>(R.id.plain_text)
+        assertEquals(SampleData.dark.text, text.currentTextColor)
     }
 
     /** A timed entry from hour to half past it on date. */

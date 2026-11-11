@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import android.view.WindowManager
-import java.time.LocalDate
 
 /**
  * The system's limit on a widget's bitmaps, and how the drawn widgets keep
@@ -53,6 +52,15 @@ internal object BitmapLimit {
         return Long.MAX_VALUE
     }
 
+    /** A limit for the log: its bytes, or "no limit" for a display without a size ([limitOf]). */
+    fun describe(limit: Long): String = if (limit == Long.MAX_VALUE) "no limit" else "$limit"
+
+    /** What [capped] ends at, and how many entries it left out to get there. */
+    class Capped<T>(
+        val drawn: T,
+        val left: Int,
+    )
+
     /**
      * From start, leaves out one entry after another by next while bytesOf
      * counts it over room; next gives null when nothing is left to leave out,
@@ -63,10 +71,14 @@ internal object BitmapLimit {
         room: Long,
         bytesOf: (T) -> Long,
         next: (T) -> T?,
-    ): T {
+    ): Capped<T> {
         var drawn = start
-        while (bytesOf(drawn) > room) drawn = next(drawn) ?: break
-        return drawn
+        var left = 0
+        while (bytesOf(drawn) > room) {
+            drawn = next(drawn) ?: break
+            left++
+        }
+        return Capped(drawn, left)
     }
 
     /**
@@ -85,17 +97,6 @@ internal object BitmapLimit {
         if (needed <= limit) return
         val still = if (after > limit) ", still ${after - limit} bytes over" else ""
         Log.w(tag, "Widget $id: its bitmaps take $needed bytes, over the limit of $limit; $left entries left out$still")
-    }
-
-    /** Warns once per drawing for each day whose marks beside its number have no room, and how many. */
-    fun warnMarks(
-        tag: String,
-        id: Int,
-        withoutRoom: Map<LocalDate, Int>,
-    ) {
-        for ((date, count) in withoutRoom) {
-            Log.w(tag, "Widget $id: $date has no room beside its number for $count of its marks")
-        }
     }
 
     /** The bytes of a bitmap widthPx × heightPx, light and dark. */
