@@ -6,7 +6,7 @@ import android.graphics.Bitmap
 import android.util.Log
 import android.widget.RemoteViews
 import dev.cupr.calendar.R
-import dev.cupr.calendar.month.DAYS_IN_WEEK
+import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.month.MonthLayout
 import dev.cupr.calendar.month.Week
 import dev.cupr.calendar.render.ChromeRenderer

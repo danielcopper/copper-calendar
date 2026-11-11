@@ -6,6 +6,7 @@ import dev.cupr.calendar.sample.SampleData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -178,6 +179,46 @@ class WeekLayoutTest {
                 .single()
                 .addition,
         )
+    }
+
+    @Test
+    fun `a birthday whose year of birth lies after it gets no age`() {
+        val week = build(allDay(date(13), title = "Falsch", kind = Kinds.BIRTHDAY).copy(year = 2030))
+        assertNull(
+            week
+                .on(13)
+                .entries
+                .single()
+                .addition,
+        )
+        assertThrows(IllegalArgumentException::class.java) { Addition.Turns(-1) }
+    }
+
+    @Test
+    fun `a timed entry of no length at the first day's midnight is left out, unlike in the month`() {
+        val midnight = date(9).atStartOfDay()
+        assertTrue(build(timed(midnight, midnight, "Mitternacht")).all { it.entries.isEmpty() })
+    }
+
+    @Test
+    fun `the days run on without a gap`() {
+        val error =
+            assertThrows(IllegalArgumentException::class.java) {
+                WeekLayout.build(listOf(date(9), date(11)), emptyList(), today)
+            }
+        assertTrue("${error.message}", error.message!!.startsWith("The days run on without a gap"))
+        assertThrows(IllegalArgumentException::class.java) { WeekLayout.build(dates.reversed(), emptyList(), today) }
+        assertThrows(IllegalArgumentException::class.java) { WeekLayout.build(emptyList(), emptyList(), today) }
+    }
+
+    @Test
+    fun `a day leaves out its last entries for a line that counts them, and stays a holiday`() {
+        val day = build(allDay(date(12), title = "Feiertag", kind = Kinds.HOLIDAY), timed(at(12, 9), at(12, 10))).on(12)
+        val capped = day.copy(more = 2)
+        assertTrue(capped.shown.isEmpty())
+        assertTrue(capped.holiday)
+        assertEquals(listOf("Feiertag"), day.copy(more = 1).shown.map { it.entry.title })
+        assertThrows(IllegalArgumentException::class.java) { day.copy(more = 3) }
     }
 
     @Test

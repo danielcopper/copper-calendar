@@ -6,8 +6,8 @@ import android.graphics.Paint
 import android.text.TextPaint
 import android.text.TextUtils
 import androidx.core.graphics.createBitmap
+import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.model.Palette
-import dev.cupr.calendar.month.DAYS_IN_WEEK
 import dev.cupr.calendar.render.PhoneMonth.CHEVRON
 import dev.cupr.calendar.render.PhoneMonth.FAB_ICON
 import dev.cupr.calendar.render.PhoneMonth.FAB_MARGIN
@@ -128,14 +128,12 @@ class ChromeRenderer(
         range: String,
         widthPx: Int,
         scale: Scale,
-    ): Pair<String, Float> =
-        placeRange(range, rangePaint(scale, 0), widthPx - scale.px(CHEVRON) - scale.px(RANGE_GAP))
+    ): Pair<String, Float> = placeRange(range, rangePaint(scale, 0), widthPx - scale.px(CHEVRON) - scale.px(RANGE_GAP))
 
     private fun rangePaint(
         scale: Scale,
         color: Int,
-    ): TextPaint =
-        fonts.paint(scale, RANGE_FONT, FontWeight.REGULAR, color).apply { fontFeatureSettings = "tnum" }
+    ): TextPaint = fonts.paint(scale, RANGE_FONT, FontWeight.REGULAR, color).apply { fontFeatureSettings = "tnum" }
 
     /** The range cut to fit before end, and the x it starts at. */
     private fun placeRange(

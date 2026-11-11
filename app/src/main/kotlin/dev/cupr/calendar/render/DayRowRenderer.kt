@@ -11,6 +11,7 @@ import android.text.TextPaint
 import androidx.annotation.ColorInt
 import androidx.core.graphics.createBitmap
 import dev.cupr.calendar.R
+import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.model.Palette
 import dev.cupr.calendar.render.PhoneMonth.CARD_SIDE
 import dev.cupr.calendar.render.TileWeek.BAR
@@ -64,7 +65,7 @@ data class WeekTexts(
     val until: String,
 ) {
     init {
-        require(weekdays.size == WEEKDAYS) { "The week needs $WEEKDAYS weekday names, not ${weekdays.size}" }
+        require(weekdays.size == DAYS_IN_WEEK) { "The week needs $DAYS_IN_WEEK weekday names, not ${weekdays.size}" }
     }
 
     fun addition(addition: Addition): String =
@@ -75,8 +76,6 @@ data class WeekTexts(
         }
 
     companion object {
-        private const val WEEKDAYS = 7
-
         fun of(resources: Resources) =
             WeekTexts(
                 weekdays = resources.getStringArray(R.array.weekday_heads).toList(),

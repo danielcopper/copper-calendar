@@ -4,9 +4,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.test.core.app.ApplicationProvider
+import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.month.Bar
-import dev.cupr.calendar.month.DAYS_IN_WEEK
 import dev.cupr.calendar.month.Day
 import dev.cupr.calendar.month.Week
 import dev.cupr.calendar.render.PhoneMonth.CARD_INSET

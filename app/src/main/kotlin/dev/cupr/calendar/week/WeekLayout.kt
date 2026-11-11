@@ -2,9 +2,12 @@ package dev.cupr.calendar.week
 
 import androidx.annotation.StringRes
 import dev.cupr.calendar.R
+import dev.cupr.calendar.days.CalendarDays
+import dev.cupr.calendar.days.DAYS_IN_WEEK
+import dev.cupr.calendar.days.isWeekend
+import dev.cupr.calendar.days.longName
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.model.Kinds
-import java.text.Collator
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -31,42 +34,59 @@ enum class WeekDays(
                 MONDAY_TO_SUNDAY -> today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
                 FROM_TODAY -> today
             }
-        return List(DAYS) { first.plusDays(it.toLong()) }
-    }
-
-    companion object {
-        const val DAYS = 7
+        return List(DAYS_IN_WEEK) { first.plusDays(it.toLong()) }
     }
 }
 
 /**
  * A day of the week's rows ("Woche"), as the dashboard's tile shows it
  * (`calendar_days` with `empty`, `past` and `runs`; the dashboard's file is
- * named in [dev.cupr.calendar.render.PhoneMonth]).
+ * named in [dev.cupr.calendar.render.PhoneMonth]). [WeekLayout] makes it.
  */
-data class WeekDay(
+@ConsistentCopyVisibility
+data class WeekDay internal constructor(
     val date: LocalDate,
     val today: Boolean,
     /** Before today: the whole row is dimmed. */
     val past: Boolean,
-    /** A public holiday stands on it: its number is red. */
-    val holiday: Boolean,
     /** Its entries, in order. */
     val entries: List<DayEntry>,
     /** The titles of the entries over several days that it lies in after their first day shown. */
     val running: List<String>,
+    /**
+     * How many of its last entries the row leaves out and counts in a
+     * "+N weitere" line instead, 0 for none: only a full week does, for the
+     * bitmap limit.
+     */
+    val more: Int = 0,
 ) {
-    val weekend: Boolean get() = date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY
+    init {
+        require(!(past && today)) { "A past day is not today: $date" }
+        require(more in 0..entries.size) { "A day of ${entries.size} entries cannot leave out $more" }
+    }
+
+    /** A public holiday stands on it: its number is red. */
+    val holiday: Boolean get() = entries.any { it.entry.kind == Kinds.HOLIDAY }
+
+    val weekend: Boolean get() = date.isWeekend
+
+    /** The entries the row draws: all but the [more] it leaves out. */
+    val shown: List<DayEntry> get() = entries.dropLast(more)
 }
 
-/** An entry as a row of the week shows it. */
-data class DayEntry(
+/** An entry as a row of the week shows it. [WeekLayout] makes it. */
+@ConsistentCopyVisibility
+data class DayEntry internal constructor(
     val entry: Entry,
     /** Timed within this day: its time ("16:00–16:45"); none for an entry drawn as a chip. */
     val time: String?,
     /** Its short addition after the title; none for no addition. */
     val addition: Addition?,
-)
+) {
+    init {
+        require(time == null || !entry.allDay) { "An all-day entry has no time: ${entry.title}" }
+    }
+}
 
 /** An entry's short addition, worded by the app while drawing (D18). */
 sealed interface Addition {
@@ -76,7 +96,11 @@ sealed interface Addition {
     /** A birthday's "wird 26". */
     data class Turns(
         val age: Int,
-    ) : Addition
+    ) : Addition {
+        init {
+            require(age >= 0) { "A birthday turns $age" }
+        }
+    }
 
     /** An entry over several days: "bis" and when it ends, a day ("Sonntag, 22. November") or a time ("01:00"). */
     data class Until(
@@ -85,85 +109,40 @@ sealed interface Addition {
 }
 
 /**
- * The days of the week's rows from the entries (`calendar_days`). Every day
- * shows, also an empty one; an entry stands on its first day, one that began
- * before the first day on that; past entries stay. An entry over several days
- * says "bis" and its last day, and each further day shown inside it carries
- * its title in [WeekDay.running]; school holidays and vacations that began
- * before the first day stand on the first day shown instead of making it
- * count. Timed entries ending today are not marked over.
+ * The days of the week's rows from the entries (`calendar_days`, shared with
+ * the month as [CalendarDays]). Every day shows, also an empty one; an entry
+ * stands on its first day, one that began before the first day on that; past
+ * entries stay. An entry over several days says "bis" and its last day, and
+ * each further day shown inside it carries its title in [WeekDay.running].
+ * Timed entries ending today are not marked over.
  */
 object WeekLayout {
-    private val collator: Collator = Collator.getInstance(Locale.GERMAN)
-    private val longDate = DateTimeFormatter.ofPattern("EEEE, d. MMMM", Locale.GERMAN)
     private val clock = DateTimeFormatter.ofPattern("HH:mm")
     private val dayAndMonth = DateTimeFormatter.ofPattern("d. MMM", Locale.GERMAN)
 
+    /** The days of dates, which run on without a gap. */
     fun build(
         dates: List<LocalDate>,
         entries: List<Entry>,
         today: LocalDate,
     ): List<WeekDay> {
-        require(dates.isNotEmpty()) { "A week shows at least one day" }
-        val begin = dates.first()
-        val end = dates.last()
-        val placed = mutableMapOf<LocalDate, MutableList<Placed>>()
-        val spans = mutableListOf<Span>()
-        entries
-            // Left out: ended before the first day, or begins after the last.
-            .filter { it.end.isAfter(begin.atStartOfDay()) && !maxOf(it.start.toLocalDate(), begin).isAfter(end) }
-            .forEach { place(it, begin, placed, spans) }
+        val placed = CalendarDays.place(dates, entries, keepFirstMidnight = false)
         val running = mutableMapOf<LocalDate, MutableList<String>>()
-        for (span in spans) {
-            var listed = span.listed
-            for (date in dates.filter { it.isAfter(span.first) && !it.isAfter(span.last) }) {
-                if (listed) {
-                    running.getOrPut(date) { mutableListOf() } += span.title
-                } else {
-                    placed.getOrPut(date) { mutableListOf() } += span.row
-                }
-                listed = true
+        for (entry in placed.filter { it.multi }) {
+            for (date in dates.filter { it.isAfter(entry.date) && !it.isAfter(entry.last) }) {
+                running.getOrPut(date) { mutableListOf() } += entry.entry.title
             }
         }
-        val order =
-            compareBy<Placed>({ it.start != null }, { it.start })
-                .then { a, b -> collator.compare(a.day.entry.title, b.day.entry.title) }
-        return dates.map { date ->
-            val rows = placed[date].orEmpty().sortedWith(order).map { it.day }
+        val days = CalendarDays.byDay(dates, placed)
+        return dates.mapIndexed { index, date ->
             WeekDay(
                 date = date,
                 today = date == today,
                 past = date.isBefore(today),
-                holiday = rows.any { it.entry.kind == Kinds.HOLIDAY },
-                entries = rows,
+                entries = days[index].map(::dayEntry),
                 running = running[date].orEmpty(),
             )
         }
-    }
-
-    /**
-     * Puts an entry on the day it stands on, its first or else the first day
-     * begin, and an entry over several days into spans; school holidays and
-     * vacations that began before begin only into spans, which list them on
-     * the first day shown.
-     */
-    private fun place(
-        entry: Entry,
-        begin: LocalDate,
-        placed: MutableMap<LocalDate, MutableList<Placed>>,
-        spans: MutableList<Span>,
-    ) {
-        val first = entry.start.toLocalDate()
-        val last = entry.end.minusNanos(1).toLocalDate()
-        val date = maxOf(first, begin)
-        val multi = last.isAfter(first)
-        val span = entry.allDay && entry.kind in SPAN_KINDS && multi
-        val row = placedRow(entry, date, first, last, multi)
-        if (multi) {
-            spans +=
-                Span(if (span) first else date, last, entry.title, row, listed = !span || !first.isBefore(begin))
-        }
-        if (!span || !first.isBefore(begin)) placed.getOrPut(date) { mutableListOf() } += row
     }
 
     /**
@@ -182,59 +161,37 @@ object WeekLayout {
         }
     }
 
-    /** An entry as it stands on date, and its start when it is timed on that day (the order's key). */
-    private data class Placed(
-        val day: DayEntry,
-        val start: LocalDateTime?,
-    )
-
-    /** An entry over several days, as far as its title runs on into the days after the one it stands on. */
-    private data class Span(
-        val first: LocalDate,
-        val last: LocalDate,
-        val title: String,
-        val row: Placed,
-        val listed: Boolean,
-    )
-
-    private fun placedRow(
-        entry: Entry,
-        date: LocalDate,
-        first: LocalDate,
-        last: LocalDate,
-        multi: Boolean,
-    ): Placed {
-        val timed = !entry.allDay && first == date
+    /** An entry as it stands on its day: its time when it is timed there, and its addition. */
+    private fun dayEntry(placed: CalendarDays.Placed): DayEntry {
+        val entry = placed.entry
+        // A year of birth after the entry's year is wrong data; it gets no age.
+        val age = entry.year?.let { entry.start.year - it }?.takeIf { it >= 0 }
         val addition =
             when {
                 entry.kind == Kinds.HOLIDAY -> Addition.Holiday
-                entry.kind == Kinds.BIRTHDAY && entry.year != null -> Addition.Turns(entry.start.year - entry.year)
-                multi -> Addition.Until(until(entry, date, first, last))
+                entry.kind == Kinds.BIRTHDAY && age != null -> Addition.Turns(age)
+                placed.multi -> Addition.Until(until(placed))
                 else -> null
             }
         val time =
             when {
-                !timed -> null
-                multi || !entry.end.isAfter(entry.start) -> entry.start.format(clock)
-                else -> "${entry.start.format(clock)}–${endOfDay(entry.end, first)}"
+                !placed.timed -> null
+                placed.multi || !entry.end.isAfter(entry.start) -> entry.start.format(clock)
+                else -> "${entry.start.format(clock)}–${endOfDay(entry.end, placed.first)}"
             }
-        return Placed(DayEntry(entry, time, addition), if (timed) entry.start else null)
+        return DayEntry(entry, time, addition)
     }
 
     /**
      * Where an entry over several days ends, as its "bis" says: a timed one
-     * that began before date and ends on it, its time; any other, its last day.
+     * that began before the day it stands on and ends on it, its time; any
+     * other, its last day.
      */
-    private fun until(
-        entry: Entry,
-        date: LocalDate,
-        first: LocalDate,
-        last: LocalDate,
-    ): String =
-        if (!entry.allDay && first.isBefore(date) && last == date) {
-            endOfDay(entry.end, date)
+    private fun until(placed: CalendarDays.Placed): String =
+        if (!placed.entry.allDay && placed.first.isBefore(placed.date) && placed.last == placed.date) {
+            endOfDay(placed.entry.end, placed.date)
         } else {
-            last.format(longDate)
+            placed.last.longName
         }
 
     /** A time that ends on day, "24:00" for the midnight after it. */
@@ -244,5 +201,4 @@ object WeekLayout {
     ): String = if (end.toLocalDate() == day) end.format(clock) else MIDNIGHT
 
     private const val MIDNIGHT = "24:00"
-    private val SPAN_KINDS = setOf(Kinds.SCHOOL_HOLIDAYS, Kinds.VACATION)
 }

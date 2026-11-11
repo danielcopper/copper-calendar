@@ -7,10 +7,10 @@ import android.graphics.RectF
 import androidx.annotation.ColorInt
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.withClip
+import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.model.Palette
 import dev.cupr.calendar.month.Bar
-import dev.cupr.calendar.month.DAYS_IN_WEEK
 import dev.cupr.calendar.month.Day
 import dev.cupr.calendar.month.Week
 import dev.cupr.calendar.render.PhoneMonth.BAR_BAND

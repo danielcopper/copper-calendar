@@ -468,4 +468,11 @@ class MonthLayoutTest {
             }
         assertEquals("A week has 7 days, not 1", error.message)
     }
+
+    @Test
+    fun `a week's seven days run on without a gap`() {
+        val gap = List(7) { today.plusDays(it.toLong() * 2) }
+        val error = assertThrows(IllegalArgumentException::class.java) { MonthLayout.week(gap, emptyList(), today) }
+        assertTrue("${error.message}", error.message!!.startsWith("The days run on without a gap"))
+    }
 }

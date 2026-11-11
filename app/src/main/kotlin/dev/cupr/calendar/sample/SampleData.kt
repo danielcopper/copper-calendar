@@ -135,7 +135,7 @@ object SampleData {
                 ),
             )
             add(
-                allDay(LocalDate.of(2026, 11, 13), 1, "Max Weber", null, "birthday", "mdi:cake-variant")
+                allDay(LocalDate.of(2026, 11, 13), 1, "Max Weber", null, Kinds.BIRTHDAY, "mdi:cake-variant")
                     .copy(calendar = BIRTHDAYS, year = 2000),
             )
             add(
@@ -166,7 +166,7 @@ object SampleData {
                     3,
                     "Kurzurlaub Ostsee",
                     REBECCAPURPLE,
-                    "vacation",
+                    Kinds.VACATION,
                     "mdi:bag-suitcase",
                 ),
             )
