@@ -226,7 +226,7 @@ class WeekRowRenderer(
             canvas.restoreToCount(saved)
         }
 
-        /** An entry's mark in a size × size box, wherever a mark stands in a cell ([drawMark]); its dot fits the box. */
+        /** An entry's mark in a size × size box, wherever one stands in a cell ([drawMark]), its dot inside the box. */
         private fun mark(
             entry: Entry,
             @ColorInt color: Int,

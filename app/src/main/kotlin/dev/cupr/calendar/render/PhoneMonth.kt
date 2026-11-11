@@ -14,7 +14,7 @@ package dev.cupr.calendar.render
  * - `infra/homeassistant/config/www/zuhause/events/`: the drawings in
  *   assets/drawings, unchanged copies;
  *
- * and at 64054110, where the templates moved from zuhause.yaml:
+ * and at 64054110, in the file the templates moved to from zuhause.yaml:
  * - `infra/homeassistant/config/dashboards/templates.yaml`: the tile
  *   "Kalender · diese Woche" (template `calendar`), its styles ([TileWeek]'s
  *   measures) and its rule `calendar_days`, which WeekLayout ports.

@@ -430,8 +430,8 @@ class DayRowRenderer(
     companion object {
         /**
          * The least width in dp at which a row keeps its one line per entry:
-         * Android's least width for 4 cells, 70 × 4 − 30 dp, as the widget's
-         * provider info asks for (D34). Narrower, the rows stack (D39).
+         * Android's least width for 4 cells (D34). Narrower, the rows stack
+         * (D39).
          */
         private const val STACKED_BELOW_DP = 250
 

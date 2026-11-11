@@ -70,9 +70,9 @@ class WeekColumnsRenderTest {
     /**
      * Both week widgets' bitmaps (header, "+" and rows, light and dark) for
      * the sample week and for a week with a very full Saturday, at the
-     * default and a full-width size, and "Woche" also stacked at 2 and 3
-     * cells wide, against Android 17's limit at a Pixel 6's screen
-     * ([BITMAP_LIMIT]).
+     * default and a full-width size, and "Woche" also stacked at its least
+     * width and 3 cells wide, against Android 17's limit at a Pixel 6's
+     * screen ([BITMAP_LIMIT]), as drawn without the cap.
      */
     @Test
     fun `measures the week widgets' bitmaps against Android's limit`() {
@@ -89,7 +89,7 @@ class WeekColumnsRenderTest {
                 lines += "Woche quer, $label, $widthDp dp: $quer bytes, ${percent(quer)} % of the limit"
                 if (entries === SampleData.entries) sample += listOf(woche, quer)
             }
-            for (widthDp in listOf(TWO_CELLS_DP, THREE_CELLS_DP)) {
+            for (widthDp in listOf(LEAST_DP, THREE_CELLS_DP)) {
                 val woche = wocheBytes(dates, entries, widthDp)
                 lines += "Woche, $label, $widthDp dp, stacked: $woche bytes, ${percent(woche)} % of the limit"
                 if (entries === SampleData.entries) sample += woche
@@ -194,8 +194,8 @@ class WeekColumnsRenderTest {
 
         const val DEFAULT_DP = 276
 
-        /** "Woche" at 2 and 3 cells wide (design.md's table), where its rows stack. */
-        const val TWO_CELLS_DP = 130
+        /** "Woche" at its least width (D34) and 3 cells wide (Android's cell-size table), where its rows stack. */
+        const val LEAST_DP = 150
         const val THREE_CELLS_DP = 203
 
         /** A widget as wide as a Pixel 6's screen (412 dp). */
