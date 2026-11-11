@@ -24,7 +24,7 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="12dp">
 
-            <include layout="@layout/widget_header_images" />
+            <include layout="@layout/widget_header_images_unscaled" />
         </FrameLayout>
 
         <ListView

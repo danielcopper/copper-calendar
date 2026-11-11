@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The drawn header, light and dark, unscaled at the top left, for "Woche",
+     whose rows are shown unscaled too (widget_week_day.xml): in a header
+     wider than drawn, as in landscape, header and rows keep one size. The
+     month and "Woche quer" scale their header (widget_header_images.xml) as
+     they scale their rows, whose day columns stretch with the list. -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <ImageView
+        android:id="@+id/header_light"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:importantForAccessibility="no"
+        android:scaleType="matrix"
+        android:visibility="@integer/light_visibility" />
+
+    <ImageView
+        android:id="@+id/header_dark"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:importantForAccessibility="no"
+        android:scaleType="matrix"
+        android:visibility="@integer/dark_visibility" />
+</merge>
