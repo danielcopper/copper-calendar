@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -188,10 +189,13 @@ class WeekColumnsWidgetTest {
         assertEquals(dark, row.findViewById<View>(R.id.week_dark).visibility)
     }
 
-    /** The fade runs from the card's colour, clear, to the card's colour. */
+    /** The fade runs down from the card's colour, clear, to the card's colour at the list's bottom edge. */
     private fun assertFade(card: Int) {
         assertEquals(card, application.getColor(R.color.widget_card))
         assertEquals(card and 0x00FFFFFF, application.getColor(R.color.widget_card_clear))
+        val fade = application.getDrawable(R.drawable.widget_fade) as GradientDrawable
+        assertEquals(GradientDrawable.Orientation.TOP_BOTTOM, fade.orientation)
+        assertEquals(listOf(card and 0x00FFFFFF, card), fade.colors?.toList())
     }
 
     @Test
