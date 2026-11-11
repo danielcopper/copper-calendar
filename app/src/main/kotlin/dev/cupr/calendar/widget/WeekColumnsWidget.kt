@@ -152,9 +152,8 @@ object WeekColumnsWidget {
     }
 
     /**
-     * Whether the drawn row is taller than the list shows at heightDp: the
-     * widget less the card's border and padding at the top and bottom, and
-     * less the header, headerPx high.
+     * Whether the drawn row is taller than the list shows at heightDp below
+     * the header, headerPx high ([DrawnWidget.listPx]).
      */
     internal fun overflows(
         rows: WeekRowRenderer,
@@ -162,8 +161,5 @@ object WeekColumnsWidget {
         scale: Scale,
         heightDp: Int,
         headerPx: Int,
-    ): Boolean {
-        val listPx = scale.px(heightDp - 2 * (PhoneMonth.CARD_BORDER + PhoneMonth.CARD_END)) - headerPx
-        return rows.heightPx(week, scale) > listPx
-    }
+    ): Boolean = rows.heightPx(week, scale) > DrawnWidget.listPx(scale, heightDp, headerPx)
 }

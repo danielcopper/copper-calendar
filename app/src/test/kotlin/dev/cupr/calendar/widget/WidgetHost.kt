@@ -22,7 +22,7 @@ internal object WidgetHost {
     const val WIDTH_DP = DrawnWidget.DEFAULT_WIDTH_DP
 
     /** 4 cells high (design.md). */
-    const val HEIGHT_DP = 456
+    const val HEIGHT_DP = DrawnWidget.DEFAULT_HEIGHT_DP
 
     /** 2 cells high (design.md), "Woche quer"'s default. */
     const val LOW_HEIGHT_DP = WeekColumnsWidget.DEFAULT_HEIGHT_DP
