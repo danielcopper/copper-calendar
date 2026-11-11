@@ -96,22 +96,32 @@ class WeekRowRenderer(
         val column = widthPx / DAYS_IN_WEEK.toFloat()
         return week.days
             .mapIndexedNotNull { index, day ->
-                val (x, right) = cellContent(index, column, scale)
-                val none = markSizes(day, x, right, scale).count { it <= 0f }
+                val cell = Cell(index, column, scale)
+                val none = markPlaces(day, cell.contentLeft, cell.contentRight, scale).count { it.size <= 0f }
                 if (none > 0) day.date to none else null
             }.toMap()
     }
 
-    /** Where a cell's content runs, from its left to its right, in the column at index. */
-    private fun cellContent(
+    /** The cell in the column at index: its edges, the divider at its left, and where its content runs. */
+    private class Cell(
         index: Int,
         column: Float,
         scale: Scale,
-    ): Pair<Float, Float> {
+    ) {
         val left = index * column
+        val right = left + column
+
+        /** The divider at its left, none in the first column. */
         val border = if (index > 0) scale.hairline else 0f
-        return left + border + scale.px(CELL_SIDE) to left + column - scale.px(CELL_SIDE)
+        val contentLeft = left + border + scale.px(CELL_SIDE)
+        val contentRight = right - scale.px(CELL_SIDE)
     }
+
+    /** A mark beside a day's number: where it starts and its size, 0 for one with no room. */
+    private class MarkPlace(
+        val x: Float,
+        val size: Float,
+    )
 
     /** The width of a day's number, or of its pill today, at least [NUMBER_MIN_WIDTH]. */
     private fun numberWidth(
@@ -126,21 +136,21 @@ class WeekRowRenderer(
     }
 
     /**
-     * The sizes of a day's marks beside its number, in its cell's content from
+     * Where a day's marks stand beside its number, in its cell's content from
      * x to right: each [DRAWING] at most and smaller where less room is left,
-     * so it stays inside its own cell, and 0 for one with no room left.
+     * so it stays inside its own cell, and of size 0 with no room left.
      */
-    private fun markSizes(
+    private fun markPlaces(
         day: Day,
         x: Float,
         right: Float,
         scale: Scale,
-    ): List<Float> {
+    ): List<MarkPlace> {
         var drawingX = x + numberWidth(day, scale) + scale.px(NUMBER_GAP)
         return day.marks.map {
-            val size = max(0f, min(scale.px(DRAWING), right - drawingX))
-            if (size > 0f) drawingX += size + scale.px(DRAWINGS_GAP)
-            size
+            val place = MarkPlace(drawingX, max(0f, min(scale.px(DRAWING), right - drawingX)))
+            if (place.size > 0f) drawingX += place.size + scale.px(DRAWINGS_GAP)
+            place
         }
     }
 
@@ -174,21 +184,21 @@ class WeekRowRenderer(
             index: Int,
             lanes: Int,
         ) {
-            val left = index * column
-            val right = left + column
-            val (x, contentRight) = cellContent(index, column, scale)
+            val cell = Cell(index, column, scale)
             val saved =
                 if (day.otherMonth) {
-                    canvas.saveLayerAlpha(left, 0f, right, bottom, opacityAlpha(OTHER_MONTH))
+                    canvas.saveLayerAlpha(cell.left, 0f, cell.right, bottom, opacityAlpha(OTHER_MONTH))
                 } else {
                     canvas.save()
                 }
-            val border = if (index > 0) scale.hairline else 0f
-            if (index > 0) canvas.fill(left, top, left + border, bottom, palette.divider)
-            if (day.weekend) canvas.fill(left + border, top, right, bottom, palette.text.withOpacity(WEEKEND_TINT))
-            val width = contentRight - x
+            if (cell.border > 0f) canvas.fill(cell.left, top, cell.left + cell.border, bottom, palette.divider)
+            if (day.weekend) {
+                canvas.fill(cell.left + cell.border, top, cell.right, bottom, palette.text.withOpacity(WEEKEND_TINT))
+            }
+            val x = cell.contentLeft
+            val width = cell.contentRight - x
             var y = top + scale.px(CELL_TOP)
-            numberRow(day, x, y, contentRight)
+            numberRow(day, x, y, cell.contentRight)
             y += scale.px(NUMBER_ROW + GAP + lanes * LANE + GAP)
             for (entry in day.shown) {
                 entryLine(entry, day.past, x, y, width)
@@ -203,7 +213,7 @@ class WeekRowRenderer(
 
         /**
          * The number (today in the accent's pill) and the marked entries'
-         * marks beside it, sized by [markSizes]; one with no room left is not
+         * marks beside it, placed by [markPlaces]; one with no room left is not
          * drawn ([marksWithoutRoom] names them).
          */
         private fun numberRow(
@@ -224,11 +234,9 @@ class WeekRowRenderer(
             }
             paint.textAlign = Paint.Align.CENTER
             canvas.drawText(label, x + width / 2, paint.baselineIn(boxTop, height), paint)
-            var drawingX = x + width + scale.px(NUMBER_GAP)
-            for ((entry, size) in day.marks.zip(markSizes(day, x, right, scale))) {
-                if (size <= 0f) break
-                mark(entry, palette.colorOf(entry), drawingX, y + (scale.px(NUMBER_ROW) - size) / 2, size)
-                drawingX += size + scale.px(DRAWINGS_GAP)
+            for ((entry, place) in day.marks.zip(markPlaces(day, x, right, scale))) {
+                if (place.size <= 0f) break
+                mark(entry, palette.colorOf(entry), place.x, y + (scale.px(NUMBER_ROW) - place.size) / 2, place.size)
             }
         }
 
