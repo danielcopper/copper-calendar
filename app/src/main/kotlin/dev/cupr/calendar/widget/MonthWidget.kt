@@ -66,12 +66,12 @@ object MonthWidget {
         // The drawn rows and header span the widget less the card's inset at both sides.
         val widthPx = scale.px(widthDp - 2 * PhoneMonth.CARD_INSET).roundToInt()
         val assets = RenderAssets.of(context)
-        val chrome = DrawnWidget.chrome(context)
         val rows = WeekRowRenderer(assets.fonts, assets.icons, assets.drawings)
         val kept = Kept()
         val views = RemoteViews(context.packageName, R.layout.widget_month)
-        DrawnWidget.fixedParts(context, views, kept, chrome, ChromeRenderer.title(view.month), today, scale) {
-            chrome.header(view.month, widthPx, scale, it)
+        val title = ChromeRenderer.title(view.month)
+        DrawnWidget.fixedParts(context, views, kept, title, today, scale) { chrome, palette ->
+            chrome.header(view.month, widthPx, scale, palette)
         }
         val needed = kept.bytes + view.weeks.sumOf { BitmapLimit.bytes(widthPx, rows.heightPx(it, scale)) }
         BitmapLimit.warnOver(TAG, id, needed = needed, limit = limit, left = 0, after = needed)

@@ -97,15 +97,16 @@ object WeekColumnsWidget {
         // The drawn row and header span the widget less the card's inset at both sides.
         val widthPx = scale.px(widthDp - 2 * PhoneMonth.CARD_INSET).roundToInt()
         val assets = RenderAssets.of(context)
-        val chrome = DrawnWidget.chrome(context)
         val rows = WeekRowRenderer(assets.fonts, assets.icons, assets.drawings)
         val kept = Kept()
         val title = context.getString(days.title)
         val range = WeekLayout.range(dates.first(), dates.last())
         val views = RemoteViews(context.packageName, R.layout.widget_week_columns)
         var headerPx = 0
-        DrawnWidget.fixedParts(context, views, kept, chrome, "$title, $range", today, scale) {
-            chrome.weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, it).also { headerPx = it.height }
+        DrawnWidget.fixedParts(context, views, kept, "$title, $range", today, scale) { chrome, palette ->
+            chrome
+                .weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette)
+                .also { headerPx = it.height }
         }
         val full = MonthLayout.week(dates, entries, today)
         // Room for the fade's blank room counted in, as a row that has to be capped is taller than its list.

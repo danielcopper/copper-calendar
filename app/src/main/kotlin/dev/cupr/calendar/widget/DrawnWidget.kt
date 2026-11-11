@@ -85,7 +85,7 @@ internal object DrawnWidget {
         }
 
     /** The renderer of the fixed parts, with the weekday heads. */
-    fun chrome(context: Context): ChromeRenderer {
+    private fun chrome(context: Context): ChromeRenderer {
         val assets = RenderAssets.of(context)
         return ChromeRenderer(
             assets.fonts,
@@ -95,22 +95,22 @@ internal object DrawnWidget {
     }
 
     /**
-     * The header and "+": the header drawn light and dark by header, named by
-     * description and opening the calendar page; "+" opening a new entry on
-     * today.
+     * The header and "+": the header drawn light and dark by header with the
+     * renderer of the fixed parts, named by description and opening the
+     * calendar page; "+" opening a new entry on today.
      */
     fun fixedParts(
         context: Context,
         views: RemoteViews,
         kept: Kept,
-        chrome: ChromeRenderer,
         description: String,
         today: LocalDate,
         scale: Scale,
-        header: (Palette) -> Bitmap,
+        header: (ChromeRenderer, Palette) -> Bitmap,
     ) {
-        views.setImageViewBitmap(R.id.header_light, kept.keep(header(SampleData.light)))
-        views.setImageViewBitmap(R.id.header_dark, kept.keep(header(SampleData.dark)))
+        val chrome = chrome(context)
+        views.setImageViewBitmap(R.id.header_light, kept.keep(header(chrome, SampleData.light)))
+        views.setImageViewBitmap(R.id.header_dark, kept.keep(header(chrome, SampleData.dark)))
         views.setContentDescription(R.id.header, description)
         views.setOnClickPendingIntent(R.id.header, Taps.pendingIntent(context, Tap.Header))
         views.setImageViewBitmap(R.id.fab_light, kept.keep(chrome.fab(scale, SampleData.light)))

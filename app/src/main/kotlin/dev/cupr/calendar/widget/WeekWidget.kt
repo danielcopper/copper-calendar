@@ -78,15 +78,14 @@ object WeekWidget {
         // The rows span the card inside its border; they draw inside its side padding themselves.
         val rowPx = scale.px(widthDp - 2 * PhoneMonth.CARD_BORDER).roundToInt()
         val assets = RenderAssets.of(context)
-        val chrome = DrawnWidget.chrome(context)
         val texts = WeekTexts.of(context.resources)
         val rows = DayRowRenderer.forWidth(assets.fonts, assets.icons, assets.drawings, texts, widthDp)
         val kept = Kept()
         val title = context.getString(days.title)
         val range = WeekLayout.range(dates.first(), dates.last())
         val views = RemoteViews(context.packageName, R.layout.widget_week)
-        DrawnWidget.fixedParts(context, views, kept, chrome, "$title, $range", today, scale) {
-            chrome.weekHeader(title, range, null, headerPx, scale, it)
+        DrawnWidget.fixedParts(context, views, kept, "$title, $range", today, scale) { chrome, palette ->
+            chrome.weekHeader(title, range, null, headerPx, scale, palette)
         }
         val full = WeekLayout.build(dates, entries, today)
         val bytesOf = { days: List<WeekDay> -> days.sumOf { BitmapLimit.bytes(rowPx, rows.heightPx(it, scale)) } }
