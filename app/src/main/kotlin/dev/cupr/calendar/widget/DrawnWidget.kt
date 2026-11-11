@@ -149,7 +149,8 @@ internal object DrawnWidget {
     /**
      * The header and "+": the header drawn light and dark by header with the
      * renderer of the fixed parts, named by description and opening the
-     * calendar page; "+" opening a new entry on today.
+     * calendar page; "+" opening a new entry on today. Returns the drawn
+     * header's height in px, which the list's height leaves out.
      */
     fun fixedParts(
         context: Context,
@@ -159,15 +160,17 @@ internal object DrawnWidget {
         today: LocalDate,
         scale: Scale,
         header: (ChromeRenderer, Palette) -> Bitmap,
-    ) {
+    ): Int {
         val chrome = chrome(context)
-        views.setImageViewBitmap(R.id.header_light, kept.keep(header(chrome, SampleData.light)))
+        val light = kept.keep(header(chrome, SampleData.light))
+        views.setImageViewBitmap(R.id.header_light, light)
         views.setImageViewBitmap(R.id.header_dark, kept.keep(header(chrome, SampleData.dark)))
         views.setContentDescription(R.id.header, description)
         views.setOnClickPendingIntent(R.id.header, Taps.pendingIntent(context, Tap.Header))
         views.setImageViewBitmap(R.id.fab_light, kept.keep(chrome.fab(scale, SampleData.light)))
         views.setImageViewBitmap(R.id.fab_dark, kept.keep(chrome.fab(scale, SampleData.dark)))
         views.setOnClickPendingIntent(R.id.fab, Taps.pendingIntent(context, Tap.New(today)))
+        return light.height
     }
 
     /** The list's rows, each by its stable id, and the template their taps fill in. */

@@ -102,12 +102,10 @@ object WeekColumnsWidget {
         val title = context.getString(days.title)
         val range = WeekLayout.range(dates.first(), dates.last())
         val views = RemoteViews(context.packageName, R.layout.widget_week_columns)
-        var headerPx = 0
-        DrawnWidget.fixedParts(context, views, kept, "$title, $range", today, scale) { chrome, palette ->
-            chrome
-                .weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette)
-                .also { headerPx = it.height }
-        }
+        val headerPx =
+            DrawnWidget.fixedParts(context, views, kept, "$title, $range", today, scale) { chrome, palette ->
+                chrome.weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette)
+            }
         val full = MonthLayout.week(dates, entries, today)
         // Room for the fade's blank room counted in, as a row that has to be capped is taller than its list.
         val fadeDp = FADE_DP.toFloat()

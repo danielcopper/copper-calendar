@@ -75,10 +75,10 @@ object MonthWidget {
         val kept = Kept()
         val views = RemoteViews(context.packageName, R.layout.widget_month)
         val title = ChromeRenderer.title(view.month)
-        var headerPx = 0
-        DrawnWidget.fixedParts(context, views, kept, title, today, scale) { chrome, palette ->
-            chrome.header(view.month, widthPx, scale, palette).also { headerPx = it.height }
-        }
+        val headerPx =
+            DrawnWidget.fixedParts(context, views, kept, title, today, scale) { chrome, palette ->
+                chrome.header(view.month, widthPx, scale, palette)
+            }
         val needed = kept.bytes + view.weeks.sumOf { BitmapLimit.bytes(widthPx, rows.heightPx(it, scale)) }
         BitmapLimit.warnOver(TAG, id, needed = needed, limit = limit, left = 0, after = needed)
         DrawnWidget.warnMarks(
@@ -86,19 +86,18 @@ object MonthWidget {
             id,
             view.weeks.flatMap { rows.marksWithoutRoom(it, widthPx, scale).toList() }.toMap(),
         )
-        val heights = mutableListOf<Int>()
         val items =
             view.weeks.map { week ->
                 val light = kept.keep(rows.render(week, widthPx, scale, SampleData.light))
                 val dark = kept.keep(rows.render(week, widthPx, scale, SampleData.dark))
-                heights += light.height
                 week.days
                     .first()
                     .date
                     .toEpochDay() to DrawnWidget.weekRow(context, week, light, dark)
             }
         DrawnWidget.list(context, views, items)
-        val scrolled = TodayOnTop.scroll(context, views, heights, view.todayWeek, height, headerPx)
+        val heightsPx = view.weeks.map { rows.heightPx(it, scale) }
+        val scrolled = TodayOnTop.scroll(context, views, heightsPx, view.todayWeek, height, headerPx)
         DrawnWidget.logDrawn(TAG, id, kept, widthPx, limit, scrolled)
         return kept.drawn(views, limit)
     }

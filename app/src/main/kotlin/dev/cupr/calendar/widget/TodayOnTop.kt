@@ -107,6 +107,7 @@ internal object TodayOnTop {
         headerPx: Int,
     ): String {
         if (height == null) {
+            // As below, the list's padding is cleared: an earlier update may have set one.
             views.setViewPadding(R.id.list, 0, 0, 0, 0)
             if (today >= 0) views.setScrollPosition(R.id.list, today)
             return "; today is row $today, scrolled into view (no ${AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT})"
@@ -115,6 +116,7 @@ internal object TodayOnTop {
         val extraPx = ViewConfiguration.get(context).scaledFadingEdgeLength
         val target = target(heightsPx, today, listPx, extraPx)
         val paddingPx = target?.paddingPx ?: 0
+        // setViewPadding sets all four sides; the list has no padding but this one.
         views.setViewPadding(R.id.list, 0, 0, 0, paddingPx)
         target?.let { views.setScrollPosition(R.id.list, it.index) }
         return "; today is row $today, scrolled to ${target?.index ?: "none"}, rows from today to it " +
