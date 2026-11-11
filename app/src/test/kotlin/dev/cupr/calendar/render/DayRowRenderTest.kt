@@ -77,18 +77,21 @@ class DayRowRenderTest {
         }
     }
 
-    /** At 2, 3 and 4 cells wide (design.md's table), stacked below 4 as the widget draws them. */
+    /**
+     * From the least width, 150 dp, to 4 cells (276 dp), stacked below 250 dp
+     * as the widget draws them, on both sides of that switch.
+     */
     @Test
-    fun `renders the sample week's rows at 2, 3 and 4 cells wide, dark and light, to PNG files`() {
+    fun `renders the sample week's rows from 150 to 276 dp wide, dark and light, to PNG files`() {
         val dates = WeekDays.MONDAY_TO_SUNDAY.dates(today)
         val week = WeekLayout.build(dates, SampleData.entries, today)
         Probe.renderDir.mkdirs()
-        for ((cells, widthDp) in listOf(2 to 130, 3 to 203, 4 to 276)) {
+        for (widthDp in listOf(150, 200, 245, 250, 276)) {
             val headerPx = scale.px(widthDp - 2 * PhoneMonth.CARD_INSET).roundToInt()
             val narrowPx = scale.px(widthDp - 2 * PhoneMonth.CARD_BORDER).roundToInt()
             val renderer = if (DayRowRenderer.stacksAt(widthDp)) stacked else rows
             for ((mode, palette) in modes) {
-                val file = File(Probe.renderDir, "woche-${cells}cells-monday-$mode.png")
+                val file = File(Probe.renderDir, "woche-${widthDp}dp-monday-$mode.png")
                 file.delete()
                 val title = context.getString(WeekDays.MONDAY_TO_SUNDAY.title)
                 val header =
@@ -112,7 +115,7 @@ class DayRowRenderTest {
         val thursday = LocalDate.of(2026, 11, 12)
         val timed = Probe.timed(thursday, icon = null)
         val pad = 2 * TileWeek.ROW_PAD
-        // The weekday above the date: two lines, as tall as a chip's or "frei"'s line needs.
+        // The weekday above the date: two lines, taller than a chip's or "frei"'s one line.
         val head = 2 * TileWeek.TODAY_LINE
         assertEquals(pad + head, stacked.heightDp(day(thursday)), 0.01f)
         assertEquals(pad + head, stacked.heightDp(day(thursday, chip(thursday))), 0.01f)
@@ -186,6 +189,58 @@ class DayRowRenderTest {
             assertFalse(stackedRow.has(palette.accent, gapLeft, headTop, gapRight, headBottom))
             assertTrue(oneLine.has(palette.accent, gapLeft, headTop, gapRight, headBottom))
         }
+    }
+
+    @Test
+    fun `the tap areas, the drawn lines and the height share one geometry, stacked or not`() {
+        val thursday = LocalDate.of(2026, 11, 12)
+        val week =
+            WeekLayout.build(
+                listOf(thursday.minusDays(1), thursday),
+                listOf(chip(thursday.minusDays(1), 2), chip(thursday), Probe.timed(thursday, icon = null)),
+                today,
+            )
+        val day = week[1]
+        assertEquals(listOf("Ganztags"), day.running)
+        for ((renderer, column) in listOf(rows to TileWeek.DAY_COLUMN, stacked to DayRowRenderer.STACKED_COLUMN)) {
+            val drawn = renderer.render(day, rowPx, scale, SampleData.light)
+            val areas = renderer.entryAreas(day, rowPx, scale)
+            assertEquals(2, areas.size)
+            // Below the running titles' line.
+            assertEquals(scale.hairline + scale.px(TileWeek.ROW_PAD + TileWeek.LINE + TileWeek.LINE_GAP), areas[0].top, 0.01f)
+            assertEquals(areas[0].bottom, areas[1].top, 0.01f)
+            // The last area ends one gap below the last line, where the row's bottom padding begins.
+            assertEquals(drawn.height - scale.px(TileWeek.ROW_PAD - TileWeek.LINE_GAP), areas[1].bottom, 1f)
+            val barX = scale.px(PhoneMonth.CARD_SIDE + column + TileWeek.COLUMN_GAP + 1f)
+            for (area in areas) {
+                for (y in listOf(area.top + scale.px(1f), area.bottom - scale.px(TileWeek.LINE_GAP + 1f))) {
+                    assertTrue("no bar at $y", Probe.near(drawn.getPixel(barX.toInt(), y.toInt()), Probe.RED))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `a day that leaves out entries draws a line counting them instead, and has no tap area there`() {
+        val thursday = LocalDate.of(2026, 11, 12)
+        val full = day(thursday, chip(thursday), Probe.timed(thursday, icon = null))
+        val capped = full.copy(more = 1)
+        val text = SampleData.light.tertiaryText
+        for (renderer in listOf(rows, stacked)) {
+            val area = renderer.entryAreas(capped, rowPx, scale).single()
+            val drawn = renderer.render(capped, rowPx, scale, SampleData.light)
+            val right = rowPx.toFloat()
+            assertTrue(drawn.has(text, area.left, area.bottom, right, area.bottom + scale.px(TileWeek.LINE)))
+            val uncapped = renderer.render(full, rowPx, scale, SampleData.light)
+            assertFalse(uncapped.has(text, area.left, 0f, right, uncapped.height.toFloat()))
+        }
+        // In one line per entry, the counting line is as tall as the entry it stands for.
+        assertEquals(rows.heightDp(full), rows.heightDp(capped), 0.01f)
+        assertEquals(
+            stacked.heightDp(full) - DayRowRenderer.TIME_LINE,
+            stacked.heightDp(capped),
+            0.01f,
+        )
     }
 
     /** A day of the sample week with entries as given, the others empty. */

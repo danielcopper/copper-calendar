@@ -17,6 +17,8 @@
     <string name="week_holiday">Feiertag</string>
     <string name="week_turns">wird %1$d</string>
     <string name="week_until">bis %1$s</string>
+    <!-- The entries a full day leaves out for the bitmap limit (D40). -->
+    <string name="week_more">+%1$d weitere</string>
     <string name="new_entry">Neuer Eintrag</string>
     <!-- A tap's target cannot be opened (D25): no app handles a target the Home Assistant app would open; any other case, also one this app may not start. -->
     <string name="target_home_assistant_missing">Home-Assistant-App nicht gefunden</string>
