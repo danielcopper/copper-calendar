@@ -48,8 +48,8 @@ internal class WidgetHeight(
     val leastDp: Int?,
 ) {
     init {
-        require(dp > 0) { "a widget's height is above 0 dp, not $dp" }
-        require(leastDp == null || leastDp > 0) { "a widget's least height is above 0 dp, not $leastDp" }
+        require(dp > 0) { "A widget's height is above 0 dp, not $dp" }
+        require(leastDp == null || leastDp > 0) { "A widget's least height is above 0 dp, not $leastDp" }
     }
 
     /** The height, the option it came from, and the least height beside it, for the log. */
