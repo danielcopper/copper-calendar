@@ -9,19 +9,29 @@ import dev.cupr.calendar.R
 import kotlin.math.roundToInt
 
 /**
- * Where a widget's list scrolls so today's row stands on top. The only list
- * scroll a widget's views offer, `setScrollPosition`, is a smooth scroll to a
- * position, which ends with a row below the visible ones as the last visible
- * row; so the list scrolls not to today's row but to the last row that still
- * fits below it, and today's row stands on top when the list comes from above.
- * The list's height is the widget's height in portrait less its card and
- * header ([DrawnWidget.listPx]).
+ * Where a widget's list scrolls so today's row stands flush on top. The only
+ * list scroll a widget's views offer, `setScrollPosition`, is a smooth scroll
+ * to a position, AOSP's `AbsListView.PositionScroller`, which ends with the
+ * target's bottom at the list's bottom padding: for a target below the
+ * visible rows (`MOVE_DOWN_POS`) at the padding or its
+ * `mExtraScroll`, whichever is more, for one already shown (`scrollToVisible`)
+ * at the padding. So the list scrolls not to today's row but to the last row
+ * that still fits below it, and gets as much bottom padding as those rows
+ * leave of its height; with `clipToPadding` false the rows after the target
+ * still show in that padding, and today's row stands at the top when the list
+ * comes from above. The list's height is the widget's height in portrait
+ * less its card and header ([DrawnWidget.listPx]).
  */
 internal object TodayOnTop {
-    /** The row to scroll to, and the summed height in px of today's row through it. */
+    /**
+     * The row to scroll to, the summed height in px of today's row through
+     * it, and the list's bottom padding in px that ends the scroll with
+     * today's row at the top.
+     */
     data class Target(
         val index: Int,
         val rowsPx: Int,
+        val paddingPx: Int,
     )
 
     /**
@@ -33,9 +43,12 @@ internal object TodayOnTop {
      * list's last row: AOSP's `AbsListView.PositionScroller` scrolls down
      * until the target's bottom is its `mExtraScroll` above the list's
      * bottom, which is `ViewConfiguration.getScaledFadingEdgeLength()`,
-     * 12 dp (the list's bottom padding, 0 here, when that is more); for the
-     * last row only that padding. Null when today is no row's index, as -1
-     * from indexOfFirst.
+     * 12 dp, or the list's bottom padding when that is more; for the last
+     * row only that padding. The padding is what the rows leave of
+     * listPx, so at least extraPx; none for the last row, which the scroll
+     * brings to the list's bottom, and none for today's row alone when it is
+     * taller than listPx less extraPx. Null when today is no row's index, as
+     * -1 from indexOfFirst.
      */
     fun target(
         heightsPx: List<Int>,
@@ -46,19 +59,21 @@ internal object TodayOnTop {
         if (today !in heightsPx.indices) return null
         val throughLast = heightsPx.subList(today, heightsPx.size).sum()
         return if (throughLast <= listPx) {
-            Target(heightsPx.lastIndex, throughLast)
+            Target(heightsPx.lastIndex, throughLast, 0)
         } else {
-            fitting(heightsPx, today, listPx - extraPx)
+            fitting(heightsPx, today, listPx, listPx - extraPx)
         }
     }
 
     /**
      * The last row from today's on whose rows fit into roomPx, today's row
-     * when it alone does not, for rows that through the last pass roomPx.
+     * when it alone does not, for rows that through the last pass roomPx;
+     * with the padding they leave of listPx when they fit.
      */
     private fun fitting(
         heightsPx: List<Int>,
         today: Int,
+        listPx: Float,
         roomPx: Float,
     ): Target {
         var index = today
@@ -67,7 +82,9 @@ internal object TodayOnTop {
             index += 1
             rowsPx += heightsPx[index]
         }
-        return Target(index, rowsPx)
+        // Rounded down: a padding a fraction short would leave today's row that much below the top.
+        val paddingPx = if (rowsPx <= roomPx) (listPx - rowsPx).toInt() else 0
+        return Target(index, rowsPx, paddingPx)
     }
 
     /**
@@ -89,7 +106,8 @@ internal object TodayOnTop {
     }
 
     /**
-     * Scrolls the list of views to its [target], with the smooth scroll's
+     * Scrolls the list of views to its [target] and sets the list's bottom
+     * padding to the target's, 0 without a target, with the smooth scroll's
      * room below it from context's fading edge length: rows are the drawn
      * rows' heights in px, today the index of today's row, or -1 when none is
      * today, which leaves the list unscrolled; listPx is the list's height in
@@ -106,9 +124,11 @@ internal object TodayOnTop {
     ): String {
         val extraPx = ViewConfiguration.get(context).scaledFadingEdgeLength
         val target = target(rows, today, listPx, extraPx)
+        val paddingPx = target?.paddingPx ?: 0
+        views.setViewPadding(R.id.list, 0, 0, 0, paddingPx)
         target?.let { views.setScrollPosition(R.id.list, it.index) }
         return "; today is row $today, scrolled to ${target?.index ?: "none"}, rows from today to it " +
-            "${target?.rowsPx ?: 0} px of a list ${listPx.roundToInt()} px high, less $extraPx px above a target " +
-            "not last, in ${height.dp} dp (${height.from})"
+            "${target?.rowsPx ?: 0} px of a list ${listPx.roundToInt()} px high, bottom padding $paddingPx px, " +
+            "less $extraPx px above a target not last, in ${height.dp} dp (${height.from})"
     }
 }

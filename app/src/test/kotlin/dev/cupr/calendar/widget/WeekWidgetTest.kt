@@ -247,26 +247,46 @@ class WeekWidgetTest {
     private fun ViewGroup.descriptions() =
         (0 until childCount).map { getChildAt(it).findViewById<View>(R.id.entry).contentDescription }
 
+    /** The list of "Woche" drawn widthDp wide for a widget heightDp high, scrolled to its target, and that. */
+    private fun scrolled(
+        heightDp: Int,
+        widthDp: Int = WidgetHost.WIDTH_DP,
+    ): Pair<ListView, Int> {
+        val height = WidgetHeight(heightDp, "the test's")
+        val days = WeekDays.MONDAY_TO_SUNDAY
+        return WidgetHost.scrolledToTarget(application, heightDp, { context, _ ->
+            WeekWidget.draw(context, widthDp, days, 1, Long.MAX_VALUE, height = height).views
+        }, widthDp)
+    }
+
     @Test
-    fun `scrolled to its target, the list shows the days from today through the target`() {
-        // At 200 and 360 dp the days after today fill more than the list; at 4 cells they do not.
-        for ((heightDp, expected) in listOf(200 to 3, 360 to 4)) {
-            val height = WidgetHeight(heightDp, "the test's")
-            val (list, target) =
-                WidgetHost.todayOnTop(application, heightDp, today = 2) { context, width ->
-                    val days = WeekDays.MONDAY_TO_SUNDAY
-                    WeekWidget.draw(context, width, days, 1, Long.MAX_VALUE, height = height).views
-                }
-            assertEquals("$heightDp dp", expected, target)
-            assertEquals("$heightDp dp", 2, list.firstVisiblePosition)
-            val bottom = { day: Int -> list.getChildAt(day - list.firstVisiblePosition).bottom }
-            // The smooth scroll leaves room below a target that is not the last row.
-            val room = list.height - ViewConfiguration.get(application).scaledFadingEdgeLength
-            assertTrue("$heightDp dp: day $target ends in the scroll's room", bottom(target) <= room)
-            assertTrue("$heightDp dp: day ${target + 1} fits too", bottom(target + 1) > room)
+    fun `scrolled to its target, today stands at the top, the days after it below`() {
+        // From 200 to 360 dp the days after today fill more than the list; 2 cells wide too, its rows stacked.
+        for ((size, expected) in listOf(200 to 276 to 3, 220 to 276 to 3, 360 to 276 to 4, 220 to 146 to 2)) {
+            val (heightDp, widthDp) = size
+            val (list, target) = scrolled(heightDp, widthDp)
+            assertEquals("$heightDp x $widthDp dp", expected, target)
+            val day = { index: Int -> list.getChildAt(index - list.firstVisiblePosition) }
+            assertEquals("$heightDp x $widthDp dp: today's top", 0, day(2).top)
+            // The list does not clip its rows to its padding, so the day after the target shows in it.
+            assertNotNull("$heightDp x $widthDp dp: day ${target + 1} is not shown", day(target + 1))
         }
-        val (_, target) = WidgetHost.todayOnTop(application, WidgetHost.HEIGHT_DP, today = 2, week)
-        assertEquals("the last day", 6, target)
+        // At 4 cells the days from today fill less than the list, so it scrolls to its end, unpadded.
+        val (list, target) = scrolled(WidgetHost.HEIGHT_DP)
+        assertEquals(6, target)
+        assertEquals(0, list.paddingBottom)
+        assertEquals(list.height, list.getChildAt(6 - list.firstVisiblePosition).bottom)
+    }
+
+    @Test
+    fun `when today's row alone is taller than the list, it ends above the fading edge and its top is cut`() {
+        // At the least height, 110 dp, the list is 50 px high; today's row, 73 px, gets no padding.
+        val (list, target) = scrolled(110)
+        assertEquals(2, target)
+        assertEquals(0, list.paddingBottom)
+        val today = list.getChildAt(2 - list.firstVisiblePosition)
+        assertEquals(list.height - ViewConfiguration.get(application).scaledFadingEdgeLength, today.bottom)
+        assertEquals(-35, today.top)
     }
 
     @Test
@@ -281,7 +301,8 @@ class WeekWidgetTest {
         ShadowLog.clear()
         WeekWidgetProvider().onAppWidgetOptionsChanged(application, manager, id, options)
         val log = ShadowLog.getLogsForTag("WeekWidget").single { it.type == Log.INFO }.msg
-        assertTrue(log, log.contains("today is row 2, scrolled to 4,"))
+        assertTrue(log, log.contains("today is row 2, scrolled to 4, rows from today to it 156 px"))
+        assertTrue(log, log.contains(" of a list 240 px high, bottom padding 84 px,"))
         assertTrue(log, log.endsWith(" in 300 dp (appWidgetMaxHeight, 200 dp least)"))
     }
 

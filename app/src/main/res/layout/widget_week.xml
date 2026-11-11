@@ -27,11 +27,14 @@
             <include layout="@layout/widget_header_images_unscaled" />
         </FrameLayout>
 
+        <!-- Rows show in the bottom padding each update sets, so the scroll
+             to today ends with today's row at the top (TodayOnTop.kt). -->
         <ListView
             android:id="@+id/list"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
+            android:clipToPadding="false"
             android:divider="@null"
             android:dividerHeight="0dp"
             android:listSelector="@android:color/transparent"

@@ -8,7 +8,6 @@ import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.view.ViewConfiguration
 import android.widget.ImageView
 import android.widget.ListView
 import androidx.test.core.app.ApplicationProvider
@@ -78,25 +77,25 @@ class MonthWidgetTest {
     }
 
     @Test
-    fun `scrolled to its target, the list shows the weeks from the current one through the target`() {
-        // At 260, 300 and 320 dp the weeks after the current one fill more than the list; at 4 cells they do
-        // not. At 300 dp weeks 2 to 4 would fit, but not with the smooth scroll's room below them.
-        for ((heightDp, expected) in listOf(260 to 3, 300 to 3, 320 to 4)) {
+    fun `scrolled to its target, the current week stands at the top, the weeks after it below`() {
+        // From 2 cells (220 dp) to 320 dp the weeks after the current one fill more than the list.
+        for ((heightDp, expected) in listOf(220 to 2, 260 to 3, 300 to 3, 320 to 4)) {
             val height = WidgetHeight(heightDp, "the test's")
             val (list, target) =
-                WidgetHost.todayOnTop(application, heightDp, today = 2) { context, width ->
+                WidgetHost.scrolledToTarget(application, heightDp, { context, width ->
                     MonthWidget.draw(context, width, 1, Long.MAX_VALUE, height).views
-                }
+                })
             assertEquals("$heightDp dp", expected, target)
-            assertEquals("$heightDp dp", 2, list.firstVisiblePosition)
-            val bottom = { week: Int -> list.getChildAt(week - list.firstVisiblePosition).bottom }
-            // The smooth scroll leaves room below a target that is not the last row.
-            val room = list.height - ViewConfiguration.get(application).scaledFadingEdgeLength
-            assertTrue("$heightDp dp: week $target ends in the scroll's room", bottom(target) <= room)
-            assertTrue("$heightDp dp: week ${target + 1} fits too", bottom(target + 1) > room)
+            val week = { index: Int -> list.getChildAt(index - list.firstVisiblePosition) }
+            assertEquals("$heightDp dp: the current week's top", 0, week(2).top)
+            // The list does not clip its rows to its padding, so the week after the target shows in it.
+            assertNotNull("$heightDp dp: week ${target + 1} is not shown", week(target + 1))
         }
-        val (_, target) = WidgetHost.todayOnTop(application, WidgetHost.HEIGHT_DP, today = 2, WidgetHost.month)
-        assertEquals("the last week", 5, target)
+        // At 4 cells the weeks from the current one fill less than the list, so it scrolls to its end, unpadded.
+        val (list, target) = WidgetHost.scrolledToTarget(application, WidgetHost.HEIGHT_DP, WidgetHost.month)
+        assertEquals(5, target)
+        assertEquals(0, list.paddingBottom)
+        assertEquals(list.height, list.getChildAt(5 - list.firstVisiblePosition).bottom)
     }
 
     @Test
@@ -111,7 +110,8 @@ class MonthWidgetTest {
         ShadowLog.clear()
         MonthWidgetProvider().onAppWidgetOptionsChanged(application, manager, id, options)
         val log = ShadowLog.getLogsForTag("MonthWidget").single { it.type == Log.INFO }.msg
-        assertTrue(log, log.contains("today is row 2, scrolled to 4,"))
+        assertTrue(log, log.contains("today is row 2, scrolled to 4, rows from today to it 214 px"))
+        assertTrue(log, log.contains(" of a list 241 px high, bottom padding 27 px,"))
         assertTrue(log, log.endsWith(" in 320 dp (appWidgetMaxHeight, 200 dp least)"))
     }
 
