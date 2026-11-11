@@ -6,8 +6,11 @@ import android.os.Parcel
 import android.util.TypedValue
 import android.util.Xml
 import android.view.View
+import android.widget.ListView
 import android.widget.RemoteViews
+import dev.cupr.calendar.R
 import dev.cupr.calendar.render.Scale
+import org.robolectric.Shadows.shadowOf
 import org.xmlpull.v1.XmlPullParser
 import kotlin.math.roundToInt
 
@@ -59,6 +62,26 @@ internal object WidgetHost {
         return widget
     }
 
+    /**
+     * The list of the widget laid out heightDp high with the row today at its
+     * top, as a scroll from above to the row its views scroll to leaves it,
+     * and that row. Robolectric runs no smooth scroll; its shadow records
+     * where the list was asked to scroll.
+     */
+    fun todayOnTop(
+        context: Context,
+        heightDp: Int,
+        today: Int,
+        views: (Context, Int) -> RemoteViews,
+    ): Pair<ListView, Int> {
+        val list = laidOut(context, heightDp, views).findViewById<ListView>(R.id.list)
+        val target = shadowOf(list).smoothScrolledPosition
+        list.setSelectionFromTop(today, 0)
+        list.measure(exactlyPx(list.width), exactlyPx(list.height))
+        list.layout(list.left, list.top, list.right, list.bottom)
+        return list to target
+    }
+
     /** An attribute of a widget's provider info (res/xml): a dimension in pixels, or an integer. */
     fun providerAttribute(
         context: Context,
@@ -88,5 +111,7 @@ internal object WidgetHost {
     private fun exactly(
         scale: Scale,
         dp: Int,
-    ) = View.MeasureSpec.makeMeasureSpec(scale.px(dp.toFloat()).roundToInt(), View.MeasureSpec.EXACTLY)
+    ) = exactlyPx(scale.px(dp.toFloat()).roundToInt())
+
+    private fun exactlyPx(px: Int) = View.MeasureSpec.makeMeasureSpec(px, View.MeasureSpec.EXACTLY)
 }

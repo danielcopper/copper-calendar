@@ -7,6 +7,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -247,9 +248,41 @@ class WeekWidgetTest {
         (0 until childCount).map { getChildAt(it).findViewById<View>(R.id.entry).contentDescription }
 
     @Test
-    fun `the list opens scrolled to today`() {
-        val list = WidgetHost.applied(application, views = week).findViewById<ListView>(R.id.list)
-        assertEquals(2, shadowOf(list).smoothScrolledPosition)
+    fun `scrolled to its target, the list shows the days from today through the target`() {
+        // At 200 and 360 dp the days after today fill more than the list; at 4 cells they do not.
+        for ((heightDp, expected) in listOf(200 to 3, 360 to 4)) {
+            val height = WidgetHeight(heightDp, "the test's")
+            val (list, target) =
+                WidgetHost.todayOnTop(application, heightDp, today = 2) { context, width ->
+                    val days = WeekDays.MONDAY_TO_SUNDAY
+                    WeekWidget.draw(context, width, days, 1, Long.MAX_VALUE, height = height).views
+                }
+            assertEquals("$heightDp dp", expected, target)
+            assertEquals("$heightDp dp", 2, list.firstVisiblePosition)
+            val bottom = { day: Int -> list.getChildAt(day - list.firstVisiblePosition).bottom }
+            // The smooth scroll leaves room below a target that is not the last row.
+            val room = list.height - ViewConfiguration.get(application).scaledFadingEdgeLength
+            assertTrue("$heightDp dp: day $target ends in the scroll's room", bottom(target) <= room)
+            assertTrue("$heightDp dp: day ${target + 1} fits too", bottom(target + 1) > room)
+        }
+        val (_, target) = WidgetHost.todayOnTop(application, WidgetHost.HEIGHT_DP, today = 2, week)
+        assertEquals("the last day", 6, target)
+    }
+
+    @Test
+    fun `an update scrolls for the widget's greatest height, its height in portrait`() {
+        val id = shadowOf(manager).createWidget(WeekWidgetProvider::class.java, R.layout.widget_week)
+        val options =
+            Bundle().apply {
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 200)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 300)
+            }
+        manager.updateAppWidgetOptions(id, options)
+        ShadowLog.clear()
+        WeekWidgetProvider().onAppWidgetOptionsChanged(application, manager, id, options)
+        val log = ShadowLog.getLogsForTag("WeekWidget").single { it.type == Log.INFO }.msg
+        assertTrue(log, log.contains("today is row 2, scrolled to 4,"))
+        assertTrue(log, log.endsWith(" in 300 dp (appWidgetMaxHeight, 200 dp least)"))
     }
 
     @Test

@@ -14,6 +14,7 @@ import dev.cupr.calendar.days.longName
 import dev.cupr.calendar.model.Palette
 import dev.cupr.calendar.month.Week
 import dev.cupr.calendar.render.ChromeRenderer
+import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.sample.SampleData
@@ -37,6 +38,12 @@ internal class Kept {
     ) = Drawn(views, bytes, limit)
 }
 
+/** A widget's height in dp, and the option it came from, which the log names. */
+internal class WidgetHeight(
+    val dp: Int,
+    val from: String,
+)
+
 /** A widget's views, the bytes of the bitmaps they hold as the app counts them, and the limit it drew them for. */
 internal class Drawn(
     val views: RemoteViews,
@@ -52,6 +59,12 @@ internal class Drawn(
 internal object DrawnWidget {
     /** A widget's width before the launcher reports one: 4 cells (design.md). */
     const val DEFAULT_WIDTH_DP = 276
+
+    /** A widget's height before the launcher reports one: 4 cells (design.md). */
+    const val DEFAULT_HEIGHT_DP = 456
+
+    /** The height a widget is drawn for outside an update, as for the widget picker's preview. */
+    val defaultHeight = WidgetHeight(DEFAULT_HEIGHT_DP, "the default")
 
     private val dayIds =
         intArrayOf(R.id.day_0, R.id.day_1, R.id.day_2, R.id.day_3, R.id.day_4, R.id.day_5, R.id.day_6)
@@ -71,6 +84,18 @@ internal object DrawnWidget {
         tag: String,
         id: Int,
     ): Int = option(options, AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, DEFAULT_WIDTH_DP, tag, id)
+
+    /**
+     * The height in px of a widget's list below a header headerPx high, in a
+     * widget heightDp high: the widget less the card's border and padding at
+     * the top and bottom, and less the header. "+" stands over the list and
+     * takes none of it.
+     */
+    fun listPx(
+        scale: Scale,
+        heightDp: Int,
+        headerPx: Int,
+    ): Float = scale.px(heightDp - 2 * (PhoneMonth.CARD_BORDER + PhoneMonth.CARD_END)) - headerPx
 
     /** An option the launcher reports in dp, or default when it reports none, which the log says. */
     fun option(

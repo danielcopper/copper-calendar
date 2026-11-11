@@ -41,8 +41,11 @@ object WeekWidget {
         manager: AppWidgetManager,
         id: Int,
     ) {
-        val width = DrawnWidget.widthDp(manager.getAppWidgetOptions(id), TAG, id)
-        val drawn = draw(context, width, WeekDays.MONDAY_TO_SUNDAY, id, BitmapLimit.limitBytes(context, TAG, id))
+        val options = manager.getAppWidgetOptions(id)
+        val width = DrawnWidget.widthDp(options, TAG, id)
+        val height = TodayOnTop.portraitHeight(options, TAG, id)
+        val limit = BitmapLimit.limitBytes(context, TAG, id)
+        val drawn = draw(context, width, WeekDays.MONDAY_TO_SUNDAY, id, limit, height = height)
         DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
     }
 
@@ -61,7 +64,9 @@ object WeekWidget {
     /**
      * The widget at widthDp and the bytes of its bitmaps, kept within limit:
      * when its rows would pass it, the fullest days leave out their last
-     * entries for a "+N weitere" line until they fit ([leaveOutOne]).
+     * entries for a "+N weitere" line until they fit ([leaveOutOne]). Its
+     * list scrolls so today stands on top in a widget of height
+     * ([TodayOnTop.scroll]).
      */
     internal fun draw(
         context: Context,
@@ -70,6 +75,7 @@ object WeekWidget {
         id: Int,
         limit: Long,
         entries: List<Entry> = SampleData.entries,
+        height: WidgetHeight = DrawnWidget.defaultHeight,
     ): Drawn {
         val today = LocalDate.now(SampleData.clock)
         val dates = days.dates(today)
@@ -84,8 +90,9 @@ object WeekWidget {
         val title = context.getString(days.title)
         val range = WeekLayout.range(dates.first(), dates.last())
         val views = RemoteViews(context.packageName, R.layout.widget_week)
+        var headerHeightPx = 0
         DrawnWidget.fixedParts(context, views, kept, "$title, $range", today, scale) { chrome, palette ->
-            chrome.weekHeader(title, range, null, headerPx, scale, palette)
+            chrome.weekHeader(title, range, null, headerPx, scale, palette).also { headerHeightPx = it.height }
         }
         val full = WeekLayout.build(dates, entries, today)
         val bytesOf = { days: List<WeekDay> -> days.sumOf { BitmapLimit.bytes(rowPx, rows.heightPx(it, scale)) } }
@@ -100,15 +107,18 @@ object WeekWidget {
             left = capped.left,
             after = fixed + bytesOf(week),
         )
+        val heights = mutableListOf<Int>()
         val items =
             week.map { day ->
                 val light = kept.keep(rows.render(day, rowPx, scale, SampleData.light))
                 val dark = kept.keep(rows.render(day, rowPx, scale, SampleData.dark))
+                heights += light.height
                 day.date.toEpochDay() to row(context, rows, day, light, dark, scale)
             }
         DrawnWidget.list(context, views, items)
-        week.indexOfFirst { it.today }.takeIf { it >= 0 }?.let { views.setScrollPosition(R.id.list, it) }
-        DrawnWidget.logDrawn(TAG, id, kept, rowPx, limit)
+        val listPx = DrawnWidget.listPx(scale, height.dp, headerHeightPx)
+        val scrolled = TodayOnTop.scroll(context, views, heights, week.indexOfFirst { it.today }, listPx, height)
+        DrawnWidget.logDrawn(TAG, id, kept, rowPx, limit, scrolled)
         return kept.drawn(views, limit)
     }
 
