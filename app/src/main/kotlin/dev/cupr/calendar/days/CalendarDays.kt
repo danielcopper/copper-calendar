@@ -46,6 +46,10 @@ internal object CalendarDays {
     ) {
         val first: LocalDate = entry.start.toLocalDate()
 
+        init {
+            require(!date.isBefore(first)) { "${entry.title} stands on $date, before its first day $first" }
+        }
+
         /** Its last day: the day of the last moment before its end. */
         val last: LocalDate = entry.end.minusNanos(1).toLocalDate()
 
@@ -83,7 +87,7 @@ internal object CalendarDays {
             .map { Placed(it, maxOf(it.start.toLocalDate(), begin)) }
     }
 
-    /** The placed entries per date, in the order above. */
+    /** The entries [place] placed for the same dates, per date, in the order above. */
     fun byDay(
         dates: List<LocalDate>,
         placed: List<Placed>,
@@ -93,7 +97,7 @@ internal object CalendarDays {
     }
 
     /** Dates are at least one, ascending, one day apart. */
-    fun requireRun(dates: List<LocalDate>) {
+    private fun requireRun(dates: List<LocalDate>) {
         require(dates.isNotEmpty()) { "A run of days has at least one day" }
         require(dates.zipWithNext().all { (a, b) -> b == a.plusDays(1) }) { "The days run on without a gap: $dates" }
     }

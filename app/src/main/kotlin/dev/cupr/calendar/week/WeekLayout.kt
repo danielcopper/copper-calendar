@@ -72,6 +72,12 @@ data class WeekDay internal constructor(
 
     /** The entries the row draws: all but the [more] it leaves out. */
     val shown: List<DayEntry> get() = entries.dropLast(more)
+
+    /** The day leaving out one more of its last entries; it has one left to show. */
+    internal fun leaveOutLast(): WeekDay {
+        check(shown.isNotEmpty()) { "$date shows no entry to leave out" }
+        return copy(more = more + 1)
+    }
 }
 
 /** An entry as a row of the week shows it. [WeekLayout] makes it. */

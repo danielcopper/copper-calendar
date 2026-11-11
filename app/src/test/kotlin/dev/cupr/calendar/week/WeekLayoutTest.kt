@@ -1,5 +1,6 @@
 package dev.cupr.calendar.week
 
+import dev.cupr.calendar.days.CalendarDays
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.model.Kinds
 import dev.cupr.calendar.sample.SampleData
@@ -219,6 +220,16 @@ class WeekLayoutTest {
         assertTrue(capped.holiday)
         assertEquals(listOf("Feiertag"), day.copy(more = 1).shown.map { it.entry.title })
         assertThrows(IllegalArgumentException::class.java) { day.copy(more = 3) }
+        assertThrows(IllegalArgumentException::class.java) { day.copy(more = -1) }
+        assertThrows(IllegalStateException::class.java) { day.copy(more = 2).leaveOutLast() }
+        assertEquals(1, day.leaveOutLast().more)
+    }
+
+    @Test
+    fun `an entry stands on its first day or after it, never before`() {
+        val entry = timed(at(12, 9), at(12, 10))
+        assertEquals(date(12), CalendarDays.Placed(entry, date(12)).date)
+        assertThrows(IllegalArgumentException::class.java) { CalendarDays.Placed(entry, date(11)) }
     }
 
     @Test

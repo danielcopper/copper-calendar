@@ -61,7 +61,8 @@ data class Day internal constructor(
     val marks: List<Entry>,
     /**
      * Its own entries shown in the cell, in order; in "Woche quer" every one,
-     * the marks with no room beside the number among them.
+     * the marks with no room beside the number among them, unless a full
+     * week leaves out its last ones for the bitmap limit (D40).
      */
     val shown: List<Entry>,
     /**
@@ -77,6 +78,15 @@ data class Day internal constructor(
     }
 
     val weekend: Boolean get() = date.isWeekend
+
+    /** The lines its cell draws below the number and bars: its entries shown, and "+N" when it counts any. */
+    val lines: Int get() = shown.size + if (more > 0) 1 else 0
+
+    /** The day leaving out its last entry shown, counted in "+N"; it has one left to show. */
+    internal fun leaveOutLast(): Day {
+        check(shown.isNotEmpty()) { "$date shows no entry to leave out" }
+        return copy(shown = shown.dropLast(1), more = more + 1)
+    }
 }
 
 /** An entry over several days, as one week draws it. */
@@ -133,7 +143,6 @@ object MonthLayout {
         today: LocalDate,
     ): Week {
         require(dates.size == DAYS_IN_WEEK) { "A week has $DAYS_IN_WEEK days, not ${dates.size}" }
-        CalendarDays.requireRun(dates)
         return weeks(dates, entries, today, month = null, every = true).single()
     }
 
