@@ -56,7 +56,8 @@ object MonthWidget {
      * show at most two entries each, so it leaves nothing out for the limit;
      * the log warns when its weeks pass it, and [DrawnWidget.push] falls back.
      * Its list scrolls so the current week stands on top in a widget of
-     * height, or only into view without one ([TodayOnTop.scroll]).
+     * height, or to its end when the weeks from the current one on fit, and
+     * only into view without a height ([TodayOnTop.scroll], D27).
      */
     internal fun draw(
         context: Context,

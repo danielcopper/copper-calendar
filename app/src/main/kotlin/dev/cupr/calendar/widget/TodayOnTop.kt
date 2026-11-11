@@ -10,18 +10,11 @@ import dev.cupr.calendar.render.Scale
 import kotlin.math.roundToInt
 
 /**
- * Where a widget's list scrolls so today's row stands flush on top. The only
- * list scroll a widget's views offer, `setScrollPosition`, is a smooth scroll
- * to a position, AOSP's `AbsListView.PositionScroller`, which ends with the
- * target's bottom at the list's bottom padding: for a target below the
- * visible rows (`MOVE_DOWN_POS`) at the padding or its
- * `mExtraScroll`, whichever is more, for one already shown (`scrollToVisible`)
- * at the padding. So the list scrolls not to today's row but to the last row
- * that still fits below it, and gets as much bottom padding as those rows
- * leave of its height; with `clipToPadding` false the rows after the target
- * still show in that padding, and today's row stands at the top when the list
- * comes from above. The list's height is the widget's height in portrait
- * less its card and header ([DrawnWidget.listPx]).
+ * Where a widget's list scrolls so today's row stands flush on top, as D27
+ * describes it with the rule by which AOSP's `AbsListView.PositionScroller`
+ * ends a smooth scroll to a row: not to today's row but to the last row that
+ * still fits below it with the scroll's room to spare, with a bottom padding
+ * of what those rows leave of the list's height ([DrawnWidget.listPx]).
  */
 internal object TodayOnTop {
     /**
@@ -36,20 +29,16 @@ internal object TodayOnTop {
     )
 
     /**
-     * The last row at or after today whose rows from today's on fit into the
-     * list, listPx high, by the rows' heights in px: the last row when the
+     * The last row, today's or one after it, whose rows from today's on fit
+     * into the list, listPx high, by the rows' heights in px: the last row when the
      * rows from today's on fit into listPx; otherwise the last that fits into
      * listPx less extraPx, today's row when it alone does not. extraPx is
      * the room the smooth scroll leaves below a target that is not the
-     * list's last row: AOSP's `AbsListView.PositionScroller` scrolls down
-     * until the target's bottom is its `mExtraScroll` above the list's
-     * bottom, which is `ViewConfiguration.getScaledFadingEdgeLength()`,
-     * 12 dp, or the list's bottom padding when that is more; for the last
-     * row only that padding. The padding is what the rows leave of
-     * listPx, so at least extraPx; none for the last row, which the scroll
-     * brings to the list's bottom, and none for today's row alone when it is
-     * taller than listPx less extraPx. Null when today is no row's index, as
-     * -1 from indexOfFirst.
+     * list's last row, the fading edge length (D27). The padding is what the
+     * rows leave of listPx, so at least extraPx; none for the last row, which
+     * the scroll brings to the list's bottom, and none for today's row alone
+     * when it is taller than listPx less extraPx. Null when today is no row's
+     * index, as -1 from indexOfFirst.
      */
     fun target(
         heightsPx: List<Int>,
@@ -83,7 +72,8 @@ internal object TodayOnTop {
             index += 1
             rowsPx += heightsPx[index]
         }
-        // Rounded down: a padding a fraction short would leave today's row that much below the top.
+        // Rounded down, so today's row is never cut at the top: rounded up, the padding would scroll it up to 1 px
+        // too far.
         val paddingPx = if (rowsPx <= roomPx) (listPx - rowsPx).toInt() else 0
         return Target(index, rowsPx, paddingPx)
     }

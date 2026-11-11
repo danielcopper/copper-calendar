@@ -261,7 +261,7 @@ class WeekWidgetTest {
 
     @Test
     fun `scrolled to its target, today stands at the top, the days after it below`() {
-        // From 200 to 360 dp the days after today fill more than the list; 2 cells wide too, its rows stacked.
+        // From 200 to 360 dp the days from today on fill more than the list; 2 cells wide too, its rows stacked.
         for ((size, expected) in listOf(200 to 276 to 3, 220 to 276 to 3, 360 to 276 to 4, 220 to 146 to 2)) {
             val (heightDp, widthDp) = size
             val (list, target) = scrolled(heightDp, widthDp)

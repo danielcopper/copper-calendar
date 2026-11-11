@@ -86,7 +86,7 @@ class MonthWidgetTest {
 
     @Test
     fun `scrolled to its target, the current week stands at the top, the weeks after it below`() {
-        // From 2 cells (220 dp) to 320 dp the weeks after the current one fill more than the list.
+        // From 2 cells (220 dp) to 320 dp the weeks from the current one on fill more than the list.
         for ((heightDp, expected) in listOf(220 to 2, 260 to 3, 300 to 3, 320 to 4)) {
             val (list, target) = scrolled(heightDp)
             assertEquals("$heightDp dp", expected, target)

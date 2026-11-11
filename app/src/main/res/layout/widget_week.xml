@@ -27,8 +27,9 @@
             <include layout="@layout/widget_header_images_unscaled" />
         </FrameLayout>
 
-        <!-- Rows show in the bottom padding each update sets, so the scroll
-             to today ends with today's row at the top (TodayOnTop.kt). -->
+        <!-- Each update sets a bottom padding that ends the scroll to today
+             with today's row at the top (TodayOnTop.kt); the list does not
+             clip its rows to it, so the rows after still show in it. -->
         <ListView
             android:id="@+id/list"
             android:layout_width="match_parent"

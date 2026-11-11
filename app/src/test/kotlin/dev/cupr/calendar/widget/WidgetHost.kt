@@ -72,14 +72,12 @@ internal object WidgetHost {
      * The list of the widget laid out heightDp high and widthDp wide, from
      * its top scrolled to the row its views scroll to, and that row.
      * Robolectric's shadow records the row but runs no scroll, so this ends
-     * the scroll where AOSP's `AbsListView.PositionScroller` ends it: a row
-     * already shown (`scrollToVisible`) with its bottom at the list's bottom
-     * padding; a row below the shown ones (`MOVE_DOWN_POS`) by bringing up the
-     * last shown row until it is the target, each with its bottom at the
-     * padding or the fading edge length, whichever is more, at the padding
-     * alone for the list's last row. It scrolls in steps of a few px, as the
-     * smooth scroll does frame by frame: one step scrolls at most the list's
-     * height less its padding (`AbsListView.trackMotionScroll`).
+     * the scroll where AOSP's `AbsListView.PositionScroller` ends it, by the
+     * rule D27 gives: for a row already shown as `scrollToVisible` does, for
+     * a row below the shown ones as `MOVE_DOWN_POS` does, which brings up the
+     * last shown row until it is the target. It scrolls in steps of a few
+     * px, as the smooth scroll does frame by frame: one step scrolls at most
+     * the list's height less its padding (`AbsListView.trackMotionScroll`).
      */
     fun scrolledToTarget(
         context: Context,

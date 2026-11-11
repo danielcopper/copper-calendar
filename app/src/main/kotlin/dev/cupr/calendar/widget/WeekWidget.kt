@@ -65,8 +65,9 @@ object WeekWidget {
      * The widget at widthDp and the bytes of its bitmaps, kept within limit:
      * when its rows would pass it, the fullest days leave out their last
      * entries for a "+N weitere" line until they fit ([leaveOutOne]). Its
-     * list scrolls so today stands on top in a widget of height, or only
-     * into view without one ([TodayOnTop.scroll]).
+     * list scrolls so today stands on top in a widget of height, or to its
+     * end when the days from today on fit, and only into view without a
+     * height ([TodayOnTop.scroll], D27).
      */
     internal fun draw(
         context: Context,

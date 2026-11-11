@@ -37,7 +37,7 @@ class TodayOnTopTest {
     }
 
     @Test
-    fun `when the rows after today do not fill the list, the target is the last row`() {
+    fun `when the rows from today on do not fill the list, the target is the last row`() {
         assertEquals(TodayOnTop.Target(5, 420, 0), TodayOnTop.target(heights, today = 2, listPx = 1000f, EXTRA))
     }
 
