@@ -121,7 +121,8 @@ internal object DrawnWidget {
      * The height in px of a widget's list below a header headerPx high, in a
      * widget heightDp high: the widget less the card's border and padding at
      * the top and bottom, and less the header. "+" stands over the list and
-     * takes none of it.
+     * takes none of it. "Woche quer" passes its least height
+     * ([WeekColumnsWidget.update]), the month and "Woche" their greatest (D27).
      */
     fun listPx(
         scale: Scale,

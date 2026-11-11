@@ -9,11 +9,12 @@ import dev.cupr.calendar.render.Scale
 import kotlin.math.roundToInt
 
 /**
- * Where a widget's list scrolls so today's row stands flush on top, as D27
- * describes it with the rule by which AOSP's `AbsListView.PositionScroller`
- * ends a smooth scroll to a row: not to today's row but to the last row that
- * still fits below it with the scroll's room to spare, with a bottom padding
- * of what those rows leave of the list's height ([DrawnWidget.listPx]).
+ * Where a widget's list scrolls so today's row stands flush on top (D27). The
+ * app picks the target, the last row that still fits below today's with the
+ * scroll's room to spare (the list's last row needs none), and a bottom
+ * padding of what those rows leave of the list's height
+ * ([DrawnWidget.listPx]); AOSP's `AbsListView.PositionScroller` then ends the
+ * smooth scroll to it by the rules D27 gives.
  */
 internal object TodayOnTop {
     /** Why a target's list gets the bottom padding it gets (D27). */
