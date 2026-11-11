@@ -3,7 +3,10 @@
      it the day's transparent tap area, and above that a tap area per entry,
      which WeekWidget adds (widget_week_entry.xml) where the row draws the
      entries. The tap areas are children of the row, not its root: a list
-     row's root gets no click handling of its own from its fill-in intent. -->
+     row's root gets no click handling of its own from its fill-in intent.
+     The row is drawn at the width the launcher reports and shown unscaled,
+     at the top left: scaled to a wider list, it would grow taller and its
+     entries would slide away from their tap areas. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
@@ -12,18 +15,16 @@
         android:id="@+id/day_light"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:adjustViewBounds="true"
         android:importantForAccessibility="no"
-        android:scaleType="fitXY"
+        android:scaleType="matrix"
         android:visibility="@integer/light_visibility" />
 
     <ImageView
         android:id="@+id/day_dark"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:adjustViewBounds="true"
         android:importantForAccessibility="no"
-        android:scaleType="fitXY"
+        android:scaleType="matrix"
         android:visibility="@integer/dark_visibility" />
 
     <FrameLayout

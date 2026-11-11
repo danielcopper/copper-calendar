@@ -171,9 +171,44 @@ class WeekWidgetTest {
     }
 
     @Test
+    @Config(qualifiers = "+560dpi")
+    fun `at a fractional density each entry's tap area starts and ends where its area does, rounded`() {
+        val scale = Scale(application.resources.displayMetrics.density)
+        assertEquals(3.5f, scale.px(1f), 0.001f)
+        val entries = row(5).findViewById<ViewGroup>(R.id.entries)
+        val assets = RenderAssets.of(application)
+        val rows =
+            DayRowRenderer.forWidth(
+                assets.fonts,
+                assets.icons,
+                assets.drawings,
+                WeekTexts.of(application.resources),
+                WidgetHost.WIDTH_DP,
+            )
+        val day = WeekLayout.build(WeekDays.MONDAY_TO_SUNDAY.dates(wednesday), SampleData.entries, wednesday)[5]
+        val rowPx = scale.px(WidgetHost.WIDTH_DP - 2 * PhoneMonth.CARD_BORDER).roundToInt()
+        val areas = rows.entryAreas(day, rowPx, scale)
+        assertEquals(areas.size, entries.childCount)
+        areas.forEachIndexed { index, area ->
+            val slot = entries.getChildAt(index)
+            assertEquals("top of $index", area.top.roundToInt(), entries.top + slot.top)
+            assertEquals("bottom of $index", area.bottom.roundToInt(), entries.top + slot.bottom)
+        }
+    }
+
+    @Test
+    fun `a row laid out wider than it was drawn stays unscaled, so its entries keep their tap areas`() {
+        val list = WidgetHost.laidOut(application, views = week, widthDp = 350).findViewById<ListView>(R.id.list)
+        val row = list.getChildAt(0)
+        val image = row.findViewById<ImageView>(R.id.day_light)
+        val bitmap = (image.drawable as BitmapDrawable).bitmap
+        assertTrue(list.width > bitmap.width)
+        assertEquals(bitmap.height, image.height)
+        assertEquals(bitmap.height, row.height)
+    }
+
+    @Test
     fun `a row filled anew for another day holds only that day's entry areas`() {
-        // On each update, and for a row its list recycles, a launcher applies a row's views again to the views it
-        // shows; entry areas added there before must not pile up, or the row grows by blank lines below its drawing.
         val assets = RenderAssets.of(application)
         val rows = DayRowRenderer(assets.fonts, assets.icons, assets.drawings, WeekTexts.of(application.resources))
         val scale = Scale(application.resources.displayMetrics.density)
@@ -182,11 +217,21 @@ class WeekWidgetTest {
             val drawn = rows.render(week[index], ROW_PX, scale, SampleData.light)
             WeekWidget.row(application, rows, week[index], drawn, drawn, scale)
         }
+        val height = { view: View ->
+            view.measure(
+                View.MeasureSpec.makeMeasureSpec(ROW_PX, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            )
+            view.measuredHeight
+        }
         val row = views(5).apply(application, FrameLayout(application))
         val entries = row.findViewById<ViewGroup>(R.id.entries)
         assertEquals(8, entries.childCount)
+        val drawnHeight = rows.render(week[5], ROW_PX, scale, SampleData.light).height
+        assertEquals(drawnHeight, height(row))
         views(5).reapply(application, row)
         assertEquals(8, entries.childCount)
+        assertEquals(drawnHeight, height(row))
         views(1).reapply(application, row)
         assertEquals(listOf("07:45–08:15 Elterngespräch Schule", "15:30–16:15 Zahnarzt Ben"), entries.descriptions())
         views(6).reapply(application, row)

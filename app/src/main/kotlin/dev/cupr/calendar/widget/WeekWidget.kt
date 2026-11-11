@@ -71,9 +71,8 @@ object WeekWidget {
         val assets = RenderAssets.of(context)
         val chrome =
             ChromeRenderer(assets.fonts, assets.icons, context.resources.getStringArray(R.array.weekday_heads).toList())
-        val texts = WeekTexts.of(context.resources)
         val rows =
-            DayRowRenderer(assets.fonts, assets.icons, assets.drawings, texts, DayRowRenderer.stacksAt(widthDp))
+            DayRowRenderer.forWidth(assets.fonts, assets.icons, assets.drawings, WeekTexts.of(context.resources), widthDp)
         val drawn = mutableListOf<Bitmap>()
 
         fun Bitmap.kept(): Bitmap = also { drawn += it }
@@ -134,6 +133,7 @@ object WeekWidget {
         // recycles); views added before would stay and pile up, growing the row by blank lines below its drawing.
         row.removeAllViews(R.id.entries)
         val areas = rows.entryAreas(day, light.width, scale)
+        check(areas.size == day.shown.size) { "${areas.size} tap areas for ${day.shown.size} entries on ${day.date}" }
         val first = areas.firstOrNull() ?: return row
         row.setViewPadding(
             R.id.entries,
@@ -142,13 +142,13 @@ object WeekWidget {
             (light.width - first.right).roundToInt(),
             0,
         )
-        val texts = WeekTexts.of(context.resources)
-        day.entries.zip(areas).forEach { (entry, area) ->
+        day.shown.zip(areas).forEach { (entry, area) ->
             val cell = RemoteViews(context.packageName, R.layout.widget_week_entry)
-            cell.setViewLayoutHeight(R.id.entry_slot, area.height(), TypedValue.COMPLEX_UNIT_PX)
+            // Each slot ends where the area ends, rounded, so rounding never adds up down the row.
+            val height = area.bottom.roundToInt() - area.top.roundToInt()
+            cell.setViewLayoutHeight(R.id.entry_slot, height.toFloat(), TypedValue.COMPLEX_UNIT_PX)
             cell.setOnClickFillInIntent(R.id.entry, Taps.fillIn(tap(entry, day.date)))
-            val label = listOfNotNull(entry.time, entry.entry.title, entry.addition?.let(texts::addition))
-            cell.setContentDescription(R.id.entry, label.joinToString(" "))
+            cell.setContentDescription(R.id.entry, rows.describe(entry))
             row.addView(R.id.entries, cell)
         }
         return row

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- An entry's tap area in a day of the week widget "Woche"; WeekWidget sets
-     the slot's height to the entry's line. The area is the slot's child: the
-     root of a view added to a list row gets no click handling of its own
-     from its fill-in intent. -->
+     the slot's height to the entry's area, its lines and the gap below them.
+     The area is the slot's child, for the reason widget_week_day.xml gives
+     for its own. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/entry_slot"
     android:layout_width="match_parent"

@@ -42,15 +42,19 @@ internal object WidgetHost {
         }
     }
 
-    /** The applied widget laid out at its default width and heightDp high, so its list holds rows. */
+    /**
+     * The applied widget, drawn at its default width, laid out widthDp wide
+     * and heightDp high, so its list holds rows.
+     */
     fun laidOut(
         context: Context,
         heightDp: Int = HEIGHT_DP,
         views: (Context, Int) -> RemoteViews = month,
+        widthDp: Int = WIDTH_DP,
     ): View {
         val widget = applied(context, WIDTH_DP, views)
         val scale = Scale(context.resources.displayMetrics.density)
-        widget.measure(exactly(scale, WIDTH_DP), exactly(scale, heightDp))
+        widget.measure(exactly(scale, widthDp), exactly(scale, heightDp))
         widget.layout(0, 0, widget.measuredWidth, widget.measuredHeight)
         return widget
     }
