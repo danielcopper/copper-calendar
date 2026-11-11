@@ -78,15 +78,15 @@ class DayRowRenderTest {
     }
 
     /**
-     * From the least width, 150 dp, to 4 cells (276 dp), stacked below 250 dp
+     * From the least width, 110 dp, to 4 cells (276 dp), stacked below 250 dp
      * as the widget draws them, on both sides of that switch.
      */
     @Test
-    fun `renders the sample week's rows from 150 to 276 dp wide, dark and light, to PNG files`() {
+    fun `renders the sample week's rows from 110 to 276 dp wide, dark and light, to PNG files`() {
         val dates = WeekDays.MONDAY_TO_SUNDAY.dates(today)
         val week = WeekLayout.build(dates, SampleData.entries, today)
         Probe.renderDir.mkdirs()
-        for (widthDp in listOf(150, 200, 245, 250, 276)) {
+        for (widthDp in listOf(110, 150, 200, 245, 250, 276)) {
             val headerPx = scale.px(widthDp - 2 * PhoneMonth.CARD_INSET).roundToInt()
             val narrowPx = scale.px(widthDp - 2 * PhoneMonth.CARD_BORDER).roundToInt()
             val renderer = if (DayRowRenderer.stacksAt(widthDp)) stacked else rows

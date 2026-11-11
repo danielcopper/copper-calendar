@@ -160,11 +160,11 @@ class WeekWidgetTest {
     }
 
     @Test
-    fun `it is added 4 cells wide and can be made 150 dp wide and 2 cells high`() {
+    fun `it is added 4 cells wide and can be made 2 cells wide and 2 high`() {
         val info = { attribute: Int -> WidgetHost.providerAttribute(application, R.xml.widget_week_info, attribute) }
         val scale = Scale(application.resources.displayMetrics.density)
         assertEquals(scale.px(250f).roundToInt(), info(android.R.attr.minWidth))
-        assertEquals(scale.px(150f).roundToInt(), info(android.R.attr.minResizeWidth))
+        assertEquals(scale.px(110f).roundToInt(), info(android.R.attr.minResizeWidth))
         assertEquals(scale.px(180f).roundToInt(), info(android.R.attr.minHeight))
         assertEquals(scale.px(110f).roundToInt(), info(android.R.attr.minResizeHeight))
         assertEquals(4, info(android.R.attr.targetCellWidth))

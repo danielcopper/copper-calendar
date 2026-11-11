@@ -195,7 +195,7 @@ class WeekColumnsRenderTest {
         const val DEFAULT_DP = 276
 
         /** "Woche" at its least width (D34) and 3 cells wide (Android's cell-size table), where its rows stack. */
-        const val LEAST_DP = 150
+        const val LEAST_DP = 110
         const val THREE_CELLS_DP = 203
 
         /** A widget as wide as a Pixel 6's screen (412 dp). */
