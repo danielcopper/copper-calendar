@@ -3,9 +3,10 @@ package dev.cupr.calendar.render
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.text.TextPaint
 import androidx.core.graphics.createBitmap
+import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.model.Palette
-import dev.cupr.calendar.month.DAYS_IN_WEEK
 import dev.cupr.calendar.render.PhoneMonth.CHEVRON
 import dev.cupr.calendar.render.PhoneMonth.FAB_ICON
 import dev.cupr.calendar.render.PhoneMonth.FAB_MARGIN
@@ -20,13 +21,14 @@ import dev.cupr.calendar.render.PhoneMonth.TITLE_FONT
 import dev.cupr.calendar.render.PhoneMonth.TITLE_GAP
 import dev.cupr.calendar.render.PhoneMonth.TITLE_ROW
 import dev.cupr.calendar.render.PhoneMonth.TITLE_TOP
+import java.time.DayOfWeek
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.ceil
 
 /**
- * Draws the month widget's fixed parts: the header (month title, chevron,
+ * Draws the widgets' fixed parts: the header (title, a week's range, chevron,
  * weekday heads) and the round "+". It is given the weekday heads, Monday to
  * Sunday.
  */
@@ -45,40 +47,97 @@ class ChromeRenderer(
         widthPx: Int,
         scale: Scale,
         palette: Palette,
+    ): Bitmap = draw(title(month), null, weekdays, widthPx, scale, palette)
+
+    /**
+     * A week widget's header: its title ("DIESE WOCHE") and at the right its
+     * range ("9.–15. Nov.") and the chevron; with from, below them the weekday
+     * heads one per column, from that weekday on.
+     */
+    fun weekHeader(
+        title: String,
+        range: String,
+        from: DayOfWeek?,
+        widthPx: Int,
+        scale: Scale,
+        palette: Palette,
+    ): Bitmap = draw(title, range, from?.let(::heads), widthPx, scale, palette)
+
+    /** The weekday heads of a week from first on, in order. */
+    internal fun heads(first: DayOfWeek): List<String> =
+        List(DAYS_IN_WEEK) { weekdays[(first.value - 1 + it) % DAYS_IN_WEEK] }
+
+    private fun draw(
+        text: String,
+        range: String?,
+        heads: List<String>?,
+        widthPx: Int,
+        scale: Scale,
+        palette: Palette,
     ): Bitmap {
-        val heads = fonts.paint(scale, HEAD_FONT, FontWeight.BOLD, palette.tertiaryText)
-        heads.letterSpacing = LETTER_SPACING
-        heads.textAlign = Paint.Align.CENTER
-        val headsLine = heads.fontMetrics.let { it.descent - it.ascent }
+        val headPaint = fonts.paint(scale, HEAD_FONT, FontWeight.BOLD, palette.tertiaryText)
+        headPaint.letterSpacing = LETTER_SPACING
+        headPaint.textAlign = Paint.Align.CENTER
+        val headsLine = headPaint.fontMetrics.let { it.descent - it.ascent }
         val titleRow = scale.px(TITLE_TOP + TITLE_ROW + TITLE_BOTTOM)
-        val heightPx = ceil(titleRow + headsLine + scale.px(HEADS_BOTTOM)).toInt()
+        val heightPx = ceil(if (heads == null) titleRow else titleRow + headsLine + scale.px(HEADS_BOTTOM)).toInt()
         val bitmap = createBitmap(widthPx, heightPx)
         bitmap.density = scale.dpi
         val canvas = Canvas(bitmap)
 
         val rowTop = scale.px(TITLE_TOP)
         val rowHeight = scale.px(TITLE_ROW)
+        val chevron = scale.px(CHEVRON)
+        var end = widthPx - chevron
+        if (range != null) {
+            val (shown, x) = range(range, widthPx, scale)
+            val rangePaint = rangePaint(scale, palette.tertiaryText)
+            canvas.drawText(shown, x, rangePaint.baselineIn(rowTop, rowHeight), rangePaint)
+            end = x
+        }
         val title = fonts.paint(scale, TITLE_FONT, FontWeight.SEMI_BOLD, palette.secondaryText)
         title.letterSpacing = LETTER_SPACING
-        val chevron = scale.px(CHEVRON)
         canvas.drawCut(
-            title(month).uppercase(Locale.GERMAN),
+            text.uppercase(Locale.GERMAN),
             0f,
             title.baselineIn(rowTop, rowHeight),
-            widthPx - chevron - scale.px(TITLE_GAP),
+            end - scale.px(TITLE_GAP),
             title,
         )
         icons.path(CHEVRON_ICON)?.let {
             canvas.drawIcon(it, widthPx - chevron, rowTop + (rowHeight - chevron) / 2, chevron, palette.tertiaryText)
         }
 
-        val column = widthPx / DAYS_IN_WEEK.toFloat()
-        val baseline = heads.baselineIn(titleRow, headsLine)
-        weekdays.forEachIndexed { index, name ->
-            canvas.drawText(name.uppercase(Locale.GERMAN), (index + HALF) * column, baseline, heads)
+        if (heads != null) {
+            val column = widthPx / DAYS_IN_WEEK.toFloat()
+            val baseline = headPaint.baselineIn(titleRow, headsLine)
+            heads.forEachIndexed { index, name ->
+                canvas.drawText(name.uppercase(Locale.GERMAN), (index + HALF) * column, baseline, headPaint)
+            }
         }
         return bitmap
     }
+
+    /**
+     * A week's range as the header draws it in a header widthPx wide: the
+     * text, cut with "…" where it is wider than the room before the chevron,
+     * and the x it starts at, never left of the header.
+     */
+    internal fun range(
+        range: String,
+        widthPx: Int,
+        scale: Scale,
+    ): Pair<String, Float> {
+        val paint = rangePaint(scale, 0)
+        val end = widthPx - scale.px(CHEVRON) - scale.px(RANGE_GAP)
+        val shown = paint.cut(range, end)
+        return shown to end - paint.measureText(shown)
+    }
+
+    private fun rangePaint(
+        scale: Scale,
+        color: Int,
+    ): TextPaint = fonts.paint(scale, RANGE_FONT, FontWeight.REGULAR, color).apply { fontFeatureSettings = "tnum" }
 
     /**
      * The round "+": the accent's circle with its shadow and the plus in the
@@ -113,6 +172,10 @@ class ChromeRenderer(
         private const val SHADOW_RADIUS = (FAB_SHADOW_BLUR / 2 - 0.5f) / 0.57735f
 
         private const val HALF = 0.5f
+
+        /** A week's range beside the chevron: its text size and its gap to the chevron (the tile's). */
+        private const val RANGE_FONT = 12f
+        private const val RANGE_GAP = 2f
         private const val CHEVRON_ICON = "chevron-right"
         private const val PLUS_ICON = "plus"
 

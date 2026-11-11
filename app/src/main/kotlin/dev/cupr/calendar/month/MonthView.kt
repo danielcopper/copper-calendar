@@ -1,16 +1,15 @@
 package dev.cupr.calendar.month
 
+import dev.cupr.calendar.days.CalendarDays
+import dev.cupr.calendar.days.CalendarDays.Placed
+import dev.cupr.calendar.days.DAYS_IN_WEEK
+import dev.cupr.calendar.days.isWeekend
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.model.Kinds
-import java.text.Collator
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.TemporalAdjusters
-import java.util.Locale
-
-/** The days of a week, Monday to Sunday: the month's columns. */
-const val DAYS_IN_WEEK = 7
 
 /**
  * The month as the dashboard's calendar page shows it at phone size, one
@@ -31,7 +30,7 @@ data class MonthView internal constructor(
 
 @ConsistentCopyVisibility
 data class Week internal constructor(
-    /** Monday to Sunday. */
+    /** Its seven days in order: Monday to Sunday in the month, from any day on in "Woche quer". */
     val days: List<Day>,
     /** The entries over several days that cross this week, as bars. */
     val bars: List<Bar>,
@@ -60,9 +59,17 @@ data class Day internal constructor(
      * a dot (D24).
      */
     val marks: List<Entry>,
-    /** Its own entries shown in the cell, in order. */
+    /**
+     * Its own entries shown in the cell, in order; in "Woche quer" every one,
+     * the marks with no room beside the number among them, unless a full
+     * week leaves out its last ones for the bitmap limit (D40).
+     */
     val shown: List<Entry>,
-    /** How many of its entries "+N" counts, 0 for none: its own not shown and the marks with no room (D24). */
+    /**
+     * How many of its entries "+N" counts, 0 for none: in the month its own
+     * not shown and the marks with no room (D24); in "Woche quer" only those
+     * a full week leaves out for the bitmap limit.
+     */
     val more: Int,
 ) {
     init {
@@ -70,14 +77,23 @@ data class Day internal constructor(
         require(more >= 0) { "A day's \"+N\" counts $more" }
     }
 
-    val weekend: Boolean get() = date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY
+    val weekend: Boolean get() = date.isWeekend
+
+    /** The lines its cell draws below the number and bars: its entries shown, and "+N" when it counts any. */
+    val lines: Int get() = shown.size + if (more > 0) 1 else 0
+
+    /** The day leaving out its last entry shown, counted in "+N"; it has one left to show. */
+    internal fun leaveOutLast(): Day {
+        check(shown.isNotEmpty()) { "$date shows no entry to leave out" }
+        return copy(shown = shown.dropLast(1), more = more + 1)
+    }
 }
 
 /** An entry over several days, as one week draws it. */
 @ConsistentCopyVisibility
 data class Bar internal constructor(
     val entry: Entry,
-    /** The first and last column it covers in this week (0 = Monday). */
+    /** The first and last column it covers in this week (0 = the week's first day). */
     val from: Int,
     val to: Int,
     val lane: Int,
@@ -102,8 +118,6 @@ object MonthLayout {
     /** At phone size a cell shows 1 drawing of its marked entries (`drawn`). */
     const val MOST_DRAWINGS = 1
 
-    private val collator: Collator = Collator.getInstance(Locale.GERMAN)
-
     /** The dates from the Monday on or before the 1st to the Sunday on or after the last day (`calendar_grid`). */
     fun grid(month: YearMonth): List<LocalDate> {
         val first = month.atDay(1).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
@@ -115,11 +129,38 @@ object MonthLayout {
         month: YearMonth,
         entries: List<Entry>,
         today: LocalDate,
-    ): MonthView {
-        val dates = grid(month)
-        val placed = place(dates, entries)
+    ): MonthView = MonthView(month, weeks(grid(month), entries, today, month, every = false))
+
+    /**
+     * Seven days from any day on drawn as one week of the month ("Woche
+     * quer", D19): no day of another month, and every entry of a day shown
+     * instead of [MOST_ENTRIES] and "+N"; a marked entry with no room beside
+     * the number is shown as a line among them.
+     */
+    fun week(
+        dates: List<LocalDate>,
+        entries: List<Entry>,
+        today: LocalDate,
+    ): Week {
+        require(dates.size == DAYS_IN_WEEK) { "A week has $DAYS_IN_WEEK days, not ${dates.size}" }
+        return weeks(dates, entries, today, month = null, every = true).single()
+    }
+
+    /** The weeks of dates; month: the days of any other month are drawn faint; every: no limit of entries. */
+    private fun weeks(
+        dates: List<LocalDate>,
+        entries: List<Entry>,
+        today: LocalDate,
+        month: YearMonth?,
+        every: Boolean,
+    ): List<Week> {
+        // The month keeps a timed entry of no length at the grid's first midnight, as the dashboard's grid does.
+        val placed = CalendarDays.onDays(dates, entries, keepFirstMidnight = true)
         val days =
-            dates.mapIndexed { index, date -> day(date, month, today, placed[index]) }
+            dates.mapIndexed { index, date ->
+                val otherMonth = month != null && YearMonth.from(date) != month
+                day(date, otherMonth, today, placed[index], every)
+            }
         val bars =
             placed.flatMapIndexed { index, rows ->
                 rows.filter { it.multi }.map { row ->
@@ -127,60 +168,19 @@ object MonthLayout {
                     Span(row, index, to)
                 }
             }
-        val weeks =
-            dates.indices.step(DAYS_IN_WEEK).map { start ->
-                Week(days.subList(start, start + DAYS_IN_WEEK).toList(), lanes(bars, dates, start))
-            }
-        return MonthView(month, weeks)
+        return dates.indices.step(DAYS_IN_WEEK).map { start ->
+            Week(days.subList(start, start + DAYS_IN_WEEK).toList(), lanes(bars, dates, start))
+        }
     }
 
-    /** An entry as placed on a day of the grid (`calendar_days`' row). */
-    private data class Row(
-        val entry: Entry,
-        val first: LocalDate,
-        val last: LocalDate,
-        val multi: Boolean,
-        /** Timed and placed on its own first day, so ordered by its time. */
-        val timed: Boolean,
-    )
-
     private data class Span(
-        val row: Row,
+        val row: Placed,
         val from: Int,
         val to: Int,
     )
 
-    /**
-     * Each entry stands on its first day, one that began before the grid on
-     * its first date; one that ended before the grid or begins after it is
-     * left out (`calendar_days` with `empty` and `past`). On each day the
-     * all-day entries first, then by time, then by title.
-     */
-    private fun place(
-        dates: List<LocalDate>,
-        entries: List<Entry>,
-    ): List<List<Row>> {
-        val begin = dates.first().atStartOfDay()
-        // An entry that begins after the grid lands on a date the grid never reads.
-        val placed =
-            entries
-                // Ended before the grid: left out, except a timed entry of no length at the grid's first midnight.
-                .filter { it.end.isAfter(begin) || it.start == begin }
-                .groupBy({ entry -> maxOf(entry.start.toLocalDate(), begin.toLocalDate()) }) { entry ->
-                    val first = entry.start.toLocalDate()
-                    val last = entry.end.minusNanos(1).toLocalDate()
-                    // Timed and standing on its own first day, not carried onto the grid's first date.
-                    val timed = !entry.allDay && !first.isBefore(begin.toLocalDate())
-                    Row(entry, first, last, multi = last.isAfter(first), timed = timed)
-                }
-        val order =
-            compareBy<Row>({ it.timed }, { if (it.timed) it.entry.start else null })
-                .then { a, b -> collator.compare(a.entry.title, b.entry.title) }
-        return dates.map { date -> placed[date].orEmpty().sortedWith(order) }
-    }
-
     /** A special day or a public holiday of one day stands beside the number (`calendar_marked`). */
-    private fun marked(row: Row) = row.entry.kind in setOf(Kinds.SPECIAL, Kinds.HOLIDAY) && !row.multi
+    private fun marked(row: Placed) = row.entry.kind in setOf(Kinds.SPECIAL, Kinds.HOLIDAY) && !row.multi
 
     /**
      * The marked entries that stand beside a day's number (D24): those with a
@@ -188,40 +188,52 @@ object MonthLayout {
      * one, which the dashboard leaves out but the widget draws as its icon or
      * a dot; each group in the day's order. A public holiday without a drawing
      * shows only as its red number. The day draws the first [MOST_DRAWINGS];
-     * "+N" counts the rest.
+     * in the month "+N" counts the rest, in "Woche quer" they are lines among
+     * the entries.
      */
-    private fun marks(rows: List<Row>): List<Entry> =
+    private fun marks(rows: List<Placed>): List<Placed> =
         rows
             .filter(::marked)
             .filter { it.entry.drawing != null || it.entry.kind == Kinds.SPECIAL }
             .sortedBy { it.entry.drawing == null }
-            .map { it.entry }
 
     /**
      * A day's cell. `holiday` sees only the entries placed on the day, so a
      * public holiday over several days reds its first day, as on the dashboard.
+     * every: all of its entries shown, the marks with no room beside the
+     * number among them in the day's order, and no "+N".
      */
     private fun day(
         date: LocalDate,
-        month: YearMonth,
+        otherMonth: Boolean,
         today: LocalDate,
-        rows: List<Row>,
+        rows: List<Placed>,
+        every: Boolean,
     ): Day {
-        val singles = rows.filter { !it.multi && !marked(it) }.map { it.entry }
         val marks = marks(rows)
-        // Marks with no room beside the number go into "+N", so at most one of the day's own entries is shown.
-        val overflow = (marks.size - MOST_DRAWINGS).coerceAtLeast(0)
-        val shown = if (singles.size <= MOST_ENTRIES && overflow == 0) singles else singles.take(MOST_ENTRIES - 1)
-        val otherMonth = YearMonth.from(date) != month
+        val beside = marks.take(MOST_DRAWINGS)
+        val shown: List<Entry>
+        val more: Int
+        if (every) {
+            val lines = marks.drop(MOST_DRAWINGS)
+            shown = rows.filter { row -> !row.multi && (!marked(row) || lines.any { it === row }) }.map { it.entry }
+            more = 0
+        } else {
+            val singles = rows.filter { !it.multi && !marked(it) }.map { it.entry }
+            // Marks with no room beside the number go into "+N", so at most one of the day's own entries is shown.
+            val overflow = marks.size - beside.size
+            shown = if (singles.size <= MOST_ENTRIES && overflow == 0) singles else singles.take(MOST_ENTRIES - 1)
+            more = singles.size - shown.size + overflow
+        }
         return Day(
             date = date,
             otherMonth = otherMonth,
             past = !otherMonth && date.isBefore(today),
             today = date == today,
             holiday = rows.any { it.entry.kind == Kinds.HOLIDAY },
-            marks = marks.take(MOST_DRAWINGS),
+            marks = beside.map { it.entry },
             shown = shown,
-            more = singles.size - shown.size + overflow,
+            more = more,
         )
     }
 

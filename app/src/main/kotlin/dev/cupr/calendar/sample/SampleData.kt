@@ -50,6 +50,8 @@ object SampleData {
             divider = 0xFF262C34.toInt(),
             accent = 0xFF6FB1FF.toInt(),
             onAccent = 0xFF0D1A2A.toInt(),
+            // The accent at 16 % opacity.
+            accentSoft = 0x296FB1FF,
             holiday = 0xFFFF7A7A.toInt(),
             // Black at half opacity.
             shadow = 0x80000000.toInt(),
@@ -73,6 +75,8 @@ object SampleData {
             divider = 0xFFE6EAF0.toInt(),
             accent = 0xFF1F6FD6.toInt(),
             onAccent = 0xFFFFFFFF.toInt(),
+            // The accent at 12 % opacity.
+            accentSoft = 0x1F1F6FD6,
             holiday = 0xFFB52222.toInt(),
             // The light text colour at 18 % opacity.
             shadow = 0x2E161B22,
@@ -86,6 +90,11 @@ object SampleData {
                 ),
         )
 
+    /**
+     * Each entry has a UID, except the special days and public holidays,
+     * which have none in Home Assistant's data either. Saturday, 14 November,
+     * is a full day, so the week's columns scroll at their default size.
+     */
     val entries: List<Entry> =
         buildList {
             for (day in listOf(26, 2, 9, 16, 23, 30)) {
@@ -126,7 +135,7 @@ object SampleData {
                 ),
             )
             add(
-                allDay(LocalDate.of(2026, 11, 13), 1, "Max Weber", null, "birthday", "mdi:cake-variant")
+                allDay(LocalDate.of(2026, 11, 13), 1, "Max Weber", null, Kinds.BIRTHDAY, "mdi:cake-variant")
                     .copy(calendar = BIRTHDAYS, year = 2000),
             )
             add(
@@ -157,7 +166,7 @@ object SampleData {
                     3,
                     "Kurzurlaub Ostsee",
                     REBECCAPURPLE,
-                    "vacation",
+                    Kinds.VACATION,
                     "mdi:bag-suitcase",
                 ),
             )
@@ -185,6 +194,43 @@ object SampleData {
                     "mdi:chef-hat",
                 ),
             )
+            add(
+                timed(
+                    LocalDate.of(2026, 11, 9),
+                    "08:00",
+                    "08:45",
+                    "Physiotherapie",
+                    STEELBLUE,
+                    "health",
+                    "mdi:heart-pulse",
+                ),
+            )
+            add(
+                timed(
+                    LocalDate.of(2026, 11, 10),
+                    "07:45",
+                    "08:15",
+                    "Elterngespräch Schule",
+                    REBECCAPURPLE,
+                    "parents_evening",
+                    "mdi:account-group",
+                ),
+            )
+            add(allDay(LocalDate.of(2026, 11, 12), 1, "Restmüll", STEELBLUE, "trash", "mdi:trash-can"))
+            val saturday = LocalDate.of(2026, 11, 14)
+            add(timed(saturday, "08:00", "09:00", "Wocheneinkauf", REBECCAPURPLE, "shopping", "mdi:cart"))
+            add(timed(saturday, "09:00", "12:00", "Flohmarkt Kita", HOTPINK, "outing", "mdi:package-variant"))
+            add(timed(saturday, "12:30", "14:00", "Mittagessen bei Oma", HOTPINK, "food", "mdi:silverware-fork-knife"))
+            add(timed(saturday, "14:00", "15:00", "Fahrrad reparieren", STEELBLUE, "repair", "mdi:hammer-wrench"))
+            add(timed(saturday, "18:30", "19:00", "Laternen basteln", LIGHTSKYBLUE, "craft", "mdi:palette"))
+            add(timed(saturday, "19:30", "21:30", "Kino", REBECCAPURPLE, "cinema", "mdi:filmstrip"))
+            // A public holiday in Saxony only, here as a sample of one.
+            add(
+                allDay(LocalDate.of(2026, 11, 18), 1, "Buß- und Bettag", null, Kinds.HOLIDAY, null)
+                    .copy(calendar = PUBLIC_HOLIDAYS),
+            )
+        }.mapIndexed { index, entry ->
+            if (entry.kind in setOf(Kinds.SPECIAL, Kinds.HOLIDAY)) entry else entry.copy(uid = "sample-$index")
         }
 
     private fun timed(

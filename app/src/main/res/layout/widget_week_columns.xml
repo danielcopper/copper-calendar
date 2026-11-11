@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The week widget "Woche quer" (WeekColumnsWidget.kt): the month widget's
+     layout with one drawn row, the seven days as a week of the month, and a
+     fixed fade at the bottom of the list. Its measures are PhoneMonth's in
+     dp; WeekColumnsWidgetTest checks that they fit the drawn parts. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_card">
+
+    <!-- Inside the card's 1 dp border, its padding of 10 dp at the top and
+         bottom and 12 dp at the sides. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingHorizontal="13dp"
+        android:paddingVertical="11dp">
+
+        <FrameLayout
+            android:id="@+id/header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <include layout="@layout/widget_header_images" />
+        </FrameLayout>
+
+        <ListView
+            android:id="@+id/list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:listSelector="@android:color/transparent"
+            android:scrollbars="none" />
+    </LinearLayout>
+
+    <!-- The fade above the list's bottom edge, shown only when the drawn row
+         is taller than the list (WeekColumnsWidget.FADE_DP); its own layer,
+         since a widget cannot know how far its list is scrolled. -->
+    <FrameLayout
+        android:id="@+id/fade"
+        android:layout_width="match_parent"
+        android:layout_height="24dp"
+        android:layout_gravity="bottom"
+        android:layout_marginHorizontal="13dp"
+        android:layout_marginBottom="11dp"
+        android:background="@drawable/widget_fade"
+        android:importantForAccessibility="no"
+        android:visibility="gone" />
+
+    <include layout="@layout/widget_fab" />
+</FrameLayout>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Woche": 4 x 4 cells by default (276 x 456 dp, design.md), resizable
+     down to 2 cells wide and 2 high; the least sizes are D34's, and
+     narrower than 4 cells its rows stack (D39). updatePeriodMillis is
+     Android's floor of 30 minutes
+     (research.md, section 5). The picker's preview is the widget drawn from
+     the sample week, written by `mise run preview` (D33). -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_week_description"
+    android:initialLayout="@layout/widget_week"
+    android:minWidth="250dp"
+    android:minHeight="180dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:previewImage="@drawable/widget_week_preview"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="4"
+    android:targetCellHeight="4"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen" />

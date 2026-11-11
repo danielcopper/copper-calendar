@@ -7,10 +7,10 @@ import android.graphics.RectF
 import androidx.annotation.ColorInt
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.withClip
+import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.model.Palette
 import dev.cupr.calendar.month.Bar
-import dev.cupr.calendar.month.DAYS_IN_WEEK
 import dev.cupr.calendar.month.Day
 import dev.cupr.calendar.month.Week
 import dev.cupr.calendar.render.PhoneMonth.BAR_BAND
@@ -50,26 +50,32 @@ import dev.cupr.calendar.render.PhoneMonth.OTHER_MONTH
 import dev.cupr.calendar.render.PhoneMonth.PAST_ENTRY
 import dev.cupr.calendar.render.PhoneMonth.TIMED_SIDE
 import dev.cupr.calendar.render.PhoneMonth.WEEKEND_TINT
-import kotlin.math.ceil
+import java.time.LocalDate
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Draws one week of the month as a bitmap (D8), at phone size
  * ([PhoneMonth]): the week's top divider, seven cells and the bars over
- * them. The bitmap is transparent where the card shows.
+ * them; "Woche quer" draws its seven days as one such week. The bitmap is
+ * transparent where the card shows.
  */
 class WeekRowRenderer(
     private val fonts: Fonts,
-    private val icons: Icons,
-    private val drawings: Drawings,
+    icons: Icons,
+    drawings: Drawings,
 ) {
+    private val marks = MarkAssets(icons, drawings)
+
+    /** The week at widthPx; blankDp: room left blank below its cells, their columns running on through it. */
     fun render(
         week: Week,
         widthPx: Int,
         scale: Scale,
         palette: Palette,
+        blankDp: Float = 0f,
     ): Bitmap {
-        val heightPx = ceil(scale.hairline + scale.px(heightDp(week))).toInt()
+        val heightPx = heightPx(week, scale, blankDp)
         val bitmap = createBitmap(widthPx, heightPx)
         bitmap.density = scale.dpi
         val canvas = Canvas(bitmap)
@@ -80,13 +86,89 @@ class WeekRowRenderer(
         return bitmap
     }
 
+    /**
+     * The days of the week drawn at widthPx whose marks beside the number do
+     * not all have room, and how many of their marks each leaves out.
+     */
+    fun marksWithoutRoom(
+        week: Week,
+        widthPx: Int,
+        scale: Scale,
+    ): Map<LocalDate, Int> {
+        val column = widthPx / DAYS_IN_WEEK.toFloat()
+        return week.days
+            .mapIndexedNotNull { index, day ->
+                val cell = Cell(index, column, scale)
+                val none = markPlaces(day, cell.contentLeft, cell.contentRight, scale).count { it.size <= 0f }
+                if (none > 0) day.date to none else null
+            }.toMap()
+    }
+
+    /** The cell in the column at index: its edges, the divider at its left, and where its content runs. */
+    private class Cell(
+        index: Int,
+        column: Float,
+        scale: Scale,
+    ) {
+        val left = index * column
+        val right = left + column
+
+        /** The divider at its left, none in the first column. */
+        val border = if (index > 0) scale.hairline else 0f
+        val contentLeft = left + border + scale.px(CELL_SIDE)
+        val contentRight = right - scale.px(CELL_SIDE)
+    }
+
+    /** A mark beside a day's number: where it starts and its size, 0 for one with no room. */
+    private class MarkPlace(
+        val x: Float,
+        val size: Float,
+    )
+
+    /** The width of a day's number, or of its pill today, at least [NUMBER_MIN_WIDTH]. */
+    private fun numberWidth(
+        day: Day,
+        scale: Scale,
+    ): Float {
+        val paint = fonts.paint(scale, NUMBER_FONT, numberWeight(day), 0).apply { fontFeatureSettings = "tnum" }
+        return max(
+            scale.px(NUMBER_MIN_WIDTH),
+            paint.measureText(day.date.dayOfMonth.toString()) + 2 * scale.px(NUMBER_SIDE),
+        )
+    }
+
+    /**
+     * Where a day's marks stand beside its number, in its cell's content from
+     * x to right: each [DRAWING] at most and smaller where less room is left,
+     * so it stays inside its own cell, and of size 0 with no room left.
+     */
+    private fun markPlaces(
+        day: Day,
+        x: Float,
+        right: Float,
+        scale: Scale,
+    ): List<MarkPlace> {
+        var drawingX = x + numberWidth(day, scale) + scale.px(NUMBER_GAP)
+        return day.marks.map {
+            val place = MarkPlace(drawingX, max(0f, min(scale.px(DRAWING), right - drawingX)))
+            if (place.size > 0f) drawingX += place.size + scale.px(DRAWINGS_GAP)
+            place
+        }
+    }
+
+    /** The drawn row's height in pixels, its divider and blankDp below its cells included. */
+    fun heightPx(
+        week: Week,
+        scale: Scale,
+        blankDp: Float = 0f,
+    ): Int = scale.rowPx(heightDp(week) + blankDp)
+
     /** The row's height below its divider: its tallest cell, at least [CELL_MIN]. */
     fun heightDp(week: Week): Float =
         max(
             CELL_MIN,
             week.days.maxOf { day ->
-                val lines = day.shown.size + if (day.more > 0) 1 else 0
-                CELL_TOP + NUMBER_ROW + GAP + week.lanes * LANE + lines * (GAP + LINE) + CELL_BOTTOM
+                CELL_TOP + NUMBER_ROW + GAP + week.lanes * LANE + day.lines * (GAP + LINE) + CELL_BOTTOM
             },
         )
 
@@ -104,22 +186,21 @@ class WeekRowRenderer(
             index: Int,
             lanes: Int,
         ) {
-            val left = index * column
-            val right = left + column
-            // The whole row as the layer's bounds: a drawing beside the number may reach into the next cell.
+            val cell = Cell(index, column, scale)
             val saved =
                 if (day.otherMonth) {
-                    canvas.saveLayerAlpha(0f, 0f, canvas.width.toFloat(), bottom, opacityAlpha(OTHER_MONTH))
+                    canvas.saveLayerAlpha(cell.left, 0f, cell.right, bottom, opacityAlpha(OTHER_MONTH))
                 } else {
                     canvas.save()
                 }
-            val border = if (index > 0) scale.hairline else 0f
-            if (index > 0) canvas.fill(left, top, left + border, bottom, palette.divider)
-            if (day.weekend) canvas.fill(left + border, top, right, bottom, palette.text.withOpacity(WEEKEND_TINT))
-            val x = left + border + scale.px(CELL_SIDE)
-            val width = right - scale.px(CELL_SIDE) - x
+            if (cell.border > 0f) canvas.fill(cell.left, top, cell.left + cell.border, bottom, palette.divider)
+            if (day.weekend) {
+                canvas.fill(cell.left + cell.border, top, cell.right, bottom, palette.text.withOpacity(WEEKEND_TINT))
+            }
+            val x = cell.contentLeft
+            val width = cell.contentRight - x
             var y = top + scale.px(CELL_TOP)
-            numberRow(day, x, y)
+            numberRow(day, x, y, cell.contentRight)
             y += scale.px(NUMBER_ROW + GAP + lanes * LANE + GAP)
             for (entry in day.shown) {
                 entryLine(entry, day.past, x, y, width)
@@ -132,16 +213,21 @@ class WeekRowRenderer(
             canvas.restoreToCount(saved)
         }
 
-        /** The number (today in the accent's pill) and the marked entries' marks beside it. */
+        /**
+         * The number (today in the accent's pill) and the marked entries'
+         * marks beside it, placed by [markPlaces]; one with no room left is not
+         * drawn ([marksWithoutRoom] names them).
+         */
         private fun numberRow(
             day: Day,
             x: Float,
             y: Float,
+            right: Float,
         ) {
             val paint = fonts.paint(scale, NUMBER_FONT, numberWeight(day), numberColor(day, palette))
             paint.fontFeatureSettings = "tnum"
             val label = day.date.dayOfMonth.toString()
-            val width = max(scale.px(NUMBER_MIN_WIDTH), paint.measureText(label) + 2 * scale.px(NUMBER_SIDE))
+            val width = numberWidth(day, scale)
             val height = scale.px(NUMBER_HEIGHT)
             val boxTop = y + (scale.px(NUMBER_ROW) - height) / 2
             if (day.today) {
@@ -150,11 +236,9 @@ class WeekRowRenderer(
             }
             paint.textAlign = Paint.Align.CENTER
             canvas.drawText(label, x + width / 2, paint.baselineIn(boxTop, height), paint)
-            var drawingX = x + width + scale.px(NUMBER_GAP)
-            val drawingY = y + scale.px(NUMBER_ROW - DRAWING) / 2
-            for (entry in day.marks) {
-                mark(entry, palette.colorOf(entry), drawingX, drawingY, scale.px(DRAWING))
-                drawingX += scale.px(DRAWING + DRAWINGS_GAP)
+            for ((entry, place) in day.marks.zip(markPlaces(day, x, right, scale))) {
+                if (place.size <= 0f) break
+                mark(entry, palette.colorOf(entry), place.x, y + (scale.px(NUMBER_ROW) - place.size) / 2, place.size)
             }
         }
 
@@ -201,13 +285,7 @@ class WeekRowRenderer(
             canvas.restoreToCount(saved)
         }
 
-        /**
-         * An entry's mark in a size × size box, wherever a mark stands (a timed
-         * line, an all-day chip with a drawing, beside the day's number): its
-         * drawing, else its icon in its colour, else a dot in its colour, also
-         * for a drawing or icon the app does not ship (D22, D24). The icon is
-         * looked up only when no drawing is drawn.
-         */
+        /** An entry's mark in a size × size box, wherever one stands in a cell ([drawMark]), its dot inside the box. */
         private fun mark(
             entry: Entry,
             @ColorInt color: Int,
@@ -215,18 +293,7 @@ class WeekRowRenderer(
             y: Float,
             size: Float,
         ) {
-            val drawing = entry.drawing?.let(drawings::get)
-            if (drawing != null) {
-                canvas.drawDrawing(drawing, x, y, size)
-                return
-            }
-            val icon = entry.icon?.let(icons::path)
-            if (icon != null) {
-                canvas.drawIcon(icon, x, y, size, color)
-            } else {
-                val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
-                canvas.drawCircle(x + size / 2, y + size / 2, scale.px(DOT) / 2, dot)
-            }
+            canvas.drawMark(entry, color, x, y, size, min(scale.px(DOT), size), marks)
         }
 
         /** An entry over several days across the columns it covers, in its lane. */

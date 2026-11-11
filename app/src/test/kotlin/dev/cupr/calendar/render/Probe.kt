@@ -4,9 +4,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.test.core.app.ApplicationProvider
+import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.month.Bar
-import dev.cupr.calendar.month.DAYS_IN_WEEK
 import dev.cupr.calendar.month.Day
 import dev.cupr.calendar.month.Week
 import dev.cupr.calendar.render.PhoneMonth.CARD_INSET
@@ -34,7 +34,10 @@ import kotlin.math.roundToInt
 internal object Probe {
     const val DENSITY = 2.625f
     val scale = Scale(DENSITY)
-    val widthPx = scale.px(WidgetHost.WIDTH_DP - 2 * CARD_INSET).roundToInt()
+
+    /** A 4-cell-wide widget's width. */
+    const val WIDTH_DP = WidgetHost.WIDTH_DP
+    val widthPx = scale.px(WIDTH_DP - 2 * CARD_INSET).roundToInt()
 
     /** Where the render tests write their PNGs (`mise run render`). */
     val renderDir = File(System.getProperty("render.dir") ?: "build/render")

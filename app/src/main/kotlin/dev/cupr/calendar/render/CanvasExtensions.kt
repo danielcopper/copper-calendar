@@ -10,6 +10,7 @@ import androidx.annotation.ColorInt
 import androidx.core.graphics.withScale
 import androidx.core.graphics.withTranslation
 import com.caverock.androidsvg.RenderOptions
+import dev.cupr.calendar.model.Entry
 
 /** Text in Roboto at a size in dp and a font weight. */
 internal fun Fonts.paint(
@@ -33,6 +34,12 @@ internal fun TextPaint.baselineIn(
     return top + (height - (metrics.descent - metrics.ascent)) / 2 - metrics.ascent
 }
 
+/** The text cut with "…" where this paint would draw it wider than maxWidth; empty without room. */
+internal fun TextPaint.cut(
+    text: String,
+    maxWidth: Float,
+): String = if (maxWidth <= 0f) "" else TextUtils.ellipsize(text, this, maxWidth, TextUtils.TruncateAt.END).toString()
+
 /** Draws text from x, cut with "…" where it would pass maxWidth. */
 internal fun Canvas.drawCut(
     text: String,
@@ -41,9 +48,8 @@ internal fun Canvas.drawCut(
     maxWidth: Float,
     paint: TextPaint,
 ) {
-    if (maxWidth <= 0f) return
-    val cut = TextUtils.ellipsize(text, paint, maxWidth, TextUtils.TruncateAt.END).toString()
-    drawText(cut, x, baseline, paint)
+    val cut = paint.cut(text, maxWidth)
+    if (cut.isNotEmpty()) drawText(cut, x, baseline, paint)
 }
 
 internal fun Canvas.fill(
@@ -84,6 +90,35 @@ internal fun Canvas.drawDrawing(
     size: Float,
 ) {
     drawing.renderToCanvas(this, RenderOptions().viewPort(x, y, size, size))
+}
+
+/**
+ * An entry's mark in a size × size box at (x, y), wherever a mark stands (a
+ * month cell's line, chip or number, a week row's line or chip): its drawing,
+ * else its icon in color, else a dot dot wide in color, also for a drawing or
+ * icon the app does not ship (D22, D24); both are looked up in assets. The
+ * icon is looked up only when no drawing is drawn.
+ */
+internal fun Canvas.drawMark(
+    entry: Entry,
+    @ColorInt color: Int,
+    x: Float,
+    y: Float,
+    size: Float,
+    dot: Float,
+    assets: MarkAssets,
+) {
+    val drawing = entry.drawing?.let(assets.drawings::get)
+    if (drawing != null) {
+        drawDrawing(drawing, x, y, size)
+        return
+    }
+    val icon = entry.icon?.let(assets.icons::path)
+    if (icon != null) {
+        drawIcon(icon, x, y, size, color)
+    } else {
+        drawCircle(x + size / 2, y + size / 2, dot / 2, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color })
+    }
 }
 
 /** A rectangle with separate radii at its left and right ends. */

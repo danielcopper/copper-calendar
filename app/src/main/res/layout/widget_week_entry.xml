@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- An entry's tap area in a day of the week widget "Woche"; WeekWidget sets
+     the slot's height to the entry's area, its lines and the gap below them.
+     The area is the slot's child, for the reason widget_week_day.xml gives
+     for its own. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/entry_slot"
+    android:layout_width="match_parent"
+    android:layout_height="20dp">
+
+    <FrameLayout
+        android:id="@+id/entry"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+</FrameLayout>

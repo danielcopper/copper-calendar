@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The week widget "Woche" (WeekWidget.kt): the month widget's card, header
+     and "+", and a list of drawn day rows. Its measures are PhoneMonth's in
+     dp; WeekWidgetTest checks that they fit the drawn parts. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_card">
+
+    <!-- Inside the card's 1 dp border and its padding of 10 dp at the top and
+         bottom. The header stands inside the 12 dp padding at the sides; the
+         rows span it, since today's tint reaches into it. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingHorizontal="1dp"
+        android:paddingVertical="11dp">
+
+        <FrameLayout
+            android:id="@+id/header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="12dp">
+
+            <include layout="@layout/widget_header_images_unscaled" />
+        </FrameLayout>
+
+        <ListView
+            android:id="@+id/list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:listSelector="@android:color/transparent"
+            android:scrollbars="none" />
+    </LinearLayout>
+
+    <include layout="@layout/widget_fab" />
+</FrameLayout>

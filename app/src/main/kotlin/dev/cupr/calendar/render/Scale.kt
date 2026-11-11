@@ -1,5 +1,6 @@
 package dev.cupr.calendar.render
 
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -16,6 +17,9 @@ class Scale(
 
     /** A 1 dp line in whole pixels, so it stays sharp. */
     val hairline: Float = max(1f, floor(density))
+
+    /** A drawn row's height in whole pixels: its 1 dp divider above and heightDp below it. */
+    fun rowPx(heightDp: Float): Int = ceil(hairline + px(heightDp)).toInt()
 
     /** The bitmap density (dpi) to tag a bitmap drawn at this scale with. */
     val dpi: Int = (density * DPI_PER_DENSITY).roundToInt()

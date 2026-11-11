@@ -12,7 +12,12 @@ package dev.cupr.calendar.render
  * - `infra/homeassistant/config/themes/zuhause.yaml`: the colours in
  *   SampleData;
  * - `infra/homeassistant/config/www/zuhause/events/`: the drawings in
- *   assets/drawings, unchanged copies.
+ *   assets/drawings, unchanged copies;
+ *
+ * and at 64054110, in the file the templates moved to from zuhause.yaml:
+ * - `infra/homeassistant/config/dashboards/templates.yaml`: the tile
+ *   "Kalender · diese Woche" (template `calendar`), its styles ([TileWeek]'s
+ *   measures) and its rule `calendar_days`, which CalendarDays ports.
  */
 internal object PhoneMonth {
     /** The card around the widget: its border, its padding at the left and right, and at the top and bottom. */
