@@ -27,7 +27,7 @@ internal object WidgetHost {
     /** 4 cells high (design.md). */
     const val HEIGHT_DP = 456
 
-    /** A step of [scrolledToTarget], less than any list's height less its padding in the tests. */
+    /** A step of [scrollToTarget], less than any list's height less its padding in the tests. */
     private const val SCROLL_STEP_PX = 4
 
     /** 2 cells high (design.md), "Woche quer"'s default. */
@@ -50,14 +50,12 @@ internal object WidgetHost {
     fun reapplied(
         context: Context,
         widget: View,
-        heightDp: Int,
+        heightDp: Int = HEIGHT_DP,
         views: (Context, Int) -> RemoteViews,
     ) {
         if (widget.parent == null) AppWidgetHostView(context).addView(widget)
         parcelled(views(context, WIDTH_DP)).reapply(context, widget)
-        val scale = Scale(context.resources.displayMetrics.density)
-        widget.measure(exactly(scale, WIDTH_DP), exactly(scale, heightDp))
-        widget.layout(0, 0, widget.measuredWidth, widget.measuredHeight)
+        layOut(context, widget, WIDTH_DP, heightDp)
     }
 
     private fun parcelled(views: RemoteViews): RemoteViews {
@@ -82,10 +80,19 @@ internal object WidgetHost {
         widthDp: Int = WIDTH_DP,
     ): View {
         val widget = applied(context, WIDTH_DP, views)
+        layOut(context, widget, widthDp, heightDp)
+        return widget
+    }
+
+    private fun layOut(
+        context: Context,
+        widget: View,
+        widthDp: Int,
+        heightDp: Int,
+    ) {
         val scale = Scale(context.resources.displayMetrics.density)
         widget.measure(exactly(scale, widthDp), exactly(scale, heightDp))
         widget.layout(0, 0, widget.measuredWidth, widget.measuredHeight)
-        return widget
     }
 
     /**
@@ -107,19 +114,28 @@ internal object WidgetHost {
      * Scrolls list from where it stands to the row its views last scrolled
      * to, and returns that row. Robolectric's shadow records the row but runs
      * no scroll, so this ends the scroll where AOSP's
-     * `AbsListView.PositionScroller` ends it, by the rule D27 gives: for a row
-     * already shown as `scrollToVisible` does, for a row below the shown ones
-     * as `MOVE_DOWN_POS` does, which brings up the last shown row until it is
-     * the target. It scrolls in steps of a few
-     * px, as the smooth scroll does frame by frame: one step scrolls at most
-     * the list's height less its padding (`AbsListView.trackMotionScroll`).
+     * `AbsListView.PositionScroller` ends it, by the rule D27 gives, of which
+     * it models two cases: a row already shown with its top in the list, as
+     * `scrollToVisible`'s bottom branch moves it, its bottom to the padding
+     * when it is below; and a row below the shown ones, as `MOVE_DOWN_POS`
+     * does, which brings up the last shown row until it is the target. A row
+     * shown with its top cut, which `scrollToVisible` brings to the top, and
+     * a row above the shown ones (`MOVE_UP_POS`) fail its check instead. It
+     * scrolls in steps of a few px, as the smooth scroll does frame by frame:
+     * one step scrolls at most the list's height less its padding
+     * (`AbsListView.trackMotionScroll`).
      */
     fun scrollToTarget(list: ListView): Int {
         val target = shadowOf(list).smoothScrolledPosition
+        val first = list.firstVisiblePosition
+        check(target >= first) { "row $target is above the first shown row $first: MOVE_UP_POS is not modelled" }
         val lastShown = { list.firstVisiblePosition + list.childCount - 1 }
         if (target <= lastShown()) {
-            val bottom = list.getChildAt(target - list.firstVisiblePosition).bottom
-            scrollInSteps(list, max(0, bottom - (list.height - list.paddingBottom)))
+            val row = list.getChildAt(target - first)
+            check(row.top >= list.paddingTop) {
+                "row $target is shown with its top cut: scrollToVisible's top branch is not modelled"
+            }
+            scrollInSteps(list, max(0, row.bottom - (list.height - list.paddingBottom)))
         } else {
             val fadingEdge = ViewConfiguration.get(list.context).scaledFadingEdgeLength
             do {

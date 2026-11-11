@@ -120,7 +120,7 @@ class MonthWidgetTest {
         val (list, _) = scrolled(220)
         assertTrue("${list.paddingBottom}", list.paddingBottom > 0)
         val height = WidgetHeight(WidgetHost.HEIGHT_DP, null)
-        WidgetHost.reapplied(application, list.rootView, WidgetHost.HEIGHT_DP) { context, width ->
+        WidgetHost.reapplied(application, list.rootView) { context, width ->
             MonthWidget.draw(context, width, 1, Long.MAX_VALUE, height).views
         }
         assertEquals(5, WidgetHost.scrollToTarget(list))
