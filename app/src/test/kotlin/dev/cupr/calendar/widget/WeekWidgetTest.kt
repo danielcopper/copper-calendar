@@ -287,6 +287,9 @@ class WeekWidgetTest {
         val today = list.getChildAt(2 - list.firstVisiblePosition)
         assertEquals(list.height - ViewConfiguration.get(application).scaledFadingEdgeLength, today.bottom)
         assertEquals(-35, today.top)
+        val log = ShadowLog.getLogsForTag("WeekWidget").last { it.type == Log.INFO }.msg
+        assertTrue(log, log.contains("; today is row 2, scrolls to row 2, 1 row, 73 of the list's 50 px, no padding: "))
+        assertTrue(log, log.contains(" no padding: today's row is taller than the list less the scroll's 12 px; "))
     }
 
     @Test
@@ -295,6 +298,8 @@ class WeekWidgetTest {
         val list = shadowOf(manager).getViewFor(id).findViewById<ListView>(R.id.list)
         assertEquals(2, shadowOf(list).smoothScrolledPosition)
         assertEquals(0, list.paddingBottom)
+        val log = ShadowLog.getLogsForTag("WeekWidget").single { it.type == Log.INFO }.msg
+        assertTrue(log, log.endsWith("; today is row 2, scrolls it into view: no appWidgetMaxHeight"))
         val warnings = ShadowLog.getLogsForTag("WeekWidget").filter { it.type == Log.WARN }.map { it.msg }
         val expected =
             "Widget $id: the launcher reports no appWidgetMaxHeight, so its list scrolls today only into view"
@@ -313,9 +318,9 @@ class WeekWidgetTest {
         ShadowLog.clear()
         WeekWidgetProvider().onAppWidgetOptionsChanged(application, manager, id, options)
         val log = ShadowLog.getLogsForTag("WeekWidget").single { it.type == Log.INFO }.msg
-        assertTrue(log, log.contains("today is row 2, scrolled to 4, rows from today to it 156 px"))
-        assertTrue(log, log.contains(" of a list 240 px high, bottom padding 84 px,"))
-        assertTrue(log, log.endsWith(" in 300 dp (appWidgetMaxHeight, 200 dp least)"))
+        assertTrue(log, log.contains("; today is row 2, scrolls to row 4, 3 rows, 156 of the list's 240 px, "))
+        assertTrue(log, log.contains(", bottom padding 84 px, at least the 12 px the scroll stops above the bottom; "))
+        assertTrue(log, log.endsWith("; 300 dp (appWidgetMaxHeight, 200 dp least)"))
     }
 
     @Test

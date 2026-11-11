@@ -97,7 +97,7 @@ object MonthWidget {
             }
         DrawnWidget.list(context, views, items)
         val heightsPx = view.weeks.map { rows.heightPx(it, scale) }
-        val scrolled = TodayOnTop.scroll(context, views, heightsPx, view.todayWeek, height, headerPx)
+        val scrolled = TodayOnTop.scroll(context, views, heightsPx, view.todayWeek, height, headerPx, TAG, id)
         DrawnWidget.logDrawn(TAG, id, kept, widthPx, limit, scrolled)
         return kept.drawn(views, limit)
     }

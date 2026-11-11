@@ -100,6 +100,9 @@ class MonthWidgetTest {
         assertEquals(5, target)
         assertEquals(0, list.paddingBottom)
         assertEquals(list.height, list.getChildAt(5 - list.firstVisiblePosition).bottom)
+        val log = ShadowLog.getLogsForTag("MonthWidget").last { it.type == Log.INFO }.msg
+        assertTrue(log, log.contains("; today is row 2, scrolls to row 5, 4 rows, "))
+        assertTrue(log, log.contains(" px, no padding: the rows to the end fit; 456 dp "))
     }
 
     @Test
@@ -114,9 +117,9 @@ class MonthWidgetTest {
         ShadowLog.clear()
         MonthWidgetProvider().onAppWidgetOptionsChanged(application, manager, id, options)
         val log = ShadowLog.getLogsForTag("MonthWidget").single { it.type == Log.INFO }.msg
-        assertTrue(log, log.contains("today is row 2, scrolled to 4, rows from today to it 214 px"))
-        assertTrue(log, log.contains(" of a list 241 px high, bottom padding 27 px,"))
-        assertTrue(log, log.endsWith(" in 320 dp (appWidgetMaxHeight, 200 dp least)"))
+        assertTrue(log, log.contains("; today is row 2, scrolls to row 4, 3 rows, 214 of the list's 241 px, "))
+        assertTrue(log, log.contains(", bottom padding 27 px, at least the 12 px the scroll stops above the bottom; "))
+        assertTrue(log, log.endsWith("; 320 dp (appWidgetMaxHeight, 200 dp least)"))
     }
 
     @Test
@@ -125,6 +128,8 @@ class MonthWidgetTest {
         val list = shadowOf(manager).getViewFor(id).findViewById<ListView>(R.id.list)
         assertEquals(2, shadowOf(list).smoothScrolledPosition)
         assertEquals(0, list.paddingBottom)
+        val log = ShadowLog.getLogsForTag("MonthWidget").single { it.type == Log.INFO }.msg
+        assertTrue(log, log.endsWith("; today is row 2, scrolls it into view: no appWidgetMaxHeight"))
         val warnings = ShadowLog.getLogsForTag("MonthWidget").filter { it.type == Log.WARN }.map { it.msg }
         val expected =
             "Widget $id: the launcher reports no appWidgetMaxHeight, so its list scrolls today only into view"
