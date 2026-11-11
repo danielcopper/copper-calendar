@@ -17,15 +17,28 @@ import kotlin.math.roundToInt
  * of what those rows leave of the list's height ([DrawnWidget.listPx]).
  */
 internal object TodayOnTop {
+    /** Why a target's list gets the bottom padding it gets (D27). */
+    enum class Fit {
+        /** The rows from today's through the target fit with the scroll's room to spare; padded by what they leave. */
+        PADDED,
+
+        /** The rows from today's to the end fit into the list; the last row is the target, without padding. */
+        TO_THE_END,
+
+        /** Today's row alone is taller than the list less the scroll's room; it is the target, without padding. */
+        TODAY_TOO_TALL,
+    }
+
     /**
      * The row to scroll to, the summed height in px of today's row through
-     * it, and the list's bottom padding in px that ends the scroll with
-     * today's row at the top.
+     * it, the list's bottom padding in px that ends the scroll with today's
+     * row at the top, and why it is that padding.
      */
     data class Target(
         val index: Int,
         val rowsPx: Int,
         val paddingPx: Int,
+        val fit: Fit,
     )
 
     /**
@@ -45,11 +58,18 @@ internal object TodayOnTop {
         today: Int,
         listPx: Float,
         extraPx: Int,
-    ): Target? {
-        if (today !in heightsPx.indices) return null
+    ): Target? = if (today in heightsPx.indices) targetFrom(heightsPx, today, listPx, extraPx) else null
+
+    /** The [target] for today, a row's index. */
+    private fun targetFrom(
+        heightsPx: List<Int>,
+        today: Int,
+        listPx: Float,
+        extraPx: Int,
+    ): Target {
         val throughLast = heightsPx.subList(today, heightsPx.size).sum()
         return if (throughLast <= listPx) {
-            Target(heightsPx.lastIndex, throughLast, 0)
+            Target(heightsPx.lastIndex, throughLast, 0, Fit.TO_THE_END)
         } else {
             fitting(heightsPx, today, listPx, listPx - extraPx)
         }
@@ -74,8 +94,11 @@ internal object TodayOnTop {
         }
         // Rounded down, so today's row is never cut at the top: rounded up, the padding would scroll it up to 1 px
         // too far.
-        val paddingPx = if (rowsPx <= roomPx) (listPx - rowsPx).toInt() else 0
-        return Target(index, rowsPx, paddingPx)
+        return if (rowsPx <= roomPx) {
+            Target(index, rowsPx, (listPx - rowsPx).toInt(), Fit.PADDED)
+        } else {
+            Target(index, rowsPx, 0, Fit.TODAY_TOO_TALL)
+        }
     }
 
     /**
@@ -83,86 +106,68 @@ internal object TodayOnTop {
      * padding to the target's, with the smooth scroll's room below it from
      * context's fading edge length: heightsPx are the drawn rows' heights,
      * today the index of today's row; the list is the widget's height less
-     * its card and a header headerPx high ([DrawnWidget.listPx]). Without a
-     * height the launcher reports, it scrolls today's row only into view,
-     * without padding (D27). When no row is today (-1), the list does not
-     * scroll and the log warns. Returns where it scrolls and from what, for
+     * its card and a header headerPx high, at scale ([DrawnWidget.listPx]).
+     * Without a height, it scrolls today's row only into view, without
+     * padding (D27). When no row is today (-1), the list does not scroll and
+     * the log warns. Each case sets the list's padding, as an earlier update
+     * may have set one: setViewPadding sets all four sides, and the list has
+     * no padding but this one. Returns where it scrolls and from what, for
      * the drawing's log line ([DrawnWidget.logDrawn]).
      */
     fun scroll(
         context: Context,
         views: RemoteViews,
+        scale: Scale,
         heightsPx: List<Int>,
         today: Int,
         height: WidgetHeight?,
         headerPx: Int,
         tag: String,
         id: Int,
-    ): String {
-        val extraPx = ViewConfiguration.get(context).scaledFadingEdgeLength
-        val scale = Scale(context.resources.displayMetrics.density)
-        val listPx = height?.let { DrawnWidget.listPx(scale, it.dp, headerPx) }
-        val target =
-            when {
-                today !in heightsPx.indices -> null
-                listPx == null -> Target(today, heightsPx[today], 0)
-                else -> target(heightsPx, today, listPx, extraPx)
-            }
-        // setViewPadding sets all four sides; the list has no padding but this one, which an earlier update may
-        // have set and which is cleared when there is none.
-        views.setViewPadding(R.id.list, 0, 0, 0, target?.paddingPx ?: 0)
-        if (target == null) {
-            Log.w(tag, "Widget $id: no row is today, so its list does not scroll")
-        } else {
-            views.setScrollPosition(R.id.list, target.index)
-        }
-        return describe(target, today, heightsPx, listPx, extraPx, height)
-    }
-
-    /** Where the list scrolls and from what, as [scroll] returns it. */
-    private fun describe(
-        target: Target?,
-        today: Int,
-        heightsPx: List<Int>,
-        listPx: Float?,
-        extraPx: Int,
-        height: WidgetHeight?,
     ): String =
         when {
-            target == null -> {
+            today !in heightsPx.indices -> {
+                views.setViewPadding(R.id.list, 0, 0, 0, 0)
+                Log.w(tag, "Widget $id: no row is today, so its list does not scroll")
                 "; no row is today"
             }
 
-            listPx == null || height == null -> {
+            height == null -> {
+                views.setViewPadding(R.id.list, 0, 0, 0, 0)
+                views.setScrollPosition(R.id.list, today)
                 "; today is row $today, scrolls it into view: no ${AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT}"
             }
 
             else -> {
-                reach(target, today, heightsPx, listPx, extraPx) + "; ${height.dp} dp (${height.from})"
+                val listPx = DrawnWidget.listPx(scale, height.dp, headerPx)
+                val extraPx = ViewConfiguration.get(context).scaledFadingEdgeLength
+                val target = targetFrom(heightsPx, today, listPx, extraPx)
+                views.setViewPadding(R.id.list, 0, 0, 0, target.paddingPx)
+                views.setScrollPosition(R.id.list, target.index)
+                reach(target, today, listPx, extraPx) + "; ${height.dp} dp (${height.from})"
             }
         }
 
-    /** How far the scroll to target reaches in a list listPx high, and the padding it gets, for [describe]. */
+    /** How far the scroll to target reaches in a list listPx high, and the padding it gets, for [scroll]'s log. */
     private fun reach(
         target: Target,
         today: Int,
-        heightsPx: List<Int>,
         listPx: Float,
         extraPx: Int,
     ): String {
         val count = target.index - today + 1
         val rows = if (count == 1) "1 row" else "$count rows"
         val padding =
-            when {
-                target.paddingPx > 0 -> {
+            when (target.fit) {
+                Fit.PADDED -> {
                     "bottom padding ${target.paddingPx} px, at least the $extraPx px the scroll stops above the bottom"
                 }
 
-                target.index == heightsPx.lastIndex && target.rowsPx <= listPx -> {
+                Fit.TO_THE_END -> {
                     "no padding: the rows to the end fit"
                 }
 
-                else -> {
+                Fit.TODAY_TOO_TALL -> {
                     "no padding: today's row is taller than the list less the scroll's $extraPx px"
                 }
             }

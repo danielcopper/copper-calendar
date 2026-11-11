@@ -117,7 +117,7 @@ object WeekWidget {
         DrawnWidget.list(context, views, items)
         val heightsPx = week.map { rows.heightPx(it, scale) }
         val todayRow = week.indexOfFirst { it.today }
-        val scrolled = TodayOnTop.scroll(context, views, heightsPx, todayRow, height, headerPx, TAG, id)
+        val scrolled = TodayOnTop.scroll(context, views, scale, heightsPx, todayRow, height, headerPx, TAG, id)
         DrawnWidget.logDrawn(TAG, id, kept, rowPx, limit, scrolled)
         return kept.drawn(views, limit)
     }
