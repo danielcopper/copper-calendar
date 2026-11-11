@@ -63,8 +63,8 @@ data class WeekTexts(
     val turns: String,
     /** "bis %1$s" */
     val until: String,
-    /** "+%1$d weitere": the entries a full day leaves out. */
-    val more: String,
+    /** "+3 weitere": the line counting the entries a full day leaves out. */
+    val more: (Int) -> String,
 ) {
     init {
         require(weekdays.size == DAYS_IN_WEEK) { "The week needs $DAYS_IN_WEEK weekday names, not ${weekdays.size}" }
@@ -90,7 +90,7 @@ data class WeekTexts(
                 holiday = resources.getString(R.string.week_holiday),
                 turns = resources.getString(R.string.week_turns),
                 until = resources.getString(R.string.week_until),
-                more = resources.getString(R.string.week_more),
+                more = { count -> resources.getQuantityString(R.plurals.week_more, count, count) },
             )
     }
 }
@@ -227,7 +227,7 @@ class DayRowRenderer(
             val x = left + scale.px(column + COLUMN_GAP)
             lines.quiet?.let { quiet(it, x, top) }
             day.shown.zip(lines.entryTops) { entry, y -> line(entry, x, top + scale.px(y)) }
-            lines.moreTop?.let { quiet(texts.more.format(Locale.GERMAN, day.more), x, top + scale.px(it)) }
+            lines.moreTop?.let { quiet(texts.more(day.more), x, top + scale.px(it)) }
             canvas.restoreToCount(saved)
         }
 

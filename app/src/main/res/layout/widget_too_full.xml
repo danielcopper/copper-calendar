@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A widget the system refused for its bitmaps (DrawnWidget.push): the
+     card with a plain text, which opens the calendar page. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_card">
+
+    <TextView
+        android:id="@+id/too_full"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:padding="12dp"
+        android:textColor="@color/widget_text"
+        android:textSize="14sp" />
+</FrameLayout>

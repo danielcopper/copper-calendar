@@ -7,7 +7,8 @@ import android.util.Log
 import android.util.TypedValue
 import android.widget.RemoteViews
 import dev.cupr.calendar.R
-import dev.cupr.calendar.render.ChromeRenderer
+import dev.cupr.calendar.days.longName
+import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.render.DayRowRenderer
 import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
@@ -21,33 +22,26 @@ import dev.cupr.calendar.week.WeekDay
 import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.week.WeekLayout
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
  * The week widget "Woche" (D14, D19), after the dashboard's tile: the month
  * widget's header and "+", and a list of drawn day rows, each the day's tap
  * area with a tap area per entry over it, stacked when the widget is
- * narrower than 4 cells ([DayRowRenderer.stacksAt]). Each drawn part comes
+ * narrower than 4 cells ([DayRowRenderer.forWidth]). Each drawn part comes
  * twice, light and dark, as in [MonthWidget].
  */
 object WeekWidget {
     private const val TAG = "WeekWidget"
-    private val dayLabel = DateTimeFormatter.ofPattern("EEEE, d. MMMM", Locale.GERMAN)
 
     fun update(
         context: Context,
         manager: AppWidgetManager,
         id: Int,
     ) {
-        // In portrait, the orientation the phones use, a widget is as wide as its least width.
-        val width =
-            manager
-                .getAppWidgetOptions(id)
-                .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
-                .takeIf { it > 0 } ?: MonthWidget.DEFAULT_WIDTH_DP
-        manager.updateAppWidget(id, views(context, width, id = id))
+        val width = DrawnWidget.widthDp(manager.getAppWidgetOptions(id), TAG, id)
+        val drawn = draw(context, width, WeekDays.MONDAY_TO_SUNDAY, id, DrawnWidget.limitBytes(context))
+        DrawnWidget.push(context, id, drawn, R.string.widget_week_too_full, TAG) { manager.updateAppWidget(id, it) }
     }
 
     /**
@@ -60,54 +54,75 @@ object WeekWidget {
         widthDp: Int,
         days: WeekDays = WeekDays.MONDAY_TO_SUNDAY,
         id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
-    ): RemoteViews {
+    ): RemoteViews = draw(context, widthDp, days, id, DrawnWidget.limitBytes(context)).views
+
+    /**
+     * The widget at widthDp and the bytes of its bitmaps, kept within limit:
+     * when its rows would pass it, the fullest days leave out their last
+     * entries for a "+N weitere" line until they fit ([capped]).
+     */
+    internal fun draw(
+        context: Context,
+        widthDp: Int,
+        days: WeekDays,
+        id: Int,
+        limit: Long,
+        entries: List<Entry> = SampleData.entries,
+    ): Drawn {
         val today = LocalDate.now(SampleData.clock)
         val dates = days.dates(today)
-        val week = WeekLayout.build(dates, SampleData.entries, today)
         val scale = Scale(context.resources.displayMetrics.density)
         val headerPx = scale.px(widthDp - 2 * PhoneMonth.CARD_INSET).roundToInt()
         // The rows span the card inside its border; they draw inside its side padding themselves.
         val rowPx = scale.px(widthDp - 2 * PhoneMonth.CARD_BORDER).roundToInt()
         val assets = RenderAssets.of(context)
-        val chrome =
-            ChromeRenderer(assets.fonts, assets.icons, context.resources.getStringArray(R.array.weekday_heads).toList())
-        val rows =
-            DayRowRenderer.forWidth(assets.fonts, assets.icons, assets.drawings, WeekTexts.of(context.resources), widthDp)
-        val drawn = mutableListOf<Bitmap>()
-
-        fun Bitmap.kept(): Bitmap = also { drawn += it }
-
+        val chrome = DrawnWidget.chrome(context)
+        val texts = WeekTexts.of(context.resources)
+        val rows = DayRowRenderer.forWidth(assets.fonts, assets.icons, assets.drawings, texts, widthDp)
+        val kept = Kept()
         val title = context.getString(days.title)
         val range = WeekLayout.range(dates.first(), dates.last())
         val views = RemoteViews(context.packageName, R.layout.widget_week)
-        for ((image, palette) in listOf(R.id.header_light to SampleData.light, R.id.header_dark to SampleData.dark)) {
-            views.setImageViewBitmap(image, chrome.weekHeader(title, range, null, headerPx, scale, palette).kept())
+        DrawnWidget.fixedParts(context, views, kept, chrome, "$title, $range", today, scale) {
+            chrome.weekHeader(title, range, null, headerPx, scale, it)
         }
-        views.setContentDescription(R.id.header, "$title, $range")
-        views.setOnClickPendingIntent(R.id.header, Taps.pendingIntent(context, Tap.Header))
-        views.setImageViewBitmap(R.id.fab_light, chrome.fab(scale, SampleData.light).kept())
-        views.setImageViewBitmap(R.id.fab_dark, chrome.fab(scale, SampleData.dark).kept())
-        views.setOnClickPendingIntent(R.id.fab, Taps.pendingIntent(context, Tap.New(today)))
-
+        val full = WeekLayout.build(dates, entries, today)
+        val week = capped(full, limit - kept.bytes) { DrawnWidget.bytes(rowPx, rows.heightPx(it, scale)) }
+        val left = week.sumOf { it.more }
+        if (left > 0) {
+            val needed = kept.bytes + full.sumOf { DrawnWidget.bytes(rowPx, rows.heightPx(it, scale)) }
+            Log.w(TAG, "Widget $id: its rows take $needed bytes, over the limit of $limit; $left entries left out")
+        }
         val items =
-            RemoteViews.RemoteCollectionItems
-                .Builder()
-                .setHasStableIds(true)
-                .setViewTypeCount(1)
-        for (day in week) {
-            val light = rows.render(day, rowPx, scale, SampleData.light).kept()
-            val dark = rows.render(day, rowPx, scale, SampleData.dark).kept()
-            items.addItem(day.date.toEpochDay(), row(context, rows, day, light, dark, scale))
-        }
-        views.setRemoteAdapter(R.id.list, items.build())
-        views.setPendingIntentTemplate(R.id.list, Taps.template(context))
+            week.map { day ->
+                val light = kept.keep(rows.render(day, rowPx, scale, SampleData.light))
+                val dark = kept.keep(rows.render(day, rowPx, scale, SampleData.dark))
+                day.date.toEpochDay() to row(context, rows, day, light, dark, scale)
+            }
+        DrawnWidget.list(context, views, items)
         week.indexOfFirst { it.today }.takeIf { it >= 0 }?.let { views.setScrollPosition(R.id.list, it) }
-        Log.i(
-            TAG,
-            "Widget $id: drew ${drawn.size} bitmaps at ${rowPx}px wide, " +
-                "${drawn.sumOf { it.allocationByteCount }} bytes",
-        )
-        return views
+        DrawnWidget.logDrawn(TAG, id, kept, rowPx, limit)
+        return Drawn(views, kept.bytes, limit)
+    }
+
+    /**
+     * The days within room bytes, as bytesOf counts a day's row: while they
+     * are over it, the day showing the most entries leaves out its last one
+     * more, counted in its "+N weitere" line; days with none left stay as they
+     * are, and so may the whole when even that does not fit.
+     */
+    internal fun capped(
+        days: List<WeekDay>,
+        room: Long,
+        bytesOf: (WeekDay) -> Long,
+    ): List<WeekDay> {
+        val week = days.toMutableList()
+        while (week.sumOf(bytesOf) > room) {
+            val fullest =
+                week.indices.filter { week[it].shown.isNotEmpty() }.maxByOrNull { week[it].shown.size } ?: break
+            week[fullest] = week[fullest].copy(more = week[fullest].more + 1)
+        }
+        return week
     }
 
     /**
@@ -128,7 +143,7 @@ object WeekWidget {
         row.setImageViewBitmap(R.id.day_light, light)
         row.setImageViewBitmap(R.id.day_dark, dark)
         row.setOnClickFillInIntent(R.id.day_row, Taps.fillIn(Tap.Day(day.date)))
-        row.setContentDescription(R.id.day_row, day.date.format(dayLabel))
+        row.setContentDescription(R.id.day_row, day.date.longName)
         // A launcher applies a row's views again to the views it shows (on each update, and to a row its list
         // recycles); views added before would stay and pile up, growing the row by blank lines below its drawing.
         row.removeAllViews(R.id.entries)

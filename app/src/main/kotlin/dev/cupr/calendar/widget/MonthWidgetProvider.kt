@@ -1,26 +1,15 @@
 package dev.cupr.calendar.widget
 
 import android.appwidget.AppWidgetManager
-import android.appwidget.AppWidgetProvider
 import android.content.Context
-import android.os.Bundle
 
-/** The month widget: drawn anew on each update and whenever its size changes. */
-class MonthWidgetProvider : AppWidgetProvider() {
-    override fun onUpdate(
-        context: Context,
-        appWidgetManager: AppWidgetManager,
-        appWidgetIds: IntArray,
-    ) {
-        appWidgetIds.forEach { MonthWidget.update(context, appWidgetManager, it) }
-    }
+/** The month widget ([DrawnWidgetProvider]). */
+class MonthWidgetProvider : DrawnWidgetProvider() {
+    override val tag = "MonthWidgetProvider"
 
-    override fun onAppWidgetOptionsChanged(
+    override fun update(
         context: Context,
-        appWidgetManager: AppWidgetManager,
-        appWidgetId: Int,
-        newOptions: Bundle,
-    ) {
-        MonthWidget.update(context, appWidgetManager, appWidgetId)
-    }
+        manager: AppWidgetManager,
+        id: Int,
+    ) = MonthWidget.update(context, manager, id)
 }

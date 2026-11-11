@@ -9,7 +9,7 @@ import org.robolectric.annotation.GraphicsMode
 /** "Woche"'s preview in the widget picker, at 4 × 4 cells, Monday to Sunday ([WidgetPreviewCheck]). */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = "xxhdpi")
+@Config(qualifiers = "+xxhdpi")
 class WeekWidgetPreviewTest :
     WidgetPreviewCheck(
         "widget_week_preview.png",

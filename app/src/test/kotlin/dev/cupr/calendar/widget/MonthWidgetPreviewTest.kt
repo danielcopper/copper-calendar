@@ -9,7 +9,7 @@ import org.robolectric.annotation.GraphicsMode
 /** The month widget's preview in the widget picker, at 4 × 4 cells ([WidgetPreviewCheck]). */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = "xxhdpi")
+@Config(qualifiers = "+xxhdpi")
 class MonthWidgetPreviewTest :
     WidgetPreviewCheck(
         "widget_month_preview.png",

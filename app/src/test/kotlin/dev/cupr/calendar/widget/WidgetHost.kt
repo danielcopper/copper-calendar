@@ -16,13 +16,13 @@ import kotlin.math.roundToInt
  * size of 4 × 4 cells; views makes a widget's views at a width in dp.
  */
 internal object WidgetHost {
-    const val WIDTH_DP = MonthWidget.DEFAULT_WIDTH_DP
+    const val WIDTH_DP = DrawnWidget.DEFAULT_WIDTH_DP
 
     /** 4 cells high (design.md). */
     const val HEIGHT_DP = 456
 
-    /** 2 cells high (design.md). */
-    const val LOW_HEIGHT_DP = 220
+    /** 2 cells high (design.md), "Woche quer"'s default. */
+    const val LOW_HEIGHT_DP = WeekColumnsWidget.DEFAULT_HEIGHT_DP
 
     val month: (Context, Int) -> RemoteViews = { context, width -> MonthWidget.views(context, width) }
 

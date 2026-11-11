@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.ListView
@@ -123,6 +124,7 @@ class WeekColumnsWidgetTest {
         }
         assertTrue(header.sameAs(draw(DayOfWeek.WEDNESDAY)))
         assertFalse(header.sameAs(draw(DayOfWeek.MONDAY)))
+        assertEquals(listOf("Mi", "Do", "Fr", "Sa", "So", "Mo", "Di"), chrome.heads(DayOfWeek.WEDNESDAY))
     }
 
     @Test
@@ -193,28 +195,55 @@ class WeekColumnsWidgetTest {
     }
 
     @Test
-    fun `an update draws the widget at the height the launcher reports`() {
+    fun `an update draws the widget at the least height the launcher reports, and says when it reports none`() {
         val id = shadowOf(manager).createWidget(WeekColumnsWidgetProvider::class.java, R.layout.widget_week_columns)
         val widget = shadowOf(manager).getViewFor(id)
         for (image in listOf(R.id.header_light, R.id.header_dark, R.id.fab_light, R.id.fab_dark)) {
             assertTrue(widget.findViewById<ImageView>(image).drawable is BitmapDrawable)
         }
-        val log = ShadowLog.getLogsForTag("WeekColumnsWidget").single().msg
-        assertTrue(log, log.startsWith("Widget $id: drew 6 bitmaps at ") && log.endsWith(", faded"))
-        val options =
+        assertEquals(View.VISIBLE, widget.findViewById<View>(R.id.fade).visibility)
+        val logs = ShadowLog.getLogsForTag("WeekColumnsWidget")
+        assertTrue(logs.single { it.type == Log.INFO }.msg.startsWith("Widget $id: drew 6 bitmaps at "))
+        assertEquals(
+            listOf(
+                "Widget $id: the launcher reports no appWidgetMinWidth, so it is drawn for 276 dp",
+                "Widget $id: the launcher reports no appWidgetMinHeight, so it is drawn for 220 dp",
+            ),
+            logs.filter { it.type == Log.WARN }.map { it.msg },
+        )
+        // Tall in portrait, its greatest height, but low in landscape, its least: the fade shows.
+        val portraitOnly =
             Bundle().apply {
                 putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 276)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 220)
                 putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 456)
             }
-        manager.updateAppWidgetOptions(id, options)
-        WeekColumnsWidgetProvider().onAppWidgetOptionsChanged(application, manager, id, options)
-        assertFalse(
-            ShadowLog
-                .getLogsForTag("WeekColumnsWidget")
-                .last()
-                .msg
-                .endsWith(", faded"),
-        )
+        manager.updateAppWidgetOptions(id, portraitOnly)
+        WeekColumnsWidgetProvider().onAppWidgetOptionsChanged(application, manager, id, portraitOnly)
+        assertEquals(View.VISIBLE, shadowOf(manager).getViewFor(id).findViewById<View>(R.id.fade).visibility)
+        val tall = Bundle(portraitOnly).apply { putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 456) }
+        manager.updateAppWidgetOptions(id, tall)
+        WeekColumnsWidgetProvider().onAppWidgetOptionsChanged(application, manager, id, tall)
+        assertEquals(View.GONE, shadowOf(manager).getViewFor(id).findViewById<View>(R.id.fade).visibility)
+    }
+
+    @Test
+    fun `the fade shows from the height at which the list no longer holds the whole row`() {
+        val fits =
+            (WidgetHost.LOW_HEIGHT_DP..WidgetHost.HEIGHT_DP).first { height ->
+                WidgetHost.applied(application, views = columns(height)).findViewById<View>(R.id.fade).visibility ==
+                    View.GONE
+            }
+        val scale = Scale(application.resources.displayMetrics.density)
+        val fadePx = ceil(scale.px(WeekColumnsWidget.FADE_DP.toFloat())).toInt()
+        for ((height, faded) in listOf(fits to false, fits - 1 to true)) {
+            val widget = WidgetHost.laidOut(application, height, columns(height))
+            val list = widget.findViewById<ListView>(R.id.list)
+            val drawn = (rowImage(columns(height)).drawable as BitmapDrawable).bitmap.height
+            val row = if (faded) drawn - fadePx else drawn
+            assertEquals("$height dp", faded, row > list.height)
+            assertEquals(if (faded) View.VISIBLE else View.GONE, widget.findViewById<View>(R.id.fade).visibility)
+        }
     }
 
     @Test
@@ -230,7 +259,7 @@ class WeekColumnsWidgetTest {
     }
 
     @Test
-    @Config(qualifiers = "xxhdpi")
+    @Config(qualifiers = "+xxhdpi")
     fun `the layout's measures fit the drawn parts`() {
         val scale = Scale(application.resources.displayMetrics.density)
         val px = { dp: Float -> scale.px(dp).roundToInt() }

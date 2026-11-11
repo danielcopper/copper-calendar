@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -287,7 +288,7 @@ class WeekWidgetTest {
         for (image in listOf(R.id.header_light, R.id.header_dark, R.id.fab_light, R.id.fab_dark)) {
             assertTrue(widget.findViewById<ImageView>(image).drawable is BitmapDrawable)
         }
-        val log = ShadowLog.getLogsForTag("WeekWidget").single().msg
+        val log = ShadowLog.getLogsForTag("WeekWidget").single { it.type == Log.INFO }.msg
         assertTrue(log, log.startsWith("Widget $id: drew 18 bitmaps at "))
     }
 
@@ -315,7 +316,7 @@ class WeekWidgetTest {
     }
 
     @Test
-    @Config(qualifiers = "xxhdpi")
+    @Config(qualifiers = "+xxhdpi")
     fun `the layout's measures fit the drawn parts`() {
         val scale = Scale(application.resources.displayMetrics.density)
         val px = { dp: Float -> scale.px(dp).roundToInt() }
