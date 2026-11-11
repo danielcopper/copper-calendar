@@ -2,10 +2,10 @@ package dev.cupr.calendar.widget
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
-import android.os.Bundle
 import android.view.ViewConfiguration
 import android.widget.RemoteViews
 import dev.cupr.calendar.R
+import dev.cupr.calendar.render.Scale
 import kotlin.math.roundToInt
 
 /**
@@ -88,42 +88,32 @@ internal object TodayOnTop {
     }
 
     /**
-     * The widget's height in portrait, its greatest height (see
-     * [DrawnWidget.widthDp]), and the option it came from, with the least
-     * height beside it for the log. Without a reported height, 4 cells, and
-     * the log says so.
-     */
-    fun portraitHeight(
-        options: Bundle,
-        tag: String,
-        id: Int,
-    ): WidgetHeight {
-        val key = AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT
-        val reported = options.getInt(key) > 0
-        val dp = DrawnWidget.option(options, key, DrawnWidget.DEFAULT_HEIGHT_DP, tag, id)
-        val least = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
-        return WidgetHeight(dp, if (reported) "$key, $least dp least" else "no $key, the default")
-    }
-
-    /**
      * Scrolls the list of views to its [target] and sets the list's bottom
      * padding to the target's, 0 without a target, with the smooth scroll's
-     * room below it from context's fading edge length: rows are the drawn
-     * rows' heights in px, today the index of today's row, or -1 when none is
-     * today, which leaves the list unscrolled; listPx is the list's height in
-     * a widget of height ([DrawnWidget.listPx]). Returns where it scrolled and
-     * from what, for the drawing's log line ([DrawnWidget.logDrawn]).
+     * room below it from context's fading edge length: heightsPx are the drawn
+     * rows' heights, today the index of today's row, or -1 when none is
+     * today, which leaves the list unscrolled; the list is the widget's
+     * height less its card and a header headerPx high ([DrawnWidget.listPx]).
+     * Without a height the launcher reports, it scrolls today's row only into
+     * view, without padding (D27). Returns where it scrolled and from what,
+     * for the drawing's log line ([DrawnWidget.logDrawn]).
      */
     fun scroll(
         context: Context,
         views: RemoteViews,
-        rows: List<Int>,
+        heightsPx: List<Int>,
         today: Int,
-        listPx: Float,
-        height: WidgetHeight,
+        height: WidgetHeight?,
+        headerPx: Int,
     ): String {
+        if (height == null) {
+            views.setViewPadding(R.id.list, 0, 0, 0, 0)
+            if (today >= 0) views.setScrollPosition(R.id.list, today)
+            return "; today is row $today, scrolled into view (no ${AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT})"
+        }
+        val listPx = DrawnWidget.listPx(Scale(context.resources.displayMetrics.density), height.dp, headerPx)
         val extraPx = ViewConfiguration.get(context).scaledFadingEdgeLength
-        val target = target(rows, today, listPx, extraPx)
+        val target = target(heightsPx, today, listPx, extraPx)
         val paddingPx = target?.paddingPx ?: 0
         views.setViewPadding(R.id.list, 0, 0, 0, paddingPx)
         target?.let { views.setScrollPosition(R.id.list, it.index) }

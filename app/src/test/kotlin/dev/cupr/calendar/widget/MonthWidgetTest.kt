@@ -76,15 +76,19 @@ class MonthWidgetTest {
         assertEquals(Tap.Day(LocalDate.of(2026, 11, 11)), Taps.read(started))
     }
 
+    /** The month's list for a widget heightDp high as the launcher reports it, scrolled to its target, and that. */
+    private fun scrolled(heightDp: Int): Pair<ListView, Int> {
+        val height = WidgetHeight(heightDp, null)
+        return WidgetHost.scrolledToTarget(application, heightDp, { context, width ->
+            MonthWidget.draw(context, width, 1, Long.MAX_VALUE, height).views
+        })
+    }
+
     @Test
     fun `scrolled to its target, the current week stands at the top, the weeks after it below`() {
         // From 2 cells (220 dp) to 320 dp the weeks after the current one fill more than the list.
         for ((heightDp, expected) in listOf(220 to 2, 260 to 3, 300 to 3, 320 to 4)) {
-            val height = WidgetHeight(heightDp, "the test's")
-            val (list, target) =
-                WidgetHost.scrolledToTarget(application, heightDp, { context, width ->
-                    MonthWidget.draw(context, width, 1, Long.MAX_VALUE, height).views
-                })
+            val (list, target) = scrolled(heightDp)
             assertEquals("$heightDp dp", expected, target)
             val week = { index: Int -> list.getChildAt(index - list.firstVisiblePosition) }
             assertEquals("$heightDp dp: the current week's top", 0, week(2).top)
@@ -92,7 +96,7 @@ class MonthWidgetTest {
             assertNotNull("$heightDp dp: week ${target + 1} is not shown", week(target + 1))
         }
         // At 4 cells the weeks from the current one fill less than the list, so it scrolls to its end, unpadded.
-        val (list, target) = WidgetHost.scrolledToTarget(application, WidgetHost.HEIGHT_DP, WidgetHost.month)
+        val (list, target) = scrolled(WidgetHost.HEIGHT_DP)
         assertEquals(5, target)
         assertEquals(0, list.paddingBottom)
         assertEquals(list.height, list.getChildAt(5 - list.firstVisiblePosition).bottom)
@@ -113,6 +117,18 @@ class MonthWidgetTest {
         assertTrue(log, log.contains("today is row 2, scrolled to 4, rows from today to it 214 px"))
         assertTrue(log, log.contains(" of a list 241 px high, bottom padding 27 px,"))
         assertTrue(log, log.endsWith(" in 320 dp (appWidgetMaxHeight, 200 dp least)"))
+    }
+
+    @Test
+    fun `without a reported height an update scrolls the current week only into view, unpadded`() {
+        val id = shadowOf(manager).createWidget(MonthWidgetProvider::class.java, R.layout.widget_month)
+        val list = shadowOf(manager).getViewFor(id).findViewById<ListView>(R.id.list)
+        assertEquals(2, shadowOf(list).smoothScrolledPosition)
+        assertEquals(0, list.paddingBottom)
+        val warnings = ShadowLog.getLogsForTag("MonthWidget").filter { it.type == Log.WARN }.map { it.msg }
+        val expected =
+            "Widget $id: the launcher reports no appWidgetMaxHeight, so its list scrolls today only into view"
+        assertTrue(warnings.toString(), expected in warnings)
     }
 
     @Test

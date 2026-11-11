@@ -252,7 +252,7 @@ class WeekWidgetTest {
         heightDp: Int,
         widthDp: Int = WidgetHost.WIDTH_DP,
     ): Pair<ListView, Int> {
-        val height = WidgetHeight(heightDp, "the test's")
+        val height = WidgetHeight(heightDp, null)
         val days = WeekDays.MONDAY_TO_SUNDAY
         return WidgetHost.scrolledToTarget(application, heightDp, { context, _ ->
             WeekWidget.draw(context, widthDp, days, 1, Long.MAX_VALUE, height = height).views
@@ -287,6 +287,18 @@ class WeekWidgetTest {
         val today = list.getChildAt(2 - list.firstVisiblePosition)
         assertEquals(list.height - ViewConfiguration.get(application).scaledFadingEdgeLength, today.bottom)
         assertEquals(-35, today.top)
+    }
+
+    @Test
+    fun `without a reported height an update scrolls today only into view, unpadded`() {
+        val id = shadowOf(manager).createWidget(WeekWidgetProvider::class.java, R.layout.widget_week)
+        val list = shadowOf(manager).getViewFor(id).findViewById<ListView>(R.id.list)
+        assertEquals(2, shadowOf(list).smoothScrolledPosition)
+        assertEquals(0, list.paddingBottom)
+        val warnings = ShadowLog.getLogsForTag("WeekWidget").filter { it.type == Log.WARN }.map { it.msg }
+        val expected =
+            "Widget $id: the launcher reports no appWidgetMaxHeight, so its list scrolls today only into view"
+        assertTrue(warnings.toString(), expected in warnings)
     }
 
     @Test

@@ -25,7 +25,7 @@ internal object WidgetHost {
     const val WIDTH_DP = DrawnWidget.DEFAULT_WIDTH_DP
 
     /** 4 cells high (design.md). */
-    const val HEIGHT_DP = DrawnWidget.DEFAULT_HEIGHT_DP
+    const val HEIGHT_DP = 456
 
     /** A step of [scrolledToTarget], less than any list's height less its padding in the tests. */
     private const val SCROLL_STEP_PX = 4

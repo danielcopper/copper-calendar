@@ -38,11 +38,44 @@ internal class Kept {
     ) = Drawn(views, bytes, limit)
 }
 
-/** A widget's height in dp, and the option it came from, which the log names. */
+/**
+ * The month's or "Woche"'s height as the launcher reports it: its greatest
+ * height in dp, its height in portrait (see [DrawnWidget.widthDp]), and its
+ * least height in dp when the launcher reports one, which the log names.
+ */
 internal class WidgetHeight(
     val dp: Int,
-    val from: String,
-)
+    val leastDp: Int?,
+) {
+    /** The option the height came from, and the least height beside it, for the log. */
+    val from: String
+        get() {
+            val least = leastDp?.let { "$it dp least" } ?: "no least height"
+            return "${AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT}, $least"
+        }
+
+    companion object {
+        /**
+         * The height the launcher reports in options; null when it reports no
+         * greatest height, which the log says: the list then scrolls today
+         * only into view (D27).
+         */
+        fun of(
+            options: Bundle,
+            tag: String,
+            id: Int,
+        ): WidgetHeight? {
+            val key = AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT
+            val dp = options.getInt(key).takeIf { it > 0 }
+            if (dp == null) {
+                Log.w(tag, "Widget $id: the launcher reports no $key, so its list scrolls today only into view")
+                return null
+            }
+            val least = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT).takeIf { it > 0 }
+            return WidgetHeight(dp, least)
+        }
+    }
+}
 
 /** A widget's views, the bytes of the bitmaps they hold as the app counts them, and the limit it drew them for. */
 internal class Drawn(
@@ -59,12 +92,6 @@ internal class Drawn(
 internal object DrawnWidget {
     /** A widget's width before the launcher reports one: 4 cells (design.md). */
     const val DEFAULT_WIDTH_DP = 276
-
-    /** A widget's height before the launcher reports one: 4 cells (design.md). */
-    const val DEFAULT_HEIGHT_DP = 456
-
-    /** The height a widget is drawn for outside an update, as for the widget picker's preview. */
-    val defaultHeight = WidgetHeight(DEFAULT_HEIGHT_DP, "the default")
 
     private val dayIds =
         intArrayOf(R.id.day_0, R.id.day_1, R.id.day_2, R.id.day_3, R.id.day_4, R.id.day_5, R.id.day_6)

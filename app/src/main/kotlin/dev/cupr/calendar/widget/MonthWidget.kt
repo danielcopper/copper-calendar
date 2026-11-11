@@ -35,7 +35,7 @@ object MonthWidget {
     ) {
         val options = manager.getAppWidgetOptions(id)
         val width = DrawnWidget.widthDp(options, TAG, id)
-        val height = TodayOnTop.portraitHeight(options, TAG, id)
+        val height = WidgetHeight.of(options, TAG, id)
         val drawn = draw(context, width, id, BitmapLimit.limitBytes(context, TAG, id), height)
         DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
     }
@@ -56,14 +56,14 @@ object MonthWidget {
      * show at most two entries each, so it leaves nothing out for the limit;
      * the log warns when its weeks pass it, and [DrawnWidget.push] falls back.
      * Its list scrolls so the current week stands on top in a widget of
-     * height ([TodayOnTop.scroll]).
+     * height, or only into view without one ([TodayOnTop.scroll]).
      */
     internal fun draw(
         context: Context,
         widthDp: Int,
         id: Int,
         limit: Long,
-        height: WidgetHeight = DrawnWidget.defaultHeight,
+        height: WidgetHeight? = null,
     ): Drawn {
         val today = LocalDate.now(SampleData.clock)
         val view = MonthLayout.build(YearMonth.from(today), SampleData.entries, today)
@@ -98,8 +98,7 @@ object MonthWidget {
                     .toEpochDay() to DrawnWidget.weekRow(context, week, light, dark)
             }
         DrawnWidget.list(context, views, items)
-        val listPx = DrawnWidget.listPx(scale, height.dp, headerPx)
-        val scrolled = TodayOnTop.scroll(context, views, heights, view.todayWeek, listPx, height)
+        val scrolled = TodayOnTop.scroll(context, views, heights, view.todayWeek, height, headerPx)
         DrawnWidget.logDrawn(TAG, id, kept, widthPx, limit, scrolled)
         return kept.drawn(views, limit)
     }

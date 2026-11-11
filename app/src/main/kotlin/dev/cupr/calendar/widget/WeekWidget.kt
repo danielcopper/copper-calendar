@@ -43,7 +43,7 @@ object WeekWidget {
     ) {
         val options = manager.getAppWidgetOptions(id)
         val width = DrawnWidget.widthDp(options, TAG, id)
-        val height = TodayOnTop.portraitHeight(options, TAG, id)
+        val height = WidgetHeight.of(options, TAG, id)
         val limit = BitmapLimit.limitBytes(context, TAG, id)
         val drawn = draw(context, width, WeekDays.MONDAY_TO_SUNDAY, id, limit, height = height)
         DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
@@ -65,8 +65,8 @@ object WeekWidget {
      * The widget at widthDp and the bytes of its bitmaps, kept within limit:
      * when its rows would pass it, the fullest days leave out their last
      * entries for a "+N weitere" line until they fit ([leaveOutOne]). Its
-     * list scrolls so today stands on top in a widget of height
-     * ([TodayOnTop.scroll]).
+     * list scrolls so today stands on top in a widget of height, or only
+     * into view without one ([TodayOnTop.scroll]).
      */
     internal fun draw(
         context: Context,
@@ -75,7 +75,7 @@ object WeekWidget {
         id: Int,
         limit: Long,
         entries: List<Entry> = SampleData.entries,
-        height: WidgetHeight = DrawnWidget.defaultHeight,
+        height: WidgetHeight? = null,
     ): Drawn {
         val today = LocalDate.now(SampleData.clock)
         val dates = days.dates(today)
@@ -116,8 +116,8 @@ object WeekWidget {
                 day.date.toEpochDay() to row(context, rows, day, light, dark, scale)
             }
         DrawnWidget.list(context, views, items)
-        val listPx = DrawnWidget.listPx(scale, height.dp, headerHeightPx)
-        val scrolled = TodayOnTop.scroll(context, views, heights, week.indexOfFirst { it.today }, listPx, height)
+        val todayRow = week.indexOfFirst { it.today }
+        val scrolled = TodayOnTop.scroll(context, views, heights, todayRow, height, headerHeightPx)
         DrawnWidget.logDrawn(TAG, id, kept, rowPx, limit, scrolled)
         return kept.drawn(views, limit)
     }
