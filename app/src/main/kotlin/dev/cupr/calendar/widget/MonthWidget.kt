@@ -2,7 +2,6 @@ package dev.cupr.calendar.widget
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
-import android.util.Log
 import android.widget.RemoteViews
 import dev.cupr.calendar.R
 import dev.cupr.calendar.month.MonthLayout
@@ -24,7 +23,10 @@ import kotlin.math.roundToInt
  * switches the mode without the app's process.
  */
 object MonthWidget {
-    private const val TAG = "MonthWidget"
+    internal const val TAG = "MonthWidget"
+
+    /** The plain text it shows when the system refuses its views (D40). */
+    internal val TOO_FULL = R.string.widget_month_too_full
 
     fun update(
         context: Context,
@@ -32,8 +34,8 @@ object MonthWidget {
         id: Int,
     ) {
         val width = DrawnWidget.widthDp(manager.getAppWidgetOptions(id), TAG, id)
-        val drawn = draw(context, width, id, DrawnWidget.limitBytes(context))
-        DrawnWidget.push(context, id, drawn, R.string.widget_month_too_full, TAG) { manager.updateAppWidget(id, it) }
+        val drawn = draw(context, width, id, BitmapLimit.limitBytes(context, TAG, id))
+        DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
     }
 
     /**
@@ -45,7 +47,7 @@ object MonthWidget {
         context: Context,
         widthDp: Int,
         id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
-    ): RemoteViews = draw(context, widthDp, id, DrawnWidget.limitBytes(context)).views
+    ): RemoteViews = draw(context, widthDp, id, BitmapLimit.limitBytes(context, TAG, id)).views
 
     /**
      * The widget at widthDp and the bytes of its bitmaps. The month's cells
@@ -71,8 +73,13 @@ object MonthWidget {
         DrawnWidget.fixedParts(context, views, kept, chrome, ChromeRenderer.title(view.month), today, scale) {
             chrome.header(view.month, widthPx, scale, it)
         }
-        val needed = kept.bytes + view.weeks.sumOf { DrawnWidget.bytes(widthPx, rows.heightPx(it, scale)) }
-        if (needed > limit) Log.w(TAG, "Widget $id: its weeks take $needed bytes, over the limit of $limit")
+        val needed = kept.bytes + view.weeks.sumOf { BitmapLimit.bytes(widthPx, rows.heightPx(it, scale)) }
+        BitmapLimit.warnOver(TAG, id, needed, limit, left = 0, after = needed)
+        BitmapLimit.warnMarks(
+            TAG,
+            id,
+            view.weeks.flatMap { rows.marksWithoutRoom(it, widthPx, scale).toList() }.toMap(),
+        )
         val items =
             view.weeks.map { week ->
                 val light = kept.keep(rows.render(week, widthPx, scale, SampleData.light))
@@ -85,6 +92,6 @@ object MonthWidget {
         DrawnWidget.list(context, views, items)
         views.setScrollPosition(R.id.list, view.todayWeek)
         DrawnWidget.logDrawn(TAG, id, kept, widthPx, limit)
-        return Drawn(views, kept.bytes, limit)
+        return kept.drawn(views, limit)
     }
 }

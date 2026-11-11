@@ -3,7 +3,6 @@ package dev.cupr.calendar.widget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.graphics.Bitmap
-import android.util.Log
 import android.util.TypedValue
 import android.widget.RemoteViews
 import dev.cupr.calendar.R
@@ -32,7 +31,10 @@ import kotlin.math.roundToInt
  * twice, light and dark, as in [MonthWidget].
  */
 object WeekWidget {
-    private const val TAG = "WeekWidget"
+    internal const val TAG = "WeekWidget"
+
+    /** The plain text it shows when the system refuses its views (D40). */
+    internal val TOO_FULL = R.string.widget_week_too_full
 
     fun update(
         context: Context,
@@ -40,8 +42,8 @@ object WeekWidget {
         id: Int,
     ) {
         val width = DrawnWidget.widthDp(manager.getAppWidgetOptions(id), TAG, id)
-        val drawn = draw(context, width, WeekDays.MONDAY_TO_SUNDAY, id, DrawnWidget.limitBytes(context))
-        DrawnWidget.push(context, id, drawn, R.string.widget_week_too_full, TAG) { manager.updateAppWidget(id, it) }
+        val drawn = draw(context, width, WeekDays.MONDAY_TO_SUNDAY, id, BitmapLimit.limitBytes(context, TAG, id))
+        DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
     }
 
     /**
@@ -54,12 +56,12 @@ object WeekWidget {
         widthDp: Int,
         days: WeekDays = WeekDays.MONDAY_TO_SUNDAY,
         id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
-    ): RemoteViews = draw(context, widthDp, days, id, DrawnWidget.limitBytes(context)).views
+    ): RemoteViews = draw(context, widthDp, days, id, BitmapLimit.limitBytes(context, TAG, id)).views
 
     /**
      * The widget at widthDp and the bytes of its bitmaps, kept within limit:
      * when its rows would pass it, the fullest days leave out their last
-     * entries for a "+N weitere" line until they fit ([capped]).
+     * entries for a "+N weitere" line until they fit ([leaveOutOne]).
      */
     internal fun draw(
         context: Context,
@@ -87,12 +89,10 @@ object WeekWidget {
             chrome.weekHeader(title, range, null, headerPx, scale, it)
         }
         val full = WeekLayout.build(dates, entries, today)
-        val week = capped(full, limit - kept.bytes) { DrawnWidget.bytes(rowPx, rows.heightPx(it, scale)) }
-        val left = week.sumOf { it.more }
-        if (left > 0) {
-            val needed = kept.bytes + full.sumOf { DrawnWidget.bytes(rowPx, rows.heightPx(it, scale)) }
-            Log.w(TAG, "Widget $id: its rows take $needed bytes, over the limit of $limit; $left entries left out")
-        }
+        val bytesOf = { days: List<WeekDay> -> days.sumOf { BitmapLimit.bytes(rowPx, rows.heightPx(it, scale)) } }
+        val week = BitmapLimit.capped(full, limit - kept.bytes, bytesOf, ::leaveOutOne)
+        val fixed = kept.bytes
+        BitmapLimit.warnOver(TAG, id, fixed + bytesOf(full), limit, week.sumOf { it.more }, fixed + bytesOf(week))
         val items =
             week.map { day ->
                 val light = kept.keep(rows.render(day, rowPx, scale, SampleData.light))
@@ -102,27 +102,17 @@ object WeekWidget {
         DrawnWidget.list(context, views, items)
         week.indexOfFirst { it.today }.takeIf { it >= 0 }?.let { views.setScrollPosition(R.id.list, it) }
         DrawnWidget.logDrawn(TAG, id, kept, rowPx, limit)
-        return Drawn(views, kept.bytes, limit)
+        return kept.drawn(views, limit)
     }
 
     /**
-     * The days within room bytes, as bytesOf counts a day's row: while they
-     * are over it, the day showing the most entries leaves out its last one
-     * more, counted in its "+N weitere" line; days with none left stay as they
-     * are, and so may the whole when even that does not fit.
+     * The days with one more entry left out, counted in its "+N weitere"
+     * line: from the day showing the most, the first of them when several
+     * do; none when no day shows one.
      */
-    internal fun capped(
-        days: List<WeekDay>,
-        room: Long,
-        bytesOf: (WeekDay) -> Long,
-    ): List<WeekDay> {
-        val week = days.toMutableList()
-        while (week.sumOf(bytesOf) > room) {
-            val fullest =
-                week.indices.filter { week[it].shown.isNotEmpty() }.maxByOrNull { week[it].shown.size } ?: break
-            week[fullest] = week[fullest].copy(more = week[fullest].more + 1)
-        }
-        return week
+    internal fun leaveOutOne(days: List<WeekDay>): List<WeekDay>? {
+        val fullest = days.indices.filter { days[it].shown.isNotEmpty() }.maxByOrNull { days[it].shown.size }
+        return fullest?.let { index -> days.mapIndexed { i, day -> if (i == index) day.leaveOutLast() else day } }
     }
 
     /**
@@ -148,7 +138,6 @@ object WeekWidget {
         // recycles); views added before would stay and pile up, growing the row by blank lines below its drawing.
         row.removeAllViews(R.id.entries)
         val areas = rows.entryAreas(day, light.width, scale)
-        check(areas.size == day.shown.size) { "${areas.size} tap areas for ${day.shown.size} entries on ${day.date}" }
         val first = areas.firstOrNull() ?: return row
         row.setViewPadding(
             R.id.entries,
@@ -169,12 +158,9 @@ object WeekWidget {
         return row
     }
 
-    /** What a tap on an entry opens: the entry by its UID on date, or date when it has none or a blank one (D37). */
+    /** What a tap on an entry opens ([Tap.entryOrDay]). */
     internal fun tap(
         entry: DayEntry,
         date: LocalDate,
-    ): Tap =
-        entry.entry.uid
-            ?.takeIf { it.isNotBlank() }
-            ?.let { Tap.Entry(it, date) } ?: Tap.Day(date)
+    ): Tap = Tap.entryOrDay(entry.entry.uid, date)
 }

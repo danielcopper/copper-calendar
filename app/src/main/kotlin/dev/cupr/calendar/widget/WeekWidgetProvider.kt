@@ -5,7 +5,7 @@ import android.content.Context
 
 /** The week widget "Woche" ([DrawnWidgetProvider]). */
 class WeekWidgetProvider : DrawnWidgetProvider() {
-    override val tag = "WeekWidgetProvider"
+    override val tag = WeekWidget.TAG
 
     override fun update(
         context: Context,

@@ -199,13 +199,17 @@ class WeekWidgetTest {
 
     @Test
     fun `a row laid out wider than it was drawn stays unscaled, so its entries keep their tap areas`() {
-        val list = WidgetHost.laidOut(application, views = week, widthDp = 350).findViewById<ListView>(R.id.list)
+        val widget = WidgetHost.laidOut(application, views = week, widthDp = 350)
+        val list = widget.findViewById<ListView>(R.id.list)
         val row = list.getChildAt(0)
         val image = row.findViewById<ImageView>(R.id.day_light)
         val bitmap = (image.drawable as BitmapDrawable).bitmap
         assertTrue(list.width > bitmap.width)
         assertEquals(bitmap.height, image.height)
         assertEquals(bitmap.height, row.height)
+        // Its header too stays at the size it was drawn, as the rows do.
+        val header = widget.findViewById<ImageView>(R.id.header_light)
+        assertEquals((header.drawable as BitmapDrawable).bitmap.height, header.height)
     }
 
     @Test

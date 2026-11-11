@@ -2,7 +2,6 @@ package dev.cupr.calendar.widget
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
-import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import dev.cupr.calendar.R
@@ -35,7 +34,10 @@ object WeekColumnsWidget {
 
     /** The fade's height, as widget_week_columns.xml has it. */
     internal const val FADE_DP = 24
-    private const val TAG = "WeekColumnsWidget"
+    internal const val TAG = "WeekColumnsWidget"
+
+    /** The plain text it shows when the system refuses its views (D40). */
+    internal val TOO_FULL = R.string.widget_week_too_full
 
     /**
      * Draws the widget at its width and its least height: in portrait it is
@@ -57,8 +59,9 @@ object WeekColumnsWidget {
                 TAG,
                 id,
             )
-        val drawn = draw(context, width, height, WeekDays.MONDAY_TO_SUNDAY, id, DrawnWidget.limitBytes(context))
-        DrawnWidget.push(context, id, drawn, R.string.widget_week_too_full, TAG) { manager.updateAppWidget(id, it) }
+        val limit = BitmapLimit.limitBytes(context, TAG, id)
+        val drawn = draw(context, width, height, WeekDays.MONDAY_TO_SUNDAY, id, limit)
+        DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
     }
 
     /**
@@ -72,12 +75,12 @@ object WeekColumnsWidget {
         heightDp: Int = DEFAULT_HEIGHT_DP,
         days: WeekDays = WeekDays.MONDAY_TO_SUNDAY,
         id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
-    ): RemoteViews = draw(context, widthDp, heightDp, days, id, DrawnWidget.limitBytes(context)).views
+    ): RemoteViews = draw(context, widthDp, heightDp, days, id, BitmapLimit.limitBytes(context, TAG, id)).views
 
     /**
      * The widget at widthDp × heightDp and the bytes of its bitmaps, kept
-     * within limit: when its row would pass it, the fullest days leave out
-     * their last entries for the month's "+N" until it fits ([capped]).
+     * within limit: when its row would pass it, the tallest days leave out
+     * their last entries for the month's "+N" until it fits ([leaveOutOne]).
      */
     internal fun draw(
         context: Context,
@@ -107,12 +110,11 @@ object WeekColumnsWidget {
         val full = MonthLayout.week(dates, entries, today)
         // Room for the fade's blank room counted in, as a row that has to be capped is taller than its list.
         val fadeDp = FADE_DP.toFloat()
-        val week = capped(full, limit - kept.bytes) { DrawnWidget.bytes(widthPx, rows.heightPx(it, scale, fadeDp)) }
-        val left = week.days.sumOf { it.more }
-        if (left > 0) {
-            val needed = kept.bytes + DrawnWidget.bytes(widthPx, rows.heightPx(full, scale, fadeDp))
-            Log.w(TAG, "Widget $id: its row takes $needed bytes, over the limit of $limit; $left entries left out")
-        }
+        val bytesOf = { week: Week -> BitmapLimit.bytes(widthPx, rows.heightPx(week, scale, fadeDp)) }
+        val week = BitmapLimit.capped(full, limit - kept.bytes, bytesOf, ::leaveOutOne)
+        val fixed = kept.bytes
+        BitmapLimit.warnOver(TAG, id, fixed + bytesOf(full), limit, week.days.sumOf { it.more }, fixed + bytesOf(week))
+        BitmapLimit.warnMarks(TAG, id, rows.marksWithoutRoom(week, widthPx, scale))
         val faded = overflows(rows, week, scale, heightDp, headerPx)
         val blank = if (faded) fadeDp else 0f
         views.setViewVisibility(R.id.fade, if (faded) View.VISIBLE else View.GONE)
@@ -124,31 +126,20 @@ object WeekColumnsWidget {
             listOf(dates.first().toEpochDay() to DrawnWidget.weekRow(context, week, light, dark)),
         )
         DrawnWidget.logDrawn(TAG, id, kept, widthPx, limit, if (faded) ", faded" else "")
-        return Drawn(views, kept.bytes, limit)
+        return kept.drawn(views, limit)
     }
 
     /**
-     * The week within room bytes, as bytesOf counts its row: while it is over
-     * it, the tallest day, by its lines, leaves out its last entry more,
-     * counted in its "+N"; when no day has an entry left, it stays as it is.
+     * The week with one more entry left out, counted in its day's "+N": from
+     * the tallest day by its lines ([Day.lines]) that shows one, the first of
+     * them when several are; none when no day shows one.
      */
-    internal fun capped(
-        week: Week,
-        room: Long,
-        bytesOf: (Week) -> Long,
-    ): Week {
-        var capped = week
-        while (bytesOf(capped) > room) {
-            val days = capped.days
-            val tallest =
-                days.indices
-                    .filter { days[it].shown.isNotEmpty() }
-                    .maxByOrNull { days[it].shown.size + if (days[it].more > 0) 1 else 0 } ?: break
-            val day = days[tallest]
-            val less = day.copy(shown = day.shown.dropLast(1), more = day.more + 1)
-            capped = capped.copy(days = days.toMutableList().also { it[tallest] = less })
+    internal fun leaveOutOne(week: Week): Week? {
+        val days = week.days
+        val tallest = days.indices.filter { days[it].shown.isNotEmpty() }.maxByOrNull { days[it].lines }
+        return tallest?.let { index ->
+            week.copy(days = days.mapIndexed { i, day -> if (i == index) day.leaveOutLast() else day })
         }
-        return capped
     }
 
     /**

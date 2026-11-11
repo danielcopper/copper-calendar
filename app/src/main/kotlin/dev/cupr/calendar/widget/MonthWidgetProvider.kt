@@ -5,7 +5,7 @@ import android.content.Context
 
 /** The month widget ([DrawnWidgetProvider]). */
 class MonthWidgetProvider : DrawnWidgetProvider() {
-    override val tag = "MonthWidgetProvider"
+    override val tag = MonthWidget.TAG
 
     override fun update(
         context: Context,

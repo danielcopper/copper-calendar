@@ -6,7 +6,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Log
-import android.view.WindowManager
 import android.widget.RemoteViews
 import androidx.annotation.StringRes
 import dev.cupr.calendar.R
@@ -30,9 +29,15 @@ internal class Kept {
     val bytes: Long get() = bitmaps.sumOf { it.allocationByteCount.toLong() }
 
     fun keep(bitmap: Bitmap): Bitmap = bitmap.also { bitmaps += it }
+
+    /** The views holding these bitmaps, drawn for limit. */
+    fun drawn(
+        views: RemoteViews,
+        limit: Long,
+    ) = Drawn(views, bytes, limit)
 }
 
-/** A widget's views, the bytes of the bitmaps they hold, and the limit the system holds them to. */
+/** A widget's views, the bytes of the bitmaps they hold as the app counts them, and the limit it drew them for. */
 internal class Drawn(
     val views: RemoteViews,
     val bytes: Long,
@@ -40,22 +45,13 @@ internal class Drawn(
 )
 
 /**
- * What the drawn widgets share: their size as the launcher reports it, the
- * limit on their bitmaps, their header and "+", their list, and their update
- * with its fallback when the system refuses their views.
+ * What the drawn widgets share: their size as the launcher reports it, their
+ * header and "+", their list, and their update with its fallback when the
+ * system refuses their views; the limit on their bitmaps is [BitmapLimit].
  */
 internal object DrawnWidget {
     /** A widget's width before the launcher reports one: 4 cells (design.md). */
     const val DEFAULT_WIDTH_DP = 276
-
-    /** The bytes of an ARGB_8888 bitmap, as [Bitmap.getAllocationByteCount] counts them. */
-    private const val BYTES_PER_PIXEL = 4
-
-    /** The system's limit is this many times the display's pixels in bytes. */
-    private const val LIMIT_PER_PIXEL = 6
-
-    /** Each drawn part comes twice, light and dark. */
-    const val MODES = 2
 
     private val dayIds =
         intArrayOf(R.id.day_0, R.id.day_1, R.id.day_2, R.id.day_3, R.id.day_4, R.id.day_5, R.id.day_6)
@@ -87,25 +83,6 @@ internal object DrawnWidget {
         options.getInt(key).takeIf { it > 0 } ?: default.also {
             Log.w(tag, "Widget $id: the launcher reports no $key, so it is drawn for $default dp")
         }
-
-    /**
-     * The limit on the bytes of a widget's bitmaps: 6 × the display's width ×
-     * its height in pixels, as AOSP's `AppWidgetServiceImpl` computes it
-     * (`computeMaximumWidgetBitmapMemory`, from the display's real size) and
-     * enforces it (`updateAppWidgetInstanceLocked` throws an
-     * IllegalArgumentException above it). The display's size is read from the
-     * window manager's maximum window metrics, its full size.
-     */
-    fun limitBytes(context: Context): Long {
-        val bounds = context.getSystemService(WindowManager::class.java).maximumWindowMetrics.bounds
-        return LIMIT_PER_PIXEL.toLong() * bounds.width() * bounds.height()
-    }
-
-    /** The bytes of a bitmap widthPx × heightPx, light and dark. */
-    fun bytes(
-        widthPx: Int,
-        heightPx: Int,
-    ): Long = MODES.toLong() * BYTES_PER_PIXEL * widthPx * heightPx
 
     /** The renderer of the fixed parts, with the weekday heads. */
     fun chrome(context: Context): ChromeRenderer {
@@ -193,8 +170,9 @@ internal object DrawnWidget {
     /**
      * Hands drawn to the launcher through update. When the system refuses it
      * for its bitmaps, which it does by throwing an IllegalArgumentException
-     * (see [limitBytes]), the log says so and the widget shows the plain
-     * tooFull text instead, which opens the calendar page.
+     * (see [BitmapLimit.limitBytes]), the log says so and the widget shows the plain
+     * tooFull text instead, which opens the calendar page. Only that
+     * exception, and only from update, is caught here.
      */
     fun push(
         context: Context,
@@ -207,13 +185,18 @@ internal object DrawnWidget {
         try {
             update(drawn.views)
         } catch (e: IllegalArgumentException) {
-            Log.e(tag, "Widget $id: refused with ${drawn.bytes} bytes of bitmaps, limit ${drawn.limit}", e)
-            update(tooFullViews(context, tooFull))
+            Log.e(
+                tag,
+                "Widget $id: the system refused its views; the app counted ${drawn.bytes} bytes of bitmaps " +
+                    "against ${drawn.limit}, the limit it read from the display",
+                e,
+            )
+            update(plainViews(context, tooFull))
         }
     }
 
-    /** The plain views of a widget too full to draw: its text, opening the calendar page. */
-    fun tooFullViews(
+    /** The plain views of a widget that cannot show its drawing: text on its card, opening the calendar page. */
+    fun plainViews(
         context: Context,
         @StringRes text: Int,
     ): RemoteViews {
@@ -226,8 +209,12 @@ internal object DrawnWidget {
 
 /**
  * A provider of a drawn widget: drawn anew on each update and whenever its
- * size changes. Each widget is updated on its own, so one the system refuses
- * does not keep the others from theirs.
+ * size changes. Each widget is updated on its own: when its update throws an
+ * IllegalArgumentException or an IllegalStateException, which a check in
+ * the drawing throws, or which a refused fallback of [DrawnWidget.push]
+ * would, the log says so and the widget shows "Kalender konnte nicht
+ * gezeichnet werden", which opens the calendar page; the others are updated
+ * all the same. No other exception is caught.
  */
 abstract class DrawnWidgetProvider : AppWidgetProvider() {
     /** The log's tag. */
@@ -265,7 +252,19 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         try {
             update(context, manager, id)
         } catch (e: IllegalArgumentException) {
-            Log.e(tag, "Widget $id: not updated", e)
+            failed(context, manager, id, e)
+        } catch (e: IllegalStateException) {
+            failed(context, manager, id, e)
         }
+    }
+
+    private fun failed(
+        context: Context,
+        manager: AppWidgetManager,
+        id: Int,
+        error: RuntimeException,
+    ) {
+        Log.e(tag, "Widget $id: could not be drawn", error)
+        manager.updateAppWidget(id, DrawnWidget.plainViews(context, R.string.widget_failed))
     }
 }
