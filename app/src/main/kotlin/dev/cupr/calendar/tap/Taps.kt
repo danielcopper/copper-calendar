@@ -36,21 +36,21 @@ sealed interface Tap {
         override val element = TapElement.ENTRY
 
         init {
-            require(isUid(uid)) { "An entry's tap needs its UID" }
+            require(uidOf(uid) != null) { "An entry's tap needs its UID" }
         }
 
         companion object {
-            /** Whether uid names an entry: one that is empty or blank does not (D37). */
-            fun isUid(uid: String?): Boolean = !uid.isNullOrBlank()
+            /** The UID uid names an entry by, none for one that is missing, empty or blank (D37). */
+            fun uidOf(uid: String?): String? = uid?.takeIf { it.isNotBlank() }
         }
     }
 
     companion object {
-        /** A tap on an entry: the entry by its UID on day, or day when it has no UID ([Entry.isUid], D37). */
+        /** A tap on an entry: the entry by its UID on day, or day when it has no UID ([Entry.uidOf], D37). */
         fun entryOrDay(
             uid: String?,
             day: LocalDate,
-        ): Tap = if (uid != null && Entry.isUid(uid)) Entry(uid, day) else Day(day)
+        ): Tap = Entry.uidOf(uid)?.let { Entry(it, day) } ?: Day(day)
     }
 
     /** "+", with the day a new entry starts on (today). */
@@ -156,7 +156,10 @@ object Taps {
     private fun entry(
         uid: String?,
         day: LocalDate?,
-    ): Tap? = if (uid == null || !Tap.Entry.isUid(uid) || day == null) null else Tap.Entry(uid, day)
+    ): Tap? {
+        val id = Tap.Entry.uidOf(uid)
+        return if (id == null || day == null) null else Tap.Entry(id, day)
+    }
 
     /** What an intent carries, for a log line: its element and day as given, and the keys of all its extras. */
     fun describe(intent: Intent): String =
