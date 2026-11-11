@@ -34,6 +34,12 @@ internal fun TextPaint.baselineIn(
     return top + (height - (metrics.descent - metrics.ascent)) / 2 - metrics.ascent
 }
 
+/** The text cut with "…" where this paint would draw it wider than maxWidth; empty without room. */
+internal fun TextPaint.cut(
+    text: String,
+    maxWidth: Float,
+): String = if (maxWidth <= 0f) "" else TextUtils.ellipsize(text, this, maxWidth, TextUtils.TruncateAt.END).toString()
+
 /** Draws text from x, cut with "…" where it would pass maxWidth. */
 internal fun Canvas.drawCut(
     text: String,
@@ -42,9 +48,8 @@ internal fun Canvas.drawCut(
     maxWidth: Float,
     paint: TextPaint,
 ) {
-    if (maxWidth <= 0f) return
-    val cut = TextUtils.ellipsize(text, paint, maxWidth, TextUtils.TruncateAt.END).toString()
-    drawText(cut, x, baseline, paint)
+    val cut = paint.cut(text, maxWidth)
+    if (cut.isNotEmpty()) drawText(cut, x, baseline, paint)
 }
 
 internal fun Canvas.fill(

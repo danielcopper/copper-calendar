@@ -17,7 +17,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.GraphicsMode
-import org.robolectric.shadows.ShadowLog
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.math.roundToInt
@@ -153,7 +152,7 @@ class MarkTest {
     }
 
     @Test
-    fun `a dot beside the number stays inside its cell at the least width, and a mark with no room is logged`() {
+    fun `a dot beside the number stays inside its cell at the least width, and a mark with no room is named`() {
         val leastPx = scale.px(LEAST_DP - 2 * PhoneMonth.CARD_INSET).roundToInt()
         val column = leastPx / 7f
         val sunday = monday.plusDays(6)
@@ -165,13 +164,12 @@ class MarkTest {
         assertTrue("no dot", changed.isNotEmpty())
         val right = 7 * column - scale.px(PhoneMonth.CELL_SIDE)
         assertTrue("the dot reaches x ${changed.last()}, its cell ends at $right", changed.last() <= right.toInt())
-        assertTrue(ShadowLog.getLogsForTag("WeekRowRenderer").isEmpty())
+        assertEquals(emptyMap<LocalDate, Int>(), rows.marksWithoutRoom(marked, leastPx, scale))
         val tinyPx = scale.px(TINY_DP - 2 * PhoneMonth.CARD_INSET).roundToInt()
-        rows.render(marked, tinyPx, scale, SampleData.dark)
-        assertEquals(
-            listOf("$sunday: no room beside the number for 1 of its marks"),
-            ShadowLog.getLogsForTag("WeekRowRenderer").map { it.msg },
-        )
+        assertEquals(mapOf(sunday to 1), rows.marksWithoutRoom(marked, tinyPx, scale))
+        // With no room the mark is not drawn: the cell is drawn as without it.
+        val tinyPlain = rows.render(Probe.week(monday), tinyPx, scale, SampleData.dark)
+        assertTrue(rows.render(marked, tinyPx, scale, SampleData.dark).sameAs(tinyPlain))
     }
 
     /** Whether any pixel of column x differs between the two bitmaps. */

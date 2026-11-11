@@ -47,12 +47,11 @@ import dev.cupr.calendar.week.Addition
 import dev.cupr.calendar.week.DayEntry
 import dev.cupr.calendar.week.WeekDay
 import java.util.Locale
-import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 
 /** The week rows' visible texts, from the app's string resources (D25). */
-data class WeekTexts(
+class WeekTexts(
     /** The weekdays' short names, Monday to Sunday. */
     val weekdays: List<String>,
     val today: String,
@@ -109,7 +108,7 @@ data class WeekTexts(
  * its own above its mark and title; chips, "frei" and the running titles keep
  * their one line (D39).
  */
-class DayRowRenderer(
+class DayRowRenderer internal constructor(
     private val fonts: Fonts,
     private val icons: Icons,
     private val drawings: Drawings,
@@ -141,7 +140,7 @@ class DayRowRenderer(
     fun heightPx(
         day: WeekDay,
         scale: Scale,
-    ): Int = ceil(scale.hairline + scale.px(heightDp(day))).toInt()
+    ): Int = scale.rowPx(heightDp(day))
 
     /**
      * Where each entry the day shows ([WeekDay.shown]) is drawn, in the

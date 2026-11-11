@@ -162,6 +162,10 @@ class WeekRowRenderTest {
             val (cut, x) = placed(widthDp)
             assertTrue("$widthDp dp: $cut", cut.endsWith("…") && cut.length < range.length)
             assertTrue("$widthDp dp: $x", x >= 0f)
+            // The header draws the range as cut: the same pixels as a header given the cut text.
+            val widthPx = scale.px(widthDp - 2 * PhoneMonth.CARD_INSET).roundToInt()
+            val header = chrome.weekHeader("", range, null, widthPx, scale, SampleData.light)
+            assertTrue("$widthDp dp", header.sameAs(chrome.weekHeader("", cut, null, widthPx, scale, SampleData.light)))
         }
     }
 

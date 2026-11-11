@@ -4,7 +4,6 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.text.TextPaint
-import android.text.TextUtils
 import androidx.core.graphics.createBitmap
 import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.model.Palette
@@ -27,7 +26,6 @@ import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.ceil
-import kotlin.math.max
 
 /**
  * Draws the widgets' fixed parts: the header (title, a week's range, chevron,
@@ -92,8 +90,8 @@ class ChromeRenderer(
         val chevron = scale.px(CHEVRON)
         var end = widthPx - chevron
         if (range != null) {
+            val (shown, x) = range(range, widthPx, scale)
             val rangePaint = rangePaint(scale, palette.tertiaryText)
-            val (shown, x) = placeRange(range, rangePaint, end - scale.px(RANGE_GAP))
             canvas.drawText(shown, x, rangePaint.baselineIn(rowTop, rowHeight), rangePaint)
             end = x
         }
@@ -129,22 +127,17 @@ class ChromeRenderer(
         range: String,
         widthPx: Int,
         scale: Scale,
-    ): Pair<String, Float> = placeRange(range, rangePaint(scale, 0), widthPx - scale.px(CHEVRON) - scale.px(RANGE_GAP))
+    ): Pair<String, Float> {
+        val paint = rangePaint(scale, 0)
+        val end = widthPx - scale.px(CHEVRON) - scale.px(RANGE_GAP)
+        val shown = paint.cut(range, end)
+        return shown to end - paint.measureText(shown)
+    }
 
     private fun rangePaint(
         scale: Scale,
         color: Int,
     ): TextPaint = fonts.paint(scale, RANGE_FONT, FontWeight.REGULAR, color).apply { fontFeatureSettings = "tnum" }
-
-    /** The range cut to fit before end, and the x it starts at. */
-    private fun placeRange(
-        range: String,
-        paint: TextPaint,
-        end: Float,
-    ): Pair<String, Float> {
-        val shown = TextUtils.ellipsize(range, paint, max(end, 0f), TextUtils.TruncateAt.END).toString()
-        return shown to end - paint.measureText(shown)
-    }
 
     /**
      * The round "+": the accent's circle with its shadow and the plus in the

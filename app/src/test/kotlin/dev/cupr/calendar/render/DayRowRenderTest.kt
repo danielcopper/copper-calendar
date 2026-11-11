@@ -213,7 +213,7 @@ class DayRowRenderTest {
                 0.01f,
             )
             assertEquals(areas[0].bottom, areas[1].top, 0.01f)
-            // The last area ends one gap below the last line, where the row's bottom padding begins.
+            // The last area ends one gap below the last line, inside the row's bottom padding.
             assertEquals(drawn.height - scale.px(TileWeek.ROW_PAD - TileWeek.LINE_GAP), areas[1].bottom, 1f)
             val barX = scale.px(PhoneMonth.CARD_SIDE + column + TileWeek.COLUMN_GAP + 1f)
             for (area in areas) {
@@ -245,6 +245,24 @@ class DayRowRenderTest {
             stacked.heightDp(capped),
             0.01f,
         )
+    }
+
+    @Test
+    fun `the counting line names how many entries the day leaves out, one or more`() {
+        assertEquals("+1 weiterer", texts.more(1))
+        assertEquals("+2 weitere", texts.more(2))
+        assertEquals("+3 weitere", texts.more(3))
+        // The same two entries shown, one or two left out: the lines differ only in their count.
+        val thursday = LocalDate.of(2026, 11, 12)
+        val timed = { hour: Int ->
+            Probe.timed(thursday, icon = null).copy(start = thursday.atTime(hour, 0), end = thursday.atTime(hour, 30))
+        }
+        val one = day(thursday, timed(8), timed(9), timed(10)).copy(more = 1)
+        val two = day(thursday, timed(8), timed(9), timed(10), timed(11)).copy(more = 2)
+        assertEquals(one.shown, two.shown)
+        val drawn = { day: WeekDay -> rows.render(day, rowPx, scale, SampleData.light) }
+        assertFalse(drawn(one).sameAs(drawn(two)))
+        assertTrue(drawn(two).sameAs(drawn(day(thursday, timed(8), timed(9), timed(12), timed(13)).copy(more = 2))))
     }
 
     /** A day of the sample week with entries as given, the others empty. */
