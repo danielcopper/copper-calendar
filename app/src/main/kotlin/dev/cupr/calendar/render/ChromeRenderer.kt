@@ -3,6 +3,8 @@ package dev.cupr.calendar.render
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.text.TextPaint
+import android.text.TextUtils
 import androidx.core.graphics.createBitmap
 import dev.cupr.calendar.model.Palette
 import dev.cupr.calendar.month.DAYS_IN_WEEK
@@ -25,6 +27,7 @@ import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.ceil
+import kotlin.math.max
 
 /**
  * Draws the widgets' fixed parts: the header (title, a week's range, chevron,
@@ -88,10 +91,10 @@ class ChromeRenderer(
         val chevron = scale.px(CHEVRON)
         var end = widthPx - chevron
         if (range != null) {
-            val rangePaint = fonts.paint(scale, RANGE_FONT, FontWeight.REGULAR, palette.tertiaryText)
-            rangePaint.fontFeatureSettings = "tnum"
-            end -= scale.px(RANGE_GAP) + rangePaint.measureText(range)
-            canvas.drawText(range, end, rangePaint.baselineIn(rowTop, rowHeight), rangePaint)
+            val rangePaint = rangePaint(scale, palette.tertiaryText)
+            val (shown, x) = placeRange(range, rangePaint, end - scale.px(RANGE_GAP))
+            canvas.drawText(shown, x, rangePaint.baselineIn(rowTop, rowHeight), rangePaint)
+            end = x
         }
         val title = fonts.paint(scale, TITLE_FONT, FontWeight.SEMI_BOLD, palette.secondaryText)
         title.letterSpacing = LETTER_SPACING
@@ -114,6 +117,34 @@ class ChromeRenderer(
             }
         }
         return bitmap
+    }
+
+    /**
+     * A week's range as the header draws it in a header widthPx wide: the
+     * text, cut with "…" where it is wider than the room before the chevron,
+     * and the x it starts at, never left of the header.
+     */
+    internal fun range(
+        range: String,
+        widthPx: Int,
+        scale: Scale,
+    ): Pair<String, Float> =
+        placeRange(range, rangePaint(scale, 0), widthPx - scale.px(CHEVRON) - scale.px(RANGE_GAP))
+
+    private fun rangePaint(
+        scale: Scale,
+        color: Int,
+    ): TextPaint =
+        fonts.paint(scale, RANGE_FONT, FontWeight.REGULAR, color).apply { fontFeatureSettings = "tnum" }
+
+    /** The range cut to fit before end, and the x it starts at. */
+    private fun placeRange(
+        range: String,
+        paint: TextPaint,
+        end: Float,
+    ): Pair<String, Float> {
+        val shown = TextUtils.ellipsize(range, paint, max(end, 0f), TextUtils.TruncateAt.END).toString()
+        return shown to end - paint.measureText(shown)
     }
 
     /**

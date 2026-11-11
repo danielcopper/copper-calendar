@@ -11,6 +11,7 @@ import dev.cupr.calendar.month.MonthView
 import dev.cupr.calendar.render.Probe.at
 import dev.cupr.calendar.render.Probe.has
 import dev.cupr.calendar.sample.SampleData
+import dev.cupr.calendar.week.WeekLayout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
@@ -21,6 +22,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
 import java.time.LocalDate
+import kotlin.math.roundToInt
 
 /**
  * Renders every week row of the sample month, dark and light, to PNG files
@@ -144,6 +146,23 @@ class WeekRowRenderTest {
         val error =
             assertThrows(IllegalArgumentException::class.java) { ChromeRenderer(fonts, icons, weekdays.drop(1)) }
         assertEquals("The header needs 7 weekday heads, not 6", error.message)
+    }
+
+    @Test
+    fun `a week's range across two months shows whole at 150 dp, and narrower is cut, never left of the header`() {
+        val range = WeekLayout.range(LocalDate.of(2026, 11, 30), LocalDate.of(2026, 12, 6))
+        assertEquals("30. Nov. – 6. Dez.", range)
+        val placed = { widthDp: Int ->
+            chrome.range(range, scale.px(widthDp - 2 * PhoneMonth.CARD_INSET).roundToInt(), scale)
+        }
+        val (whole, wholeX) = placed(150)
+        assertEquals(range, whole)
+        assertTrue("$wholeX", wholeX >= 0f)
+        for (widthDp in listOf(110, 100)) {
+            val (cut, x) = placed(widthDp)
+            assertTrue("$widthDp dp: $cut", cut.endsWith("…") && cut.length < range.length)
+            assertTrue("$widthDp dp: $x", x >= 0f)
+        }
     }
 
     private fun write(
