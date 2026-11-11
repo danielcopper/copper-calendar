@@ -31,8 +31,8 @@ internal object TodayOnTop {
 
     /**
      * The row to scroll to, the summed height in px of today's row through
-     * it, the list's bottom padding in px that ends the scroll with today's
-     * row at the top, and why it is that padding.
+     * it, the list's bottom padding in px, and why it is that padding
+     * ([Fit]).
      */
     data class Target(
         val index: Int,
