@@ -252,7 +252,8 @@ internal object DrawnWidget {
  * the drawing throws, the log says so and the widget shows the plain text
  * [R.string.widget_failed], which opens the calendar page; the others are
  * updated all the same. No other exception is caught, and a plain text the
- * system refuses here is not caught again: its exception propagates (D40).
+ * system refuses here is not caught again: its exception propagates, and the
+ * widgets after it in that update are not updated (D40).
  */
 abstract class DrawnWidgetProvider : AppWidgetProvider() {
     /** The log's tag. */
