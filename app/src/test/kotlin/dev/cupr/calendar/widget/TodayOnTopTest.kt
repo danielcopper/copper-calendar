@@ -52,6 +52,11 @@ class TodayOnTopTest {
     }
 
     @Test
+    fun `when today is the last row and taller than the list, it is the target, without padding`() {
+        assertEquals(TodayOnTop.Target(5, 100, 0), TodayOnTop.target(heights, today = 5, listPx = 90f, EXTRA))
+    }
+
+    @Test
     fun `when today's row alone fits the list but not with the scroll's room, it gets no padding`() {
         assertEquals(TodayOnTop.Target(3, 120, 0), TodayOnTop.target(heights, today = 3, listPx = 125f, EXTRA))
     }

@@ -78,7 +78,7 @@ internal object TodayOnTop {
     ): Target {
         var index = today
         var rowsPx = heightsPx[today]
-        while (rowsPx + heightsPx[index + 1] <= roomPx) {
+        while (index < heightsPx.lastIndex && rowsPx + heightsPx[index + 1] <= roomPx) {
             index += 1
             rowsPx += heightsPx[index]
         }
