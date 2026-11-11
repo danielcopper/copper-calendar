@@ -17,6 +17,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowLog
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.math.roundToInt
@@ -41,9 +42,9 @@ class MarkTest {
     private val chipMarkX = Probe.cellX(0) + scale.px(PhoneMonth.CHIP_LEFT + PhoneMonth.CHIP_DRAWING_SHIFT)
 
     /**
-     * A 5-cell-wide widget's drawn width (349 dp, design.md's table), where a
-     * mark beside the number has room for its full size; at 4 cells it is
-     * drawn smaller, to fit its cell.
+     * The drawn width of a 5-cell-wide widget (349 dp by Android's cell-size
+     * table, less the card's inset), where a mark beside the number has room
+     * for its full size; at 4 cells it is drawn smaller, to fit its cell.
      */
     private val widePx = scale.px(WIDE_DP - 2 * PhoneMonth.CARD_INSET).roundToInt()
 
@@ -151,6 +152,28 @@ class MarkTest {
         }
     }
 
+    @Test
+    fun `a dot beside the number stays inside its cell at the least width, and a mark with no room is logged`() {
+        val leastPx = scale.px(LEAST_DP - 2 * PhoneMonth.CARD_INSET).roundToInt()
+        val column = leastPx / 7f
+        val sunday = monday.plusDays(6)
+        val special = Probe.allDay(sunday).copy(kind = Kinds.SPECIAL)
+        val marked = Probe.week(monday, mapOf(6 to Probe.day(sunday, marks = listOf(special))))
+        val plain = rows.render(Probe.week(monday), leastPx, scale, SampleData.dark)
+        val bitmap = rows.render(marked, leastPx, scale, SampleData.dark)
+        val changed = (0 until bitmap.width).filter { x -> differs(bitmap, plain, x) }
+        assertTrue("no dot", changed.isNotEmpty())
+        val right = 7 * column - scale.px(PhoneMonth.CELL_SIDE)
+        assertTrue("the dot reaches x ${changed.last()}, its cell ends at $right", changed.last() <= right.toInt())
+        assertTrue(ShadowLog.getLogsForTag("WeekRowRenderer").isEmpty())
+        val tinyPx = scale.px(TINY_DP - 2 * PhoneMonth.CARD_INSET).roundToInt()
+        rows.render(marked, tinyPx, scale, SampleData.dark)
+        assertEquals(
+            listOf("$sunday: no room beside the number for 1 of its marks"),
+            ShadowLog.getLogsForTag("WeekRowRenderer").map { it.msg },
+        )
+    }
+
     /** Whether any pixel of column x differs between the two bitmaps. */
     private fun differs(
         a: Bitmap,
@@ -185,5 +208,9 @@ class MarkTest {
         const val LANTERN_X = 21.5f
         const val LANTERN_Y = 25f
         const val WIDE_DP = 349
+
+        /** The least width of the month and "Woche quer", 250 dp (D34), and one far below it. */
+        const val LEAST_DP = 250
+        const val TINY_DP = 150
     }
 }

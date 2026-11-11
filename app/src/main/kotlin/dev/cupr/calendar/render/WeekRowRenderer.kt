@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
+import android.util.Log
 import androidx.annotation.ColorInt
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.withClip
@@ -65,6 +66,10 @@ class WeekRowRenderer(
     private val icons: Icons,
     private val drawings: Drawings,
 ) {
+    private companion object {
+        const val TAG = "WeekRowRenderer"
+    }
+
     /** The week at widthPx; blankDp: room left blank below its cells, their columns running on through it. */
     fun render(
         week: Week,
@@ -146,7 +151,7 @@ class WeekRowRenderer(
          * The number (today in the accent's pill) and the marked entries'
          * marks beside it, each [DRAWING] at most and smaller where less room
          * is left before the cell's content ends at right, so it stays inside
-         * its own cell; one with no room left is not drawn.
+         * its own cell; one with no room left is not drawn, which the log says.
          */
         private fun numberRow(
             day: Day,
@@ -167,9 +172,12 @@ class WeekRowRenderer(
             paint.textAlign = Paint.Align.CENTER
             canvas.drawText(label, x + width / 2, paint.baselineIn(boxTop, height), paint)
             var drawingX = x + width + scale.px(NUMBER_GAP)
-            for (entry in day.marks) {
+            for ((index, entry) in day.marks.withIndex()) {
                 val size = min(scale.px(DRAWING), right - drawingX)
-                if (size <= 0f) break
+                if (size <= 0f) {
+                    Log.w(TAG, "${day.date}: no room beside the number for ${day.marks.size - index} of its marks")
+                    break
+                }
                 mark(entry, palette.colorOf(entry), drawingX, y + (scale.px(NUMBER_ROW) - size) / 2, size)
                 drawingX += size + scale.px(DRAWINGS_GAP)
             }
@@ -218,7 +226,7 @@ class WeekRowRenderer(
             canvas.restoreToCount(saved)
         }
 
-        /** An entry's mark in a size × size box, wherever a mark stands in a cell ([drawMark]). */
+        /** An entry's mark in a size × size box, wherever a mark stands in a cell ([drawMark]); its dot fits the box. */
         private fun mark(
             entry: Entry,
             @ColorInt color: Int,
@@ -226,7 +234,7 @@ class WeekRowRenderer(
             y: Float,
             size: Float,
         ) {
-            canvas.drawMark(entry, color, x, y, size, scale.px(DOT), icons, drawings)
+            canvas.drawMark(entry, color, x, y, size, min(scale.px(DOT), size), icons, drawings)
         }
 
         /** An entry over several days across the columns it covers, in its lane. */
