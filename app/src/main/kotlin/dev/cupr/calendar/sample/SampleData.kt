@@ -50,7 +50,7 @@ object SampleData {
             divider = 0xFF262C34.toInt(),
             accent = 0xFF6FB1FF.toInt(),
             onAccent = 0xFF0D1A2A.toInt(),
-            // rgba(111, 177, 255, 0.16)
+            // The accent at 16 % opacity.
             accentSoft = 0x296FB1FF,
             holiday = 0xFFFF7A7A.toInt(),
             // Black at half opacity.
@@ -75,7 +75,7 @@ object SampleData {
             divider = 0xFFE6EAF0.toInt(),
             accent = 0xFF1F6FD6.toInt(),
             onAccent = 0xFFFFFFFF.toInt(),
-            // rgba(31, 111, 214, 0.12)
+            // The accent at 12 % opacity.
             accentSoft = 0x1F1F6FD6,
             holiday = 0xFFB52222.toInt(),
             // The light text colour at 18 % opacity.
