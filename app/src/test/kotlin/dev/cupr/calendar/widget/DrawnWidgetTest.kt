@@ -232,7 +232,7 @@ class DrawnWidgetTest {
         assertTrue(ShadowLog.getLogsForTag("Test").isEmpty())
         BitmapLimit.warnOver("Test", 1, needed = 11, limit = 10, left = 1, after = 9)
         assertEquals(
-            listOf("Widget 1: its bitmaps take 11 bytes, over the limit of 10; 1 entries left out"),
+            listOf("Widget 1: its bitmaps take 11 bytes, over the limit of 10; 1 entry left out"),
             ShadowLog.getLogsForTag("Test").map { it.msg },
         )
     }
