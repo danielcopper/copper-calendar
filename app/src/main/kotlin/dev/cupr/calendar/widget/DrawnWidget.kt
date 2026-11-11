@@ -47,11 +47,16 @@ internal class WidgetHeight(
     val dp: Int,
     val leastDp: Int?,
 ) {
-    /** The option the height came from, and the least height beside it, for the log. */
-    val from: String
+    init {
+        require(dp > 0) { "a widget's height is above 0 dp, not $dp" }
+        require(leastDp == null || leastDp > 0) { "a widget's least height is above 0 dp, not $leastDp" }
+    }
+
+    /** The height, the option it came from, and the least height beside it, for the log. */
+    val forLog: String
         get() {
             val least = leastDp?.let { "$it dp least" } ?: "no least height"
-            return "${AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT}, $least"
+            return "$dp dp (${AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT}, $least)"
         }
 
     companion object {

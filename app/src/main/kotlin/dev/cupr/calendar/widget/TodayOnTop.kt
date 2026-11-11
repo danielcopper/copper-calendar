@@ -144,7 +144,7 @@ internal object TodayOnTop {
                 val target = targetFrom(heightsPx, today, listPx, extraPx)
                 views.setViewPadding(R.id.list, 0, 0, 0, target.paddingPx)
                 views.setScrollPosition(R.id.list, target.index)
-                reach(target, today, listPx, extraPx) + "; ${height.dp} dp (${height.from})"
+                reach(target, today, listPx, extraPx) + "; ${height.forLog}"
             }
         }
 
