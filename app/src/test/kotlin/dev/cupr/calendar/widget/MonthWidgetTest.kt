@@ -102,7 +102,30 @@ class MonthWidgetTest {
         assertEquals(list.height, list.getChildAt(5 - list.firstVisiblePosition).bottom)
         val log = ShadowLog.getLogsForTag("MonthWidget").last { it.type == Log.INFO }.msg
         assertTrue(log, log.contains("; today is row 2, scrolls to row 5, 4 rows, "))
-        assertTrue(log, log.contains(" px, no padding: the rows to the end fit; 456 dp "))
+        assertTrue(log, log.contains(" px, no padding: the rows to the end fit; "))
+        assertTrue(log, log.endsWith("; 456 dp (appWidgetMaxHeight, no least height)"))
+    }
+
+    @Test
+    @Config(qualifiers = "+xxhdpi")
+    fun `at xxhdpi too, the current week stands at the top, the weeks after it below`() {
+        val (list, target) = scrolled(300)
+        assertTrue("$target", target in 3 until 5)
+        assertEquals(0, list.getChildAt(2 - list.firstVisiblePosition).top)
+        assertNotNull(list.getChildAt(target + 1 - list.firstVisiblePosition))
+    }
+
+    @Test
+    fun `an update to a height where the weeks from the current one fit clears the padding before`() {
+        val (list, _) = scrolled(220)
+        assertTrue("${list.paddingBottom}", list.paddingBottom > 0)
+        val height = WidgetHeight(WidgetHost.HEIGHT_DP, null)
+        WidgetHost.reapplied(application, list.rootView, WidgetHost.HEIGHT_DP) { context, width ->
+            MonthWidget.draw(context, width, 1, Long.MAX_VALUE, height).views
+        }
+        assertEquals(5, WidgetHost.scrollToTarget(list))
+        assertEquals(0, list.paddingBottom)
+        assertEquals(list.height, list.getChildAt(5 - list.firstVisiblePosition).bottom)
     }
 
     @Test

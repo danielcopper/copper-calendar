@@ -40,12 +40,32 @@ internal object WidgetHost {
         context: Context,
         widthDp: Int = WIDTH_DP,
         views: (Context, Int) -> RemoteViews = month,
-    ): View {
+    ): View = parcelled(views(context, widthDp)).apply(context, AppWidgetHostView(context))
+
+    /**
+     * The views made by views at the default width, parcelled, applied
+     * again to widget as a launcher does on an update, in a widget host's
+     * view, and the widget laid out anew heightDp high.
+     */
+    fun reapplied(
+        context: Context,
+        widget: View,
+        heightDp: Int,
+        views: (Context, Int) -> RemoteViews,
+    ) {
+        if (widget.parent == null) AppWidgetHostView(context).addView(widget)
+        parcelled(views(context, WIDTH_DP)).reapply(context, widget)
+        val scale = Scale(context.resources.displayMetrics.density)
+        widget.measure(exactly(scale, WIDTH_DP), exactly(scale, heightDp))
+        widget.layout(0, 0, widget.measuredWidth, widget.measuredHeight)
+    }
+
+    private fun parcelled(views: RemoteViews): RemoteViews {
         val parcel = Parcel.obtain()
         try {
-            views(context, widthDp).writeToParcel(parcel, 0)
+            views.writeToParcel(parcel, 0)
             parcel.setDataPosition(0)
-            return RemoteViews.CREATOR.createFromParcel(parcel).apply(context, AppWidgetHostView(context))
+            return RemoteViews.CREATOR.createFromParcel(parcel)
         } finally {
             parcel.recycle()
         }
@@ -70,14 +90,8 @@ internal object WidgetHost {
 
     /**
      * The list of the widget laid out heightDp high and widthDp wide, from
-     * its top scrolled to the row its views scroll to, and that row.
-     * Robolectric's shadow records the row but runs no scroll, so this ends
-     * the scroll where AOSP's `AbsListView.PositionScroller` ends it, by the
-     * rule D27 gives: for a row already shown as `scrollToVisible` does, for
-     * a row below the shown ones as `MOVE_DOWN_POS` does, which brings up the
-     * last shown row until it is the target. It scrolls in steps of a few
-     * px, as the smooth scroll does frame by frame: one step scrolls at most
-     * the list's height less its padding (`AbsListView.trackMotionScroll`).
+     * its top scrolled to the row its views scroll to ([scrollToTarget]), and
+     * that row.
      */
     fun scrolledToTarget(
         context: Context,
@@ -86,13 +100,28 @@ internal object WidgetHost {
         widthDp: Int = WIDTH_DP,
     ): Pair<ListView, Int> {
         val list = laidOut(context, heightDp, views, widthDp).findViewById<ListView>(R.id.list)
+        return list to scrollToTarget(list)
+    }
+
+    /**
+     * Scrolls list from where it stands to the row its views last scrolled
+     * to, and returns that row. Robolectric's shadow records the row but runs
+     * no scroll, so this ends the scroll where AOSP's
+     * `AbsListView.PositionScroller` ends it, by the rule D27 gives: for a row
+     * already shown as `scrollToVisible` does, for a row below the shown ones
+     * as `MOVE_DOWN_POS` does, which brings up the last shown row until it is
+     * the target. It scrolls in steps of a few
+     * px, as the smooth scroll does frame by frame: one step scrolls at most
+     * the list's height less its padding (`AbsListView.trackMotionScroll`).
+     */
+    fun scrollToTarget(list: ListView): Int {
         val target = shadowOf(list).smoothScrolledPosition
         val lastShown = { list.firstVisiblePosition + list.childCount - 1 }
         if (target <= lastShown()) {
             val bottom = list.getChildAt(target - list.firstVisiblePosition).bottom
             scrollInSteps(list, max(0, bottom - (list.height - list.paddingBottom)))
         } else {
-            val fadingEdge = ViewConfiguration.get(context).scaledFadingEdgeLength
+            val fadingEdge = ViewConfiguration.get(list.context).scaledFadingEdgeLength
             do {
                 val last = lastShown()
                 val room = if (last < list.count - 1) max(list.paddingBottom, fadingEdge) else list.paddingBottom
@@ -101,7 +130,7 @@ internal object WidgetHost {
                 check(last == target || lastShown() > last) { "the scroll to row $target stopped at row $last" }
             } while (last < target)
         }
-        return list to target
+        return target
     }
 
     private fun scrollInSteps(

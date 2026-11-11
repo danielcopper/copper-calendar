@@ -251,9 +251,9 @@ class WeekWidgetTest {
     private fun scrolled(
         heightDp: Int,
         widthDp: Int = WidgetHost.WIDTH_DP,
+        days: WeekDays = WeekDays.MONDAY_TO_SUNDAY,
     ): Pair<ListView, Int> {
         val height = WidgetHeight(heightDp, null)
-        val days = WeekDays.MONDAY_TO_SUNDAY
         return WidgetHost.scrolledToTarget(application, heightDp, { context, _ ->
             WeekWidget.draw(context, widthDp, days, 1, Long.MAX_VALUE, height = height).views
         }, widthDp)
@@ -290,6 +290,37 @@ class WeekWidgetTest {
         val log = ShadowLog.getLogsForTag("WeekWidget").last { it.type == Log.INFO }.msg
         assertTrue(log, log.contains("; today is row 2, scrolls to row 2, 1 row, 73 of the list's 50 px, no padding: "))
         assertTrue(log, log.contains(" no padding: today's row is taller than the list less the scroll's 12 px; "))
+    }
+
+    @Test
+    @Config(qualifiers = "+xxhdpi")
+    fun `at xxhdpi too, today stands at the top, the days after it below`() {
+        val (list, target) = scrolled(360)
+        assertTrue("$target", target in 3 until 6)
+        assertEquals(0, list.getChildAt(2 - list.firstVisiblePosition).top)
+        assertNotNull(list.getChildAt(target + 1 - list.firstVisiblePosition))
+    }
+
+    @Test
+    fun `when today is the first row, as from today on, it stands at the top`() {
+        val (list, target) = scrolled(300, days = WeekDays.FROM_TODAY)
+        assertTrue("$target", target in 1 until 6)
+        assertTrue("${list.paddingBottom}", list.paddingBottom > 0)
+        assertEquals(0, list.firstVisiblePosition)
+        assertEquals(0, list.getChildAt(0).top)
+    }
+
+    @Test
+    fun `an update to a height where the days from today fit clears the padding before`() {
+        val (list, _) = scrolled(220)
+        assertTrue("${list.paddingBottom}", list.paddingBottom > 0)
+        val height = WidgetHeight(WidgetHost.HEIGHT_DP, null)
+        WidgetHost.reapplied(application, list.rootView, WidgetHost.HEIGHT_DP) { context, width ->
+            WeekWidget.draw(context, width, WeekDays.MONDAY_TO_SUNDAY, 1, Long.MAX_VALUE, height = height).views
+        }
+        assertEquals(6, WidgetHost.scrollToTarget(list))
+        assertEquals(0, list.paddingBottom)
+        assertEquals(list.height, list.getChildAt(6 - list.firstVisiblePosition).bottom)
     }
 
     @Test
