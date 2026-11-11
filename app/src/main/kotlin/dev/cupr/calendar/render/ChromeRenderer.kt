@@ -63,10 +63,11 @@ class ChromeRenderer(
         widthPx: Int,
         scale: Scale,
         palette: Palette,
-    ): Bitmap {
-        val heads = from?.let { first -> List(DAYS_IN_WEEK) { weekdays[(first.value - 1 + it) % DAYS_IN_WEEK] } }
-        return draw(title, range, heads, widthPx, scale, palette)
-    }
+    ): Bitmap = draw(title, range, from?.let(::heads), widthPx, scale, palette)
+
+    /** The weekday heads of a week from first on, in order. */
+    internal fun heads(first: DayOfWeek): List<String> =
+        List(DAYS_IN_WEEK) { weekdays[(first.value - 1 + it) % DAYS_IN_WEEK] }
 
     private fun draw(
         text: String,

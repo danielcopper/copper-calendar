@@ -73,7 +73,7 @@ class WeekRowRenderer(
         palette: Palette,
         blankDp: Float = 0f,
     ): Bitmap {
-        val heightPx = ceil(scale.hairline + scale.px(heightDp(week) + blankDp)).toInt()
+        val heightPx = heightPx(week, scale, blankDp)
         val bitmap = createBitmap(widthPx, heightPx)
         bitmap.density = scale.dpi
         val canvas = Canvas(bitmap)
@@ -83,6 +83,13 @@ class WeekRowRenderer(
         week.bars.forEach { frame.bar(it) }
         return bitmap
     }
+
+    /** The drawn row's height in pixels, its divider and blankDp below its cells included. */
+    fun heightPx(
+        week: Week,
+        scale: Scale,
+        blankDp: Float = 0f,
+    ): Int = ceil(scale.hairline + scale.px(heightDp(week) + blankDp)).toInt()
 
     /** The row's height below its divider: its tallest cell, at least [CELL_MIN]. */
     fun heightDp(week: Week): Float =
