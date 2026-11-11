@@ -22,6 +22,7 @@ import dev.cupr.calendar.week.WeekDay
 import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.week.WeekLayout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -173,6 +174,7 @@ class DrawnWidgetTest {
         val less = checkNotNull(WeekColumnsWidget.leaveOutOne(week))
         assertEquals(listOf(4, 3), less.days.take(2).map { it.shown.size })
         assertEquals(listOf(0, 2), less.days.take(2).map { it.more })
+        assertThrows(IllegalStateException::class.java) { Probe.day(monday).leaveOutLast() }
     }
 
     @Test
