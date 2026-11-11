@@ -162,6 +162,12 @@ class Drawings(
     }
 }
 
+/** What an entry's mark is drawn from ([drawMark]): its drawing, else its icon. */
+internal class MarkAssets(
+    val icons: Icons,
+    val drawings: Drawings,
+)
+
 /**
  * Logs a name the app does not ship, once per name for as long as its owner
  * lives (a process, through [RenderAssets]), so a missing asset shows in the

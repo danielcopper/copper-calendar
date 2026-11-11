@@ -96,8 +96,8 @@ internal fun Canvas.drawDrawing(
  * An entry's mark in a size × size box at (x, y), wherever a mark stands (a
  * month cell's line, chip or number, a week row's line or chip): its drawing,
  * else its icon in color, else a dot dot wide in color, also for a drawing or
- * icon the app does not ship (D22, D24). The icon is looked up only when no
- * drawing is drawn.
+ * icon the app does not ship (D22, D24); both are looked up in assets. The
+ * icon is looked up only when no drawing is drawn.
  */
 internal fun Canvas.drawMark(
     entry: Entry,
@@ -106,15 +106,14 @@ internal fun Canvas.drawMark(
     y: Float,
     size: Float,
     dot: Float,
-    icons: Icons,
-    drawings: Drawings,
+    assets: MarkAssets,
 ) {
-    val drawing = entry.drawing?.let(drawings::get)
+    val drawing = entry.drawing?.let(assets.drawings::get)
     if (drawing != null) {
         drawDrawing(drawing, x, y, size)
         return
     }
-    val icon = entry.icon?.let(icons::path)
+    val icon = entry.icon?.let(assets.icons::path)
     if (icon != null) {
         drawIcon(icon, x, y, size, color)
     } else {

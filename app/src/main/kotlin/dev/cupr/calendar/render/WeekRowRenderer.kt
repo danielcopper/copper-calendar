@@ -62,9 +62,11 @@ import kotlin.math.min
  */
 class WeekRowRenderer(
     private val fonts: Fonts,
-    private val icons: Icons,
-    private val drawings: Drawings,
+    icons: Icons,
+    drawings: Drawings,
 ) {
+    private val marks = MarkAssets(icons, drawings)
+
     /** The week at widthPx; blankDp: room left blank below its cells, their columns running on through it. */
     fun render(
         week: Week,
@@ -291,7 +293,7 @@ class WeekRowRenderer(
             y: Float,
             size: Float,
         ) {
-            canvas.drawMark(entry, color, x, y, size, min(scale.px(DOT), size), icons, drawings)
+            canvas.drawMark(entry, color, x, y, size, min(scale.px(DOT), size), marks)
         }
 
         /** An entry over several days across the columns it covers, in its lane. */

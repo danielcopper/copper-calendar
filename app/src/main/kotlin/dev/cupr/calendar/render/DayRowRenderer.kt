@@ -110,11 +110,12 @@ class WeekTexts(
  */
 class DayRowRenderer internal constructor(
     private val fonts: Fonts,
-    private val icons: Icons,
-    private val drawings: Drawings,
+    icons: Icons,
+    drawings: Drawings,
     private val texts: WeekTexts,
     private val stacked: Boolean = false,
 ) {
+    private val marks = MarkAssets(icons, drawings)
     private val column = if (stacked) STACKED_COLUMN else DAY_COLUMN
 
     fun render(
@@ -337,7 +338,7 @@ class DayRowRenderer internal constructor(
             val titleY = if (stacked) y + timeLine else y
             val mark = scale.px(MARK)
             val markY = titleY + (lineHeight - mark) / 2
-            canvas.drawMark(day.entry, color, markX, markY, mark, scale.px(DOT), icons, drawings)
+            canvas.drawMark(day.entry, color, markX, markY, mark, scale.px(DOT), marks)
             val textX = markX + mark + scale.px(PART_GAP)
             val title = fonts.paint(scale, FONT, FontWeight.MEDIUM, palette.text)
             title(day, textX, title.baselineIn(titleY, lineHeight), right - textX, title, FONT)
@@ -370,8 +371,7 @@ class DayRowRenderer internal constructor(
                     y + (lineHeight - mark) / 2,
                     mark,
                     scale.px(DOT),
-                    icons,
-                    drawings,
+                    marks,
                 )
             }
             title(day, innerX + markRoom, title.baselineIn(y, lineHeight), room, title, CHIP_FONT)
