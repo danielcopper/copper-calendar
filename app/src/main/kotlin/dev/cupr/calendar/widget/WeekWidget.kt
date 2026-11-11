@@ -16,6 +16,7 @@ import dev.cupr.calendar.render.WeekTexts
 import dev.cupr.calendar.sample.SampleData
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
+import dev.cupr.calendar.week.DayEntry
 import dev.cupr.calendar.week.WeekDay
 import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.week.WeekLayout
@@ -145,12 +146,17 @@ object WeekWidget {
         day.entries.zip(areas).forEach { (entry, area) ->
             val cell = RemoteViews(context.packageName, R.layout.widget_week_entry)
             cell.setViewLayoutHeight(R.id.entry_slot, area.height(), TypedValue.COMPLEX_UNIT_PX)
-            val tap = entry.entry.uid?.let { Tap.Entry(it, day.date) } ?: Tap.Day(day.date)
-            cell.setOnClickFillInIntent(R.id.entry, Taps.fillIn(tap))
+            cell.setOnClickFillInIntent(R.id.entry, Taps.fillIn(tap(entry, day.date)))
             val label = listOfNotNull(entry.time, entry.entry.title, entry.addition?.let(texts::addition))
             cell.setContentDescription(R.id.entry, label.joinToString(" "))
             row.addView(R.id.entries, cell)
         }
         return row
     }
+
+    /** What a tap on an entry opens: the entry by its UID on date, or date when it has none or a blank one (D37). */
+    internal fun tap(
+        entry: DayEntry,
+        date: LocalDate,
+    ): Tap = entry.entry.uid?.takeIf { it.isNotBlank() }?.let { Tap.Entry(it, date) } ?: Tap.Day(date)
 }

@@ -9,6 +9,7 @@ import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -74,6 +75,7 @@ class TapTest {
     fun `an entry without a UID or a day opens nothing`() {
         assertNull(Taps.read(tapExtras("ENTRY", "2026-11-12")))
         assertNull(Taps.read(tapExtras("ENTRY", "2026-11-12").putExtra("dev.cupr.calendar.tap.UID", "")))
+        assertNull(Taps.read(tapExtras("ENTRY", "2026-11-12").putExtra("dev.cupr.calendar.tap.UID", " ")))
         assertNull(
             Taps.read(
                 Intent()
@@ -83,6 +85,13 @@ class TapTest {
                     ).putExtra("dev.cupr.calendar.tap.UID", "abc"),
             ),
         )
+    }
+
+    @Test
+    fun `an entry's tap needs a UID that is not blank`() {
+        for (uid in listOf("", " ")) {
+            assertThrows(IllegalArgumentException::class.java) { Tap.Entry(uid, day) }
+        }
     }
 
     @Test

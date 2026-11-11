@@ -34,6 +34,10 @@ sealed interface Tap {
         override val day: LocalDate,
     ) : Tap {
         override val element = TapElement.ENTRY
+
+        init {
+            require(uid.isNotBlank()) { "An entry's tap needs its UID" }
+        }
     }
 
     /** "+", with the day a new entry starts on (today). */
@@ -122,7 +126,7 @@ object Taps {
     /**
      * The tap an intent carries, none when it carries no complete one: no or
      * an unknown element, a day, an entry or "+" without a well-formed day, or
-     * an entry without a UID.
+     * an entry without a UID or with a blank one.
      */
     fun read(intent: Intent): Tap? {
         val element = intent.getStringExtra(ELEMENT)?.let { name -> TapElement.entries.find { it.name == name } }
@@ -139,7 +143,7 @@ object Taps {
     private fun entry(
         uid: String?,
         day: LocalDate?,
-    ): Tap? = if (uid.isNullOrEmpty() || day == null) null else Tap.Entry(uid, day)
+    ): Tap? = if (uid.isNullOrBlank() || day == null) null else Tap.Entry(uid, day)
 
     /** What an intent carries, for a log line: its element and day as given, and the keys of all its extras. */
     fun describe(intent: Intent): String =

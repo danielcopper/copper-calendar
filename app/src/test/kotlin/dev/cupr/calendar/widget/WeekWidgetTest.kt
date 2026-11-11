@@ -14,6 +14,7 @@ import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.R
 import dev.cupr.calendar.render.DayRowRenderer
 import dev.cupr.calendar.render.PhoneMonth
+import dev.cupr.calendar.render.Probe
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.render.TileWeek
@@ -102,8 +103,8 @@ class WeekWidgetTest {
         val entries = row(2).findViewById<ViewGroup>(R.id.entries)
         val parade = entries.getChildAt(2).findViewById<View>(R.id.entry)
         assertEquals("17:00–18:30 Martinsumzug Kita", parade.contentDescription)
-        val tap = tapOf(parade)
-        assertTrue("$tap", tap is Tap.Entry && tap.day == wednesday && tap.uid.startsWith("sample-"))
+        val uid = checkNotNull(SampleData.entries.single { it.title == "Martinsumzug Kita" }.uid)
+        assertEquals(Tap.Entry(uid, wednesday), tapOf(parade))
     }
 
     @Test
@@ -112,6 +113,18 @@ class WeekWidgetTest {
         val special = entries.getChildAt(1).findViewById<View>(R.id.entry)
         assertEquals("Martinstag", special.contentDescription)
         assertEquals(Tap.Day(wednesday), tapOf(special))
+    }
+
+    @Test
+    fun `an entry with an empty or blank UID opens its day`() {
+        for (uid in listOf("", " ")) {
+            val entry = Probe.timed(wednesday, icon = null).copy(uid = uid)
+            val day = WeekLayout.build(listOf(wednesday), listOf(entry), wednesday).single()
+            assertEquals(Tap.Day(wednesday), WeekWidget.tap(day.entries.single(), wednesday))
+        }
+        val entry = Probe.timed(wednesday, icon = null).copy(uid = "abc")
+        val day = WeekLayout.build(listOf(wednesday), listOf(entry), wednesday).single()
+        assertEquals(Tap.Entry("abc", wednesday), WeekWidget.tap(day.entries.single(), wednesday))
     }
 
     @Test
