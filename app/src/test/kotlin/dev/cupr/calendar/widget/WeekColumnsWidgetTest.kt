@@ -65,6 +65,8 @@ class WeekColumnsWidgetTest {
         val scale = Scale(application.resources.displayMetrics.density)
         assertEquals(scale.px(250f).roundToInt(), info(android.R.attr.minWidth))
         assertEquals(scale.px(250f).roundToInt(), info(android.R.attr.minResizeWidth))
+        assertEquals(scale.px(110f).roundToInt(), info(android.R.attr.minHeight))
+        assertEquals(scale.px(110f).roundToInt(), info(android.R.attr.minResizeHeight))
         assertEquals(4, info(android.R.attr.targetCellWidth))
         assertEquals(2, info(android.R.attr.targetCellHeight))
     }

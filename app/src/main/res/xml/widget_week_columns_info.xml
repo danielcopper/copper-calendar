@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- "Woche quer": 4 x 2 cells by default (276 x 220 dp, design.md) and
-     resizable (D34), not below 4 cells wide, where its columns are the
-     month's. The least sizes follow the month's and Android's rule of
-     70 x n - 30 dp for n cells: minWidth and minResizeWidth 250 dp ask for 4
-     cells, minHeight and minResizeHeight 110 dp for 2. updatePeriodMillis is
-     Android's floor of 30 minutes (research.md, section 5). The picker's
-     preview is the widget drawn from the sample week, written by
-     `mise run preview` (D33). -->
+<!-- "Woche quer": 4 x 2 cells by default (276 x 220 dp, design.md),
+     resizable, but not below 4 cells wide, where its columns are the
+     month's; the least sizes are D34's. updatePeriodMillis is Android's
+     floor of 30 minutes (research.md, section 5). The picker's preview is
+     the widget drawn from the sample week, written by `mise run preview`
+     (D33). -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_week_columns_description"
     android:initialLayout="@layout/widget_week_columns"
