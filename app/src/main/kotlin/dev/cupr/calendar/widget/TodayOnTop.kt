@@ -1,6 +1,5 @@
 package dev.cupr.calendar.widget
 
-import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.util.Log
 import android.view.ViewConfiguration
@@ -135,7 +134,8 @@ internal object TodayOnTop {
             height == null -> {
                 views.setViewPadding(R.id.list, 0, 0, 0, 0)
                 views.setScrollPosition(R.id.list, today)
-                "; today is row $today, scrolls it into view: no ${AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT}"
+                // Not "no appWidgetMaxHeight": views() passes no height either; WidgetHeight.of warns of a launcher's.
+                "; today is row $today, scrolls it into view: no height"
             }
 
             else -> {

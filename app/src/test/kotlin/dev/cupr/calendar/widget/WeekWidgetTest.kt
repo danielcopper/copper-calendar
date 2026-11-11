@@ -330,7 +330,7 @@ class WeekWidgetTest {
         assertEquals(2, shadowOf(list).smoothScrolledPosition)
         assertEquals(0, list.paddingBottom)
         val log = ShadowLog.getLogsForTag("WeekWidget").single { it.type == Log.INFO }.msg
-        assertTrue(log, log.endsWith("; today is row 2, scrolls it into view: no appWidgetMaxHeight"))
+        assertTrue(log, log.endsWith("; today is row 2, scrolls it into view: no height"))
         val warnings = ShadowLog.getLogsForTag("WeekWidget").filter { it.type == Log.WARN }.map { it.msg }
         val expected =
             "Widget $id: the launcher reports no appWidgetMaxHeight, so its list scrolls today only into view"
