@@ -80,7 +80,8 @@ object MonthWidget {
             DrawnWidget.fixedParts(context, views, kept, title, today, scale) { chrome, palette ->
                 chrome.header(view.month, widthPx, scale, palette)
             }
-        val needed = kept.bytes + view.weeks.sumOf { BitmapLimit.bytes(widthPx, rows.heightPx(it, scale)) }
+        val heightsPx = view.weeks.map { rows.heightPx(it, scale) }
+        val needed = kept.bytes + heightsPx.sumOf { BitmapLimit.bytes(widthPx, it) }
         BitmapLimit.warnOver(TAG, id, needed = needed, limit = limit, left = 0, after = needed)
         DrawnWidget.warnMarks(
             TAG,
@@ -97,7 +98,6 @@ object MonthWidget {
                     .toEpochDay() to DrawnWidget.weekRow(context, week, light, dark)
             }
         DrawnWidget.list(context, views, items)
-        val heightsPx = view.weeks.map { rows.heightPx(it, scale) }
         val scrolled = TodayOnTop.scroll(context, views, scale, heightsPx, view.todayWeek, height, headerPx, TAG, id)
         DrawnWidget.logDrawn(TAG, id, kept, widthPx, limit, scrolled)
         return kept.drawn(views, limit)
