@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "+", as each widget's layout includes it at the bottom right of its
+     card: its drawing light and dark, with room for the shadow, and its
+     40 dp tap area. -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <ImageView
+        android:id="@+id/fab_light"
+        android:layout_width="66dp"
+        android:layout_height="66dp"
+        android:layout_gravity="bottom|end"
+        android:importantForAccessibility="no"
+        android:visibility="@integer/light_visibility" />
+
+    <ImageView
+        android:id="@+id/fab_dark"
+        android:layout_width="66dp"
+        android:layout_height="66dp"
+        android:layout_gravity="bottom|end"
+        android:importantForAccessibility="no"
+        android:visibility="@integer/dark_visibility" />
+
+    <FrameLayout
+        android:id="@+id/fab"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="13dp"
+        android:contentDescription="@string/new_entry" />
+</merge>
