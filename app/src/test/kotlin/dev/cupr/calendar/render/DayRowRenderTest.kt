@@ -155,7 +155,7 @@ class DayRowRenderTest {
     }
 
     @Test
-    fun `the stacked day column holds each weekday's name, today's and each date`() {
+    fun `the stacked day column holds each weekday's name and each date`() {
         val weekday =
             fonts.paint(scale, TileWeek.WEEKDAY_FONT, FontWeight.BOLD, Color.BLACK).apply {
                 letterSpacing = TileWeek.WEEKDAY_SPACING
@@ -165,11 +165,27 @@ class DayRowRenderTest {
                 fontFeatureSettings = "tnum"
             }
         val column = scale.px(DayRowRenderer.STACKED_COLUMN)
-        for (name in texts.weekdays + texts.today) {
+        for (name in texts.weekdays) {
             val width = weekday.measureText(name.uppercase(Locale.GERMAN))
             assertTrue("$name is ${width / scale.px(1f)} dp wide", width <= column)
         }
         for (number in 1..31) assertTrue("$number.", date.measureText("$number.") <= column)
+    }
+
+    @Test
+    fun `stacked, today's head is its weekday in the accent, in one line it is Heute`() {
+        // "Heute" reaches past the stacked column into the gap before the entries; the weekday "MI" does not.
+        val gapLeft = scale.px(PhoneMonth.CARD_SIDE + DayRowRenderer.STACKED_COLUMN)
+        val gapRight = gapLeft + scale.px(TileWeek.COLUMN_GAP)
+        val headTop = scale.hairline + scale.px(TileWeek.ROW_PAD)
+        val headBottom = headTop + scale.px(TileWeek.TODAY_LINE)
+        for (palette in listOf(SampleData.light, SampleData.dark)) {
+            val stackedRow = stacked.render(day(today), rowPx, scale, palette)
+            val oneLine = rows.render(day(today), rowPx, scale, palette)
+            assertTrue(stackedRow.has(palette.accent, 0f, headTop, gapLeft, headBottom))
+            assertFalse(stackedRow.has(palette.accent, gapLeft, headTop, gapRight, headBottom))
+            assertTrue(oneLine.has(palette.accent, gapLeft, headTop, gapRight, headBottom))
+        }
     }
 
     /** A day of the sample week with entries as given, the others empty. */

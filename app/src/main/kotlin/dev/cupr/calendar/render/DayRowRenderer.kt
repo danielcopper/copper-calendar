@@ -98,9 +98,10 @@ data class WeekTexts(
  * shows.
  *
  * A [stacked] row, for a widget narrower than 4 cells ([stacksAt]), puts the
- * weekday above the date in a narrower column, and a timed entry's time on a
- * line of its own above its mark and title; chips, "frei" and the running
- * titles keep their one line.
+ * weekday above the date in a narrower column, today's too, which keeps its
+ * tint and accent instead of "Heute", and a timed entry's time on a line of
+ * its own above its mark and title; chips, "frei" and the running titles keep
+ * their one line (D39).
  */
 class DayRowRenderer(
     private val fonts: Fonts,
@@ -212,7 +213,8 @@ class DayRowRenderer(
 
         /**
          * The weekday and the date beside it on one baseline, or stacked above
-         * it; today "Heute" above its date, both in the accent.
+         * it; today "Heute" above its date, both in the accent, and stacked its
+         * weekday in the accent.
          */
         private fun head(day: WeekDay) {
             val accentOr = { color: Int -> if (day.today) palette.accent else color }
@@ -233,7 +235,7 @@ class DayRowRenderer(
                         "tnum"
                 }
             val number = "${day.date.dayOfMonth}."
-            val name = if (day.today) texts.today else texts.weekdays[day.date.dayOfWeek.value - 1]
+            val name = if (day.today && !stacked) texts.today else texts.weekdays[day.date.dayOfWeek.value - 1]
             val upper = name.uppercase(Locale.GERMAN)
             if (day.today || stacked) {
                 val line = scale.px(TODAY_LINE)
@@ -400,8 +402,8 @@ class DayRowRenderer(
 
         private const val SEPARATOR = " · "
 
-        /** A stacked row's day column, the weekday above the date: as wide as "HEUTE" in the weekday's font. */
-        internal const val STACKED_COLUMN = 36f
+        /** A stacked row's day column, the weekday above the date: as wide as the widest, the date "10.". */
+        internal const val STACKED_COLUMN = 19f
 
         /** A stacked timed entry's time line, above its title's. */
         internal const val TIME_LINE = 16f
