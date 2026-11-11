@@ -207,7 +207,11 @@ class DayRowRenderTest {
             val areas = renderer.entryAreas(day, rowPx, scale)
             assertEquals(2, areas.size)
             // Below the running titles' line.
-            assertEquals(scale.hairline + scale.px(TileWeek.ROW_PAD + TileWeek.LINE + TileWeek.LINE_GAP), areas[0].top, 0.01f)
+            assertEquals(
+                scale.hairline + scale.px(TileWeek.ROW_PAD + TileWeek.LINE + TileWeek.LINE_GAP),
+                areas[0].top,
+                0.01f,
+            )
             assertEquals(areas[0].bottom, areas[1].top, 0.01f)
             // The last area ends one gap below the last line, where the row's bottom padding begins.
             assertEquals(drawn.height - scale.px(TileWeek.ROW_PAD - TileWeek.LINE_GAP), areas[1].bottom, 1f)
