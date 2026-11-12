@@ -98,7 +98,8 @@ object MonthWidget {
                     .toEpochDay() to DrawnWidget.weekRow(context, week, light, dark)
             }
         DrawnWidget.list(context, views, items)
-        val scrolled = TodayOnTop.scroll(context, views, scale, heightsPx, view.todayWeek, height, headerPx, TAG, id)
+        val measured = TodayOnTop.Measured(scale, heightsPx, view.todayWeek, headerPx)
+        val scrolled = TodayOnTop.scroll(context, views, measured, height, TAG, id)
         DrawnWidget.logDrawn(TAG, id, kept, widthPx, limit, scrolled)
         return kept.drawn(views, limit)
     }

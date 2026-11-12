@@ -102,30 +102,41 @@ internal object TodayOnTop {
     }
 
     /**
+     * What a widget measured of its drawing, for [scroll]: the scale it drew
+     * at, its drawn rows' heights in px, the index of today's row among them
+     * (-1 when no row is today), and its header's height in px.
+     */
+    class Measured(
+        val scale: Scale,
+        val heightsPx: List<Int>,
+        val today: Int,
+        val headerPx: Int,
+    )
+
+    /**
      * Scrolls the list of views to its [target] and sets the list's bottom
      * padding to the target's, with the smooth scroll's room below it from
-     * context's fading edge length: heightsPx are the drawn rows' heights,
-     * today the index of today's row; the list is the widget's height less
-     * its card and a header headerPx high, at scale ([DrawnWidget.listPx]).
-     * Without a height, it scrolls today's row only into view, without
-     * padding (D27). When no row is today (-1), the list does not scroll and
-     * the log warns. Each case sets the list's padding, as an earlier update
-     * may have set one: setViewPadding sets all four sides, and the list has
-     * no padding but this one. Returns where it scrolls and from what, for
-     * the drawing's log line ([DrawnWidget.logDrawn]).
+     * context's fading edge length, for the rows measured: the list is the
+     * widget's height less its card and the measured header, at the measured
+     * scale ([DrawnWidget.listPx]). Without a height, it scrolls today's row
+     * only into view, without padding (D27). When no row is today (-1), the
+     * list does not scroll and the log warns. Each case sets the list's
+     * padding, as an earlier update may have set one: setViewPadding sets all
+     * four sides, and the list has no padding but this one. Returns where it
+     * scrolls and from what, for the drawing's log line
+     * ([DrawnWidget.logDrawn]).
      */
     fun scroll(
         context: Context,
         views: RemoteViews,
-        scale: Scale,
-        heightsPx: List<Int>,
-        today: Int,
+        measured: Measured,
         height: WidgetHeight?,
-        headerPx: Int,
         tag: String,
         id: Int,
-    ): String =
-        when {
+    ): String {
+        val heightsPx = measured.heightsPx
+        val today = measured.today
+        return when {
             today !in heightsPx.indices -> {
                 views.setViewPadding(R.id.list, 0, 0, 0, 0)
                 Log.w(tag, "Widget $id: no row is today, so its list does not scroll")
@@ -140,7 +151,7 @@ internal object TodayOnTop {
             }
 
             else -> {
-                val listPx = DrawnWidget.listPx(scale, height.dp, headerPx)
+                val listPx = DrawnWidget.listPx(measured.scale, height.dp, measured.headerPx)
                 val extraPx = ViewConfiguration.get(context).scaledFadingEdgeLength
                 val target = targetFrom(heightsPx, today, listPx, extraPx)
                 views.setViewPadding(R.id.list, 0, 0, 0, target.paddingPx)
@@ -148,6 +159,7 @@ internal object TodayOnTop {
                 reach(target, today, listPx, extraPx) + "; ${height.forLog}"
             }
         }
+    }
 
     /** How far the scroll to target reaches in a list listPx high, and the padding it gets, for [scroll]'s log. */
     private fun reach(
