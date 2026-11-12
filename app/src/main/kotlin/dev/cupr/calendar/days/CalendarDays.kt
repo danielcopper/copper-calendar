@@ -22,6 +22,9 @@ val LocalDate.longName: String get() = format(LONG_NAME)
 
 private val LONG_NAME = DateTimeFormatter.ofPattern("EEEE, d. MMMM", Locale.GERMAN)
 
+/** A time of day as the dashboard writes it, "09:30": an entry's times in the week, the sign-in screen's fetch time. */
+val CLOCK_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
 /**
  * The dashboard's rule `calendar_days` as the month and the week share it
  * (the dashboard's file is named in [dev.cupr.calendar.render.PhoneMonth]):

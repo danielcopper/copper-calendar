@@ -31,6 +31,31 @@
     <!-- A tap's target cannot be opened (D25): no app handles a target the Home Assistant app would open; any other case, also one this app may not start. -->
     <string name="target_home_assistant_missing">Home-Assistant-App nicht gefunden</string>
     <string name="target_not_openable">Ziel lässt sich nicht öffnen</string>
+    <!-- The sign-in screen (D43, D46, D47): the address field, the button that opens Home Assistant's login, why a sign-in did not come about, and the status lines. -->
+    <string name="sign_in_address">Home-Assistant-Adresse</string>
+    <string name="sign_in_address_example" translatable="false">https://….ui.nabu.casa</string>
+    <string name="sign_in_address_invalid">Bitte die https-Adresse von Home Assistant eingeben</string>
+    <string name="sign_in">Mit Home Assistant anmelden</string>
+    <string name="sign_in_failed">Anmeldung fehlgeschlagen – bitte noch einmal versuchen</string>
+    <string name="sign_in_unreachable">Home Assistant nicht erreichbar – Adresse und Verbindung prüfen</string>
+    <string name="sign_in_rejected">Home Assistant hat die Anmeldung abgelehnt – bitte neu anmelden</string>
+    <string name="sign_in_unreadable">Gespeicherte Anmeldung auf diesem Handy nicht lesbar – bitte neu anmelden</string>
+    <string name="sign_in_no_fetch">Angemeldet, noch kein Abruf</string>
+    <!-- The user's name and the last fetch's time, today; on another day also its date ("11. November"). -->
+    <string name="sign_in_status_today">Angemeldet als %1$s, letzter Abruf um %2$s</string>
+    <string name="sign_in_status_day">Angemeldet als %1$s, letzter Abruf am %3$s um %2$s</string>
+    <!-- The last fetch failed: its cause in plain words, and its time; on another day also its date. -->
+    <string name="fetch_failed_today">Letzter Abruf fehlgeschlagen um %2$s: %1$s</string>
+    <string name="fetch_failed_day">Letzter Abruf fehlgeschlagen am %3$s um %2$s: %1$s</string>
+    <!-- The failed fetch's cause in plain words (D46). -->
+    <string name="fetch_cause_unreachable">Home Assistant nicht erreichbar</string>
+    <string name="fetch_cause_no_network">kein Netz</string>
+    <string name="fetch_cause_timeout">Zeitüberschreitung</string>
+    <string name="fetch_cause_sensor_missing">Sensor nicht gefunden</string>
+    <string name="fetch_cause_refused">Anmeldung abgelehnt</string>
+    <string name="fetch_cause_unexpected">unerwartete Antwort</string>
+    <string name="fetch_cause_phone">Fehler auf diesem Handy</string>
+    <string name="sign_out">Abmelden</string>
     <!-- The month widget's weekday heads, Monday to Sunday. -->
     <string-array name="weekday_heads">
         <item>Mo</item>
