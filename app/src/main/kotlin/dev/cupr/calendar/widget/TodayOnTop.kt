@@ -119,7 +119,7 @@ internal object TodayOnTop {
      * context's fading edge length, for the rows measured: the list is the
      * widget's height less its card and the measured header, at the measured
      * scale ([DrawnWidget.listPx]). Without a height, it scrolls today's row
-     * only into view, without padding (D27). When no row is today (-1), the
+     * only into view, without padding (D27). When no row is today, the
      * list does not scroll and the log warns. Each case sets the list's
      * padding, as an earlier update may have set one: setViewPadding sets all
      * four sides, and the list has no padding but this one. Returns where it
