@@ -20,4 +20,4 @@ For now the widgets show sample data for November 2026.
 
 ## License
 
-MIT, see [LICENSE](LICENSE). The bundled Roboto font and Material Design Icons keep their own licenses, in `app/src/main/assets/licenses/`; the libraries the app links (AndroidX, AndroidSVG, Kotlin) and the Gradle wrapper keep theirs.
+MIT, see [LICENSE](LICENSE). The bundled Roboto font and Material Design Icons keep their own licenses, in `app/src/main/assets/licenses/`; the libraries the app links (AndroidX, AndroidSVG, Kotlin and kotlinx, OkHttp and Okio, Guava's ListenableFuture, JSpecify, JetBrains' annotations) and the Gradle wrapper keep theirs.
