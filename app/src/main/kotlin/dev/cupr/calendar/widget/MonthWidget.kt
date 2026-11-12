@@ -33,8 +33,10 @@ object MonthWidget {
         manager: AppWidgetManager,
         id: Int,
     ) {
-        val width = DrawnWidget.widthDp(manager.getAppWidgetOptions(id), TAG, id)
-        val drawn = draw(context, width, id, BitmapLimit.limitBytes(context, TAG, id))
+        val options = manager.getAppWidgetOptions(id)
+        val width = DrawnWidget.widthDp(options, TAG, id)
+        val height = WidgetHeight.of(options, TAG, id)
+        val drawn = draw(context, width, id, BitmapLimit.limitBytes(context, TAG, id), height)
         DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
     }
 
@@ -53,12 +55,16 @@ object MonthWidget {
      * The widget at widthDp and the bytes of its bitmaps. The month's cells
      * show at most two entries each, so it leaves nothing out for the limit;
      * the log warns when its weeks pass it, and [DrawnWidget.push] falls back.
+     * Its list scrolls so the current week stands on top in a widget of
+     * height, or to its end when the weeks from the current one on fit, and
+     * only into view without a height ([TodayOnTop.scroll], D27).
      */
     internal fun draw(
         context: Context,
         widthDp: Int,
         id: Int,
         limit: Long,
+        height: WidgetHeight? = null,
     ): Drawn {
         val today = LocalDate.now(SampleData.clock)
         val view = MonthLayout.build(YearMonth.from(today), SampleData.entries, today)
@@ -70,10 +76,12 @@ object MonthWidget {
         val kept = Kept()
         val views = RemoteViews(context.packageName, R.layout.widget_month)
         val title = ChromeRenderer.title(view.month)
-        DrawnWidget.fixedParts(context, views, kept, title, today, scale) { chrome, palette ->
-            chrome.header(view.month, widthPx, scale, palette)
-        }
-        val needed = kept.bytes + view.weeks.sumOf { BitmapLimit.bytes(widthPx, rows.heightPx(it, scale)) }
+        val headerPx =
+            DrawnWidget.fixedParts(context, views, kept, title, today, scale) { chrome, palette ->
+                chrome.header(view.month, widthPx, scale, palette)
+            }
+        val heightsPx = view.weeks.map { rows.heightPx(it, scale) }
+        val needed = kept.bytes + heightsPx.sumOf { BitmapLimit.bytes(widthPx, it) }
         BitmapLimit.warnOver(TAG, id, needed = needed, limit = limit, left = 0, after = needed)
         DrawnWidget.warnMarks(
             TAG,
@@ -90,8 +98,8 @@ object MonthWidget {
                     .toEpochDay() to DrawnWidget.weekRow(context, week, light, dark)
             }
         DrawnWidget.list(context, views, items)
-        views.setScrollPosition(R.id.list, view.todayWeek)
-        DrawnWidget.logDrawn(TAG, id, kept, widthPx, limit)
+        val scrolled = TodayOnTop.scroll(context, views, scale, heightsPx, view.todayWeek, height, headerPx, TAG, id)
+        DrawnWidget.logDrawn(TAG, id, kept, widthPx, limit, scrolled)
         return kept.drawn(views, limit)
     }
 }

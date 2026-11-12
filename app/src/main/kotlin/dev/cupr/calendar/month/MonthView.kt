@@ -24,8 +24,8 @@ data class MonthView internal constructor(
     val month: YearMonth,
     val weeks: List<Week>,
 ) {
-    /** The row of the week holding today, else the first. */
-    val todayWeek: Int get() = weeks.indexOfFirst { week -> week.days.any { it.today } }.coerceAtLeast(0)
+    /** The row of the week holding today; -1 when none does, which the month widget then does not scroll to. */
+    val todayWeek: Int get() = weeks.indexOfFirst { week -> week.days.any { it.today } }
 }
 
 @ConsistentCopyVisibility

@@ -14,6 +14,7 @@ import dev.cupr.calendar.days.longName
 import dev.cupr.calendar.model.Palette
 import dev.cupr.calendar.month.Week
 import dev.cupr.calendar.render.ChromeRenderer
+import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.sample.SampleData
@@ -35,6 +36,50 @@ internal class Kept {
         views: RemoteViews,
         limit: Long,
     ) = Drawn(views, bytes, limit)
+}
+
+/**
+ * The month's or "Woche"'s height as the launcher reports it: its greatest
+ * height in dp, its height in portrait (see [DrawnWidget.widthDp]), and its
+ * least height in dp when the launcher reports one, which the log names.
+ */
+internal class WidgetHeight(
+    val dp: Int,
+    val leastDp: Int?,
+) {
+    init {
+        require(dp > 0) { "A widget's height is above 0 dp, not $dp" }
+        require(leastDp == null || leastDp > 0) { "A widget's least height is above 0 dp, not $leastDp" }
+    }
+
+    /** The height, the option it came from, and the least height beside it, for the log. */
+    val forLog: String
+        get() {
+            val least = leastDp?.let { "$it dp least" } ?: "no least height"
+            return "$dp dp (${AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT}, $least)"
+        }
+
+    companion object {
+        /**
+         * The height the launcher reports in options; null when it reports no
+         * greatest height, which the log says: the list then scrolls today
+         * only into view (D27).
+         */
+        fun of(
+            options: Bundle,
+            tag: String,
+            id: Int,
+        ): WidgetHeight? {
+            val key = AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT
+            val dp = options.getInt(key).takeIf { it > 0 }
+            if (dp == null) {
+                Log.w(tag, "Widget $id: the launcher reports no $key, so its list scrolls today only into view")
+                return null
+            }
+            val least = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT).takeIf { it > 0 }
+            return WidgetHeight(dp, least)
+        }
+    }
 }
 
 /** A widget's views, the bytes of the bitmaps they hold as the app counts them, and the limit it drew them for. */
@@ -72,6 +117,19 @@ internal object DrawnWidget {
         id: Int,
     ): Int = option(options, AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, DEFAULT_WIDTH_DP, tag, id)
 
+    /**
+     * The height in px of a widget's list below a header headerPx high, in a
+     * widget heightDp high: the widget less the card's border and padding at
+     * the top and bottom, and less the header. "+" stands over the list and
+     * takes none of it. "Woche quer" passes its least height
+     * ([WeekColumnsWidget.update]), the month and "Woche" their greatest (D27).
+     */
+    fun listPx(
+        scale: Scale,
+        heightDp: Int,
+        headerPx: Int,
+    ): Float = scale.px(heightDp - 2 * (PhoneMonth.CARD_BORDER + PhoneMonth.CARD_END)) - headerPx
+
     /** An option the launcher reports in dp, or default when it reports none, which the log says. */
     fun option(
         options: Bundle,
@@ -97,7 +155,8 @@ internal object DrawnWidget {
     /**
      * The header and "+": the header drawn light and dark by header with the
      * renderer of the fixed parts, named by description and opening the
-     * calendar page; "+" opening a new entry on today.
+     * calendar page; "+" opening a new entry on today. Returns the drawn
+     * header's height in px, which the list's height leaves out.
      */
     fun fixedParts(
         context: Context,
@@ -107,15 +166,17 @@ internal object DrawnWidget {
         today: LocalDate,
         scale: Scale,
         header: (ChromeRenderer, Palette) -> Bitmap,
-    ) {
+    ): Int {
         val chrome = chrome(context)
-        views.setImageViewBitmap(R.id.header_light, kept.keep(header(chrome, SampleData.light)))
+        val light = kept.keep(header(chrome, SampleData.light))
+        views.setImageViewBitmap(R.id.header_light, light)
         views.setImageViewBitmap(R.id.header_dark, kept.keep(header(chrome, SampleData.dark)))
         views.setContentDescription(R.id.header, description)
         views.setOnClickPendingIntent(R.id.header, Taps.pendingIntent(context, Tap.Header))
         views.setImageViewBitmap(R.id.fab_light, kept.keep(chrome.fab(scale, SampleData.light)))
         views.setImageViewBitmap(R.id.fab_dark, kept.keep(chrome.fab(scale, SampleData.dark)))
         views.setOnClickPendingIntent(R.id.fab, Taps.pendingIntent(context, Tap.New(today)))
+        return light.height
     }
 
     /** The list's rows, each by its stable id, and the template their taps fill in. */
@@ -227,7 +288,8 @@ internal object DrawnWidget {
  * the drawing throws, the log says so and the widget shows the plain text
  * [R.string.widget_failed], which opens the calendar page; the others are
  * updated all the same. No other exception is caught, and a plain text the
- * system refuses here is not caught again: its exception propagates (D40).
+ * system refuses here is not caught again: its exception propagates, and the
+ * widgets after it in that update are not updated (D40).
  */
 abstract class DrawnWidgetProvider : AppWidgetProvider() {
     /** The log's tag. */

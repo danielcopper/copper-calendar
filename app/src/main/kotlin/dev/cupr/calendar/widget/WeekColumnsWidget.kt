@@ -102,12 +102,10 @@ object WeekColumnsWidget {
         val title = context.getString(days.title)
         val range = WeekLayout.range(dates.first(), dates.last())
         val views = RemoteViews(context.packageName, R.layout.widget_week_columns)
-        var headerPx = 0
-        DrawnWidget.fixedParts(context, views, kept, "$title, $range", today, scale) { chrome, palette ->
-            chrome
-                .weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette)
-                .also { headerPx = it.height }
-        }
+        val headerPx =
+            DrawnWidget.fixedParts(context, views, kept, "$title, $range", today, scale) { chrome, palette ->
+                chrome.weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette)
+            }
         val full = MonthLayout.week(dates, entries, today)
         // Room for the fade's blank room counted in, as a row that has to be capped is taller than its list.
         val fadeDp = FADE_DP.toFloat()
@@ -152,9 +150,8 @@ object WeekColumnsWidget {
     }
 
     /**
-     * Whether the drawn row is taller than the list shows at heightDp: the
-     * widget less the card's border and padding at the top and bottom, and
-     * less the header, headerPx high.
+     * Whether the drawn row is taller than the list shows at heightDp below
+     * the header, headerPx high ([DrawnWidget.listPx]).
      */
     internal fun overflows(
         rows: WeekRowRenderer,
@@ -162,8 +159,5 @@ object WeekColumnsWidget {
         scale: Scale,
         heightDp: Int,
         headerPx: Int,
-    ): Boolean {
-        val listPx = scale.px(heightDp - 2 * (PhoneMonth.CARD_BORDER + PhoneMonth.CARD_END)) - headerPx
-        return rows.heightPx(week, scale) > listPx
-    }
+    ): Boolean = rows.heightPx(week, scale) > DrawnWidget.listPx(scale, heightDp, headerPx)
 }

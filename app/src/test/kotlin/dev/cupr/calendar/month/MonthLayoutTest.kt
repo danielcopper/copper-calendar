@@ -396,6 +396,12 @@ class MonthLayoutTest {
         assertThrows(IllegalArgumentException::class.java) { day.copy(more = -1) }
     }
 
+    @Test
+    fun `a month without today has no week of today`() {
+        val view = MonthLayout.build(SampleData.month, SampleData.entries, SampleData.month.plusMonths(1).atDay(15))
+        assertEquals(-1, view.todayWeek)
+    }
+
     // The sample month: its weeks, bars and cells.
 
     @Test

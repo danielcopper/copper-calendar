@@ -227,12 +227,19 @@ class DrawnWidgetTest {
     }
 
     @Test
+    fun `a widget's height is above 0, and so is its least height when it has one`() {
+        assertThrows(IllegalArgumentException::class.java) { WidgetHeight(0, null) }
+        assertThrows(IllegalArgumentException::class.java) { WidgetHeight(1, 0) }
+        assertEquals("1 dp (appWidgetMaxHeight, 1 dp least)", WidgetHeight(1, 1).forLog)
+    }
+
+    @Test
     fun `a drawing exactly at the limit does not warn, one byte over does`() {
         BitmapLimit.warnOver("Test", 1, needed = 10, limit = 10, left = 0, after = 10)
         assertTrue(ShadowLog.getLogsForTag("Test").isEmpty())
         BitmapLimit.warnOver("Test", 1, needed = 11, limit = 10, left = 1, after = 9)
         assertEquals(
-            listOf("Widget 1: its bitmaps take 11 bytes, over the limit of 10; 1 entries left out"),
+            listOf("Widget 1: its bitmaps take 11 bytes, over the limit of 10; 1 entry left out"),
             ShadowLog.getLogsForTag("Test").map { it.msg },
         )
     }

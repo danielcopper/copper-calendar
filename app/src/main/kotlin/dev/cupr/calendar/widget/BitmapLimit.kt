@@ -96,7 +96,8 @@ internal object BitmapLimit {
     ) {
         if (needed <= limit) return
         val still = if (after > limit) ", still ${after - limit} bytes over" else ""
-        Log.w(tag, "Widget $id: its bitmaps take $needed bytes, over the limit of $limit; $left entries left out$still")
+        val entries = if (left == 1) "1 entry" else "$left entries"
+        Log.w(tag, "Widget $id: its bitmaps take $needed bytes, over the limit of $limit; $entries left out$still")
     }
 
     /** The bytes of a bitmap widthPx × heightPx, light and dark. */
