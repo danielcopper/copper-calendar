@@ -115,10 +115,9 @@ class ChromeRenderer(
             end - scale.px(TITLE_GAP),
             title,
         )
-        if (note == null) {
-            icons.path(CHEVRON_ICON)?.let {
-                canvas.drawIcon(it, widthPx - chevron, rowTop + (rowHeight - chevron) / 2, chevron, palette.tertiaryText)
-            }
+        val chevronIcon = if (note == null) icons.path(CHEVRON_ICON) else null
+        chevronIcon?.let {
+            canvas.drawIcon(it, widthPx - chevron, rowTop + (rowHeight - chevron) / 2, chevron, palette.tertiaryText)
         }
 
         if (heads != null) {

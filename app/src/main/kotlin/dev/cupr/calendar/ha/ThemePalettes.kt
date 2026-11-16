@@ -108,16 +108,14 @@ object ThemePalettes {
     internal fun parseColor(text: String): Int? = CssColors.parse(text) ?: rgb(text.trim())
 
     @ColorInt
-    private fun rgb(text: String): Int? {
-        val match = RGB.matchEntire(text) ?: return null
-        val (red, green, blue) = match.groupValues.subList(1, ALPHA).map { it.toInt() }
-        val opacity = match.groupValues[ALPHA].ifEmpty { null }?.toDouble() ?: 1.0
-        return when {
-            listOf(red, green, blue).any { it > MAX } -> null
-            opacity > 1.0 -> null
-            else -> ((opacity * MAX).roundToInt() shl ALPHA_SHIFT) or (red shl RED_SHIFT) or (green shl GREEN_SHIFT) or blue
+    private fun rgb(text: String): Int? =
+        RGB.matchEntire(text)?.groupValues?.let { groups ->
+            val (red, green, blue) = groups.subList(1, ALPHA).map { it.toInt() }
+            val opacity = groups[ALPHA].ifEmpty { null }?.toDouble() ?: 1.0
+            val alpha = (opacity * MAX).roundToInt()
+            ((alpha shl ALPHA_SHIFT) or (red shl RED_SHIFT) or (green shl GREEN_SHIFT) or blue)
+                .takeIf { listOf(red, green, blue).all { it <= MAX } && opacity <= 1.0 }
         }
-    }
 
     private class UnreadableThemeException(
         message: String,

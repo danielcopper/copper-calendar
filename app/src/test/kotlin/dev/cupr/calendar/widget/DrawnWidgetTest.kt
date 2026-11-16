@@ -87,7 +87,8 @@ class DrawnWidgetTest {
     fun `the sample's widgets stay within the phone's limit and leave nothing out`() {
         val limit = BitmapLimit.limitBytes(application, "Test", 1)
         assertTrue(WeekWidget.draw(application, 276, WeekDays.MONDAY_TO_SUNDAY, 1, limit, sample).bytes <= limit)
-        assertTrue(WeekColumnsWidget.draw(application, 276, 220, WeekDays.MONDAY_TO_SUNDAY, 2, limit, sample).bytes <= limit)
+        val columns = WeekColumnsWidget.draw(application, 276, 220, WeekDays.MONDAY_TO_SUNDAY, 2, limit, sample)
+        assertTrue(columns.bytes <= limit)
         assertTrue(MonthWidget.draw(application, 276, 3, limit, sample).bytes <= limit)
         for (tag in listOf("WeekWidget", "WeekColumnsWidget", "MonthWidget")) {
             assertTrue(tag, ShadowLog.getLogsForTag(tag).none { it.type == Log.WARN })

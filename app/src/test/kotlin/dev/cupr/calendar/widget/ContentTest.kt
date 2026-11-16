@@ -32,7 +32,10 @@ class ContentTest {
     private fun json(text: String): JsonObject = Json.parseToJsonElement(text).jsonObject
 
     private val entry =
-        json("""{"start":"2026-11-12","end":"2026-11-13","all_day":true,"title":"Anna","calendar":"calendar.contact_birthdays"}""")
+        json(
+            """{"start":"2026-11-12","end":"2026-11-13","all_day":true,"title":"Anna",""" +
+                """"calendar":"calendar.contact_birthdays"}""",
+        )
 
     private fun snapshot(
         fetchedAt: LocalDateTime = now.minusMinutes(5),
@@ -87,7 +90,7 @@ class ContentTest {
         val calendar = calendar(snapshot = snapshot(theme = json("""{"modes":3}""")))
         assertEquals(Palettes.BUILT_IN, calendar.palettes)
         assertEquals(
-            "The snapshot's theme cannot be read (modes is not an object); drawing with the built-in colours",
+            "The snapshot's theme cannot be read (modes is not an object); drawing with the built-in ones",
             ShadowLog.getLogsForTag("Widgets").single().msg,
         )
     }

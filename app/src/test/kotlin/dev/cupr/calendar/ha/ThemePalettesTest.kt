@@ -42,7 +42,11 @@ class ThemePalettesTest {
 
     @Test
     fun `a mode's own variable wins over the theme's top level, which stands in where the mode has none`() {
-        val read = readable("""{"primary-color":"#000001","divider-color":"#000002","modes":{"dark":{"primary-color":"red"}}}""")
+        val read =
+            readable(
+                """{"primary-color":"#000001","divider-color":"#000002",""" +
+                    """"modes":{"dark":{"primary-color":"red"}}}""",
+            )
 
         assertEquals(0xFFFF0000.toInt(), read.palettes.dark.accent)
         assertEquals(0xFF000001.toInt(), read.palettes.light.accent)
@@ -77,7 +81,10 @@ class ThemePalettesTest {
 
     @Test
     fun `modes or a mode that is no object makes the theme unreadable`() {
-        assertEquals(ThemePalettes.Read.Unreadable("modes is not an object"), ThemePalettes.read(theme("""{"modes":"x"}""")))
+        assertEquals(
+            ThemePalettes.Read.Unreadable("modes is not an object"),
+            ThemePalettes.read(theme("""{"modes":"x"}""")),
+        )
         assertEquals(
             ThemePalettes.Read.Unreadable("modes.dark is not an object"),
             ThemePalettes.read(theme("""{"modes":{"dark":[]}}""")),

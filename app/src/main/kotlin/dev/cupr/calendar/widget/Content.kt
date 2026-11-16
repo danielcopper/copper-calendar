@@ -68,9 +68,20 @@ sealed interface Content {
             state: Account.State,
             snapshot: Snapshot?,
             clock: Clock,
-        ): Content {
-            if (snapshot == null && state == Account.State.SIGNED_IN) return NoData(R.string.widget_no_data)
-            if (snapshot == null || state == Account.State.SIGNED_OUT) return NoData(R.string.widget_signed_out)
+        ): Content =
+            when {
+                snapshot == null && state == Account.State.SIGNED_IN -> NoData(R.string.widget_no_data)
+                snapshot == null || state == Account.State.SIGNED_OUT -> NoData(R.string.widget_signed_out)
+                else -> calendar(context, state, snapshot, clock)
+            }
+
+        /** The snapshot's calendar, with the notice for state at clock's time. */
+        private fun calendar(
+            context: Context,
+            state: Account.State,
+            snapshot: Snapshot,
+            clock: Clock,
+        ): Calendar {
             val parsed = snapshot.parse(clock.zone)
             parsed.problems.forEach { Log.w(TAG, it) }
             val notice =
@@ -122,7 +133,7 @@ sealed interface Content {
                 }
 
                 is ThemePalettes.Read.Unreadable -> {
-                    Log.w(TAG, "The snapshot's theme cannot be read (${read.reason}); drawing with the built-in colours")
+                    Log.w(TAG, "The snapshot's theme cannot be read (${read.reason}); drawing with the built-in ones")
                     Palettes.BUILT_IN
                 }
             }
@@ -138,7 +149,10 @@ sealed interface Notice {
         override val text: String,
     ) : Notice
 
-    /** The sign-in is no longer usable: "Neu anmelden" in the accent colour; the header opens the sign-in screen (D52). */
+    /**
+     * The sign-in is no longer usable: "Neu anmelden" in the accent colour;
+     * the header opens the sign-in screen (D52).
+     */
     data class SignInAgain(
         override val text: String,
     ) : Notice

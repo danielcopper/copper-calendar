@@ -127,7 +127,8 @@ class FetcherTest {
         fetcher.fetch()
 
         assertNull(snapshots.read()!!.theme)
-        assertTrue(logs, logs.contains("The theme cannot be read (modes is not an object); keeping the built-in colours"))
+        val expected = "The theme cannot be read (modes is not an object); keeping the built-in colours"
+        assertTrue(logs, logs.contains(expected))
     }
 
     @Test

@@ -206,7 +206,12 @@ class WidgetsTest {
         val id = widgets().first()
         signedInWithSnapshot()
         Midnight.schedule(context, ExistingWorkPolicy.REPLACE)
-        val first = work.getWorkInfosForUniqueWork(Midnight.NAME).get().single().id
+        val first =
+            work
+                .getWorkInfosForUniqueWork(Midnight.NAME)
+                .get()
+                .single()
+                .id
         assertTrue(plainText(id) != null)
 
         checkNotNull(WorkManagerTestInitHelper.getTestDriver(context)).setInitialDelayMet(first)

@@ -320,7 +320,9 @@ class WeekWidgetTest {
         assertTrue("${list.paddingBottom}", list.paddingBottom > 0)
         val height = WidgetHeight(WidgetHost.HEIGHT_DP, null)
         WidgetHost.reapplied(application, list.rootView) { context, width ->
-            WeekWidget.draw(context, width, WeekDays.MONDAY_TO_SUNDAY, 1, Long.MAX_VALUE, SampleData.calendar(), height).views
+            WeekWidget
+                .draw(context, width, WeekDays.MONDAY_TO_SUNDAY, 1, Long.MAX_VALUE, SampleData.calendar(), height)
+                .views
         }
         assertEquals(6, WidgetHost.scrollToTarget(list))
         assertEquals(0, list.paddingBottom)

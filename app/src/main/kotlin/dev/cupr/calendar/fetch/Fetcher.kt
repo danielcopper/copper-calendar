@@ -277,7 +277,12 @@ class Fetcher(
         parsed.problems.forEach { Log.w(TAG, it) }
         return try {
             snapshots.write(
-                Snapshot(clock.millis(), userAndTheme.user, parsed.read.map { it.json }, checked(userAndTheme.theme)),
+                Snapshot(
+                    clock.millis(),
+                    userAndTheme.user,
+                    parsed.read.map { it.json },
+                    themeToKeep(userAndTheme.theme) { snapshots.read()?.theme },
+                ),
             )
             Outcome.Fetched(parsed.read.size, entries.size - parsed.read.size)
         } catch (e: IOException) {
@@ -285,38 +290,7 @@ class Fetcher(
         }
     }
 
-    /**
-     * The theme to keep in the new snapshot (D17): the one Home Assistant
-     * sent when the app can read it, the variables it lacks logged; none when
-     * Home Assistant has no theme of that name; and when it cannot be read,
-     * the last snapshot's, so a bad theme never replaces a good one, or none.
-     * Without a theme the widgets draw with the built-in palettes.
-     */
-    private fun checked(theme: JsonObject?): JsonObject? {
-        if (theme == null) {
-            Log.w(TAG, "Home Assistant has no theme \"${HaClient.THEME}\"; the widgets draw with the built-in colours")
-            return null
-        }
-        return when (val read = ThemePalettes.read(theme)) {
-            is ThemePalettes.Read.Readable -> {
-                if (read.missing.isNotEmpty()) {
-                    Log.w(TAG, "The theme lacks ${read.missing.joinToString()}; the built-in colours stand in for them")
-                }
-                theme
-            }
-
-            is ThemePalettes.Read.Unreadable -> {
-                val last = snapshots.read()?.theme
-                val kept = if (last == null) "the built-in colours" else "the last snapshot's theme"
-                Log.w(TAG, "The theme cannot be read (${read.reason}); keeping $kept")
-                last
-            }
-        }
-    }
-
     private companion object {
-        const val TAG = "Fetch"
-
         /** Home Assistant's refresh tokens expire after 90 days unused (`auth/const.py` at Core 2026.11.1). */
         const val UNTIL_UNUSED = "it stays valid there until it goes 90 days unused"
 
@@ -328,6 +302,8 @@ class Fetcher(
         val LOCK = Any()
     }
 }
+
+private const val TAG = "Fetch"
 
 /**
  * The screen's cause for what failed (D46): Home Assistant out of reach
@@ -344,3 +320,35 @@ private fun causeOf(
         FailureKind.REFUSED -> FetchCause.REFUSED
         FailureKind.UNEXPECTED -> FetchCause.UNEXPECTED
     }
+
+/**
+ * The theme to keep in the new snapshot (D17, D48): the one Home Assistant
+ * sent when the app can read it, the variables it lacks logged; none when
+ * Home Assistant has no theme of that name; and when it cannot be read, the
+ * last snapshot's ([last]), so a bad theme never replaces a good one, or
+ * none. Without a theme the widgets draw with the built-in palettes.
+ */
+private fun themeToKeep(
+    theme: JsonObject?,
+    last: () -> JsonObject?,
+): JsonObject? {
+    if (theme == null) {
+        Log.w(TAG, "Home Assistant has no theme \"${HaClient.THEME}\"; the widgets draw with the built-in colours")
+        return null
+    }
+    return when (val read = ThemePalettes.read(theme)) {
+        is ThemePalettes.Read.Readable -> {
+            if (read.missing.isNotEmpty()) {
+                Log.w(TAG, "The theme lacks ${read.missing.joinToString()}; the built-in colours stand in for them")
+            }
+            theme
+        }
+
+        is ThemePalettes.Read.Unreadable -> {
+            val kept = last()
+            val what = if (kept == null) "the built-in colours" else "the last snapshot's theme"
+            Log.w(TAG, "The theme cannot be read (${read.reason}); keeping $what")
+            kept
+        }
+    }
+}
