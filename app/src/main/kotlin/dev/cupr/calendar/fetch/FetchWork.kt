@@ -12,6 +12,7 @@ import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.app.runThen
 import dev.cupr.calendar.widget.Widgets
 import java.util.concurrent.TimeUnit
 
@@ -29,9 +30,7 @@ class FetchWorker(
 ) : Worker(context, params) {
     override fun doWork(): Result {
         val outcome =
-            try {
-                Services.fetcher(applicationContext).fetch { FetchWork.stopPeriodic(applicationContext) }
-            } finally {
+            runThen({ Services.fetcher(applicationContext).fetch { FetchWork.stopPeriodic(applicationContext) } }) {
                 Widgets.update(applicationContext)
             }
         return if (outcome is Fetcher.Outcome.Failed) Result.failure() else Result.success()

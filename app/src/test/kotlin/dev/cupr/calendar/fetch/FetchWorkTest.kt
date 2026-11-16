@@ -121,6 +121,22 @@ class FetchWorkTest {
     }
 
     @Test
+    fun `a fetch that throws keeps its exception when the widgets' update throws too`() {
+        val content = DrawnWidgetProvider.content
+        DrawnWidgetProvider.content = { throw IllegalArgumentException("the widgets cannot be read") }
+        Services.cipher = { throw IllegalStateException("no cipher") }
+        val thrown =
+            try {
+                assertThrows(IllegalStateException::class.java) { work() }
+            } finally {
+                DrawnWidgetProvider.content = content
+            }
+
+        assertEquals("no cipher", thrown.message)
+        assertEquals(listOf("the widgets cannot be read"), thrown.suppressed.map { it.message })
+    }
+
+    @Test
     fun `a failed fetch fails the work and keeps the periodic fetch`() {
         signIn()
         FetchWork.start(context)

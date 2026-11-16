@@ -81,13 +81,7 @@ object Services {
         code: AuthorizationCode,
     ): Boolean {
         val signedIn = fetcher(context).signIn(request, code) == Fetcher.SignIn.SignedIn
-        if (signedIn) {
-            try {
-                Widgets.update(context)
-            } finally {
-                FetchWork.start(context)
-            }
-        }
+        if (signedIn) runThen({ Widgets.update(context) }) { FetchWork.start(context) }
         return signedIn
     }
 
