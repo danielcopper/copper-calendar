@@ -20,12 +20,14 @@ import dev.cupr.calendar.ha.SignInRequest
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.AesGcmCipher
 import dev.cupr.calendar.store.TokenCipher
+import dev.cupr.calendar.widget.DrawnWidgetProvider
 import dev.cupr.calendar.widget.Midnight
 import mockwebserver3.MockResponse
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -201,6 +203,22 @@ class FetchWorkTest {
 
         home.token = { FakeHomeAssistant.json("""{"refresh_token":"refresh-1","token_type":"Bearer"}""") }
         assertTrue(Services.signIn(context, SignInRequest.start(home.address), AuthorizationCode("code-1")))
+        assertEquals(listOf(WorkInfo.State.ENQUEUED, WorkInfo.State.ENQUEUED), scheduled)
+    }
+
+    @Test
+    fun `a sign-in whose widget update throws still schedules the fetches`() {
+        home.token = { FakeHomeAssistant.json("""{"refresh_token":"refresh-1","token_type":"Bearer"}""") }
+        val content = DrawnWidgetProvider.content
+        DrawnWidgetProvider.content = { throw IllegalStateException("the widgets cannot be read") }
+        try {
+            assertThrows(IllegalStateException::class.java) {
+                Services.signIn(context, SignInRequest.start(home.address), AuthorizationCode("code-1"))
+            }
+        } finally {
+            DrawnWidgetProvider.content = content
+        }
+
         assertEquals(listOf(WorkInfo.State.ENQUEUED, WorkInfo.State.ENQUEUED), scheduled)
     }
 

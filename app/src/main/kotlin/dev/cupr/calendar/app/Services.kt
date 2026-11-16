@@ -64,8 +64,8 @@ object Services {
 
     /**
      * Keeps a new sign-in, updates the widgets, which have no snapshot to
-     * draw until the first fetch, and fetches at once (D46, D54); true when
-     * signed in.
+     * draw until the first fetch, and fetches at once (D46, D54), also when
+     * the update throws; true when signed in.
      */
     fun signIn(
         context: Context,
@@ -74,8 +74,11 @@ object Services {
     ): Boolean {
         val signedIn = fetcher(context).signIn(request, code) == Fetcher.SignIn.SignedIn
         if (signedIn) {
-            Widgets.update(context)
-            FetchWork.start(context)
+            try {
+                Widgets.update(context)
+            } finally {
+                FetchWork.start(context)
+            }
         }
         return signedIn
     }
