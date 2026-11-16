@@ -4,7 +4,6 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.util.Log
 import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.Worker
@@ -68,16 +67,14 @@ object Midnight {
     internal fun schedule(
         context: Context,
         policy: ExistingWorkPolicy,
-        clock: Clock = Clock.systemDefaultZone(),
     ) {
-        WorkManager.getInstance(context).enqueueUniqueWork(NAME, policy, request(clock))
+        val delay = untilMidnight(Clock.systemDefaultZone())
+        val request =
+            OneTimeWorkRequestBuilder<MidnightWorker>()
+                .setInitialDelay(delay.toMillis(), TimeUnit.MILLISECONDS)
+                .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(NAME, policy, request)
     }
-
-    /** The job, due at the next midnight after clock's now. */
-    internal fun request(clock: Clock): OneTimeWorkRequest =
-        OneTimeWorkRequestBuilder<MidnightWorker>()
-            .setInitialDelay(untilMidnight(clock).toMillis(), TimeUnit.MILLISECONDS)
-            .build()
 
     /** From clock's now to the start of the next day in its zone. */
     internal fun untilMidnight(clock: Clock): Duration {

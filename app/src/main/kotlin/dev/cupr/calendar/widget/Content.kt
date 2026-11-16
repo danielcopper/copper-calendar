@@ -47,10 +47,8 @@ sealed interface Content {
         val STALE_AFTER: Duration = Duration.ofHours(1)
 
         /** What the widgets show now, from the sign-in and the snapshot the app keeps. */
-        fun read(
-            context: Context,
-            clock: Clock = Clock.systemDefaultZone(),
-        ): Content = of(context, Services.account(context).state, Services.snapshots(context).read(), clock)
+        fun read(context: Context): Content =
+            of(context, Services.account(context).state, Services.snapshots(context).read(), Clock.systemDefaultZone())
 
         /**
          * What the widgets show for state and snapshot at clock's time: signed
