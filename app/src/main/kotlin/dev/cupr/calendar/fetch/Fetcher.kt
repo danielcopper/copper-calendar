@@ -138,33 +138,6 @@ class Fetcher(
             outcome
         }
 
-    private fun log(outcome: Outcome) {
-        when (outcome) {
-            is Outcome.Failed -> {
-                Log.w(TAG, "Fetch failed: ${outcome.reason}")
-            }
-
-            is Outcome.Fetched -> {
-                Log.i(TAG, "Fetched ${outcome.entries} entries, ${outcome.leftOut} left out")
-            }
-
-            Outcome.Rejected -> {
-                Log.w(TAG, "Home Assistant refused the refresh token; signing in again is needed")
-            }
-
-            Outcome.Unreadable -> {
-                Log.w(
-                    TAG,
-                    "The stored sign-in cannot be read on this phone; signing in again is needed",
-                )
-            }
-
-            Outcome.NotSignedIn -> {
-                Log.i(TAG, "Not signed in, nothing fetched")
-            }
-        }
-    }
-
     /**
      * Signs out ("Abmelden", D47): asks Home Assistant to end the refresh
      * token, then forgets the token and deletes the snapshot, the last
@@ -305,6 +278,33 @@ class Fetcher(
 }
 
 private const val TAG = "Fetch"
+
+private fun log(outcome: Fetcher.Outcome) {
+    when (outcome) {
+        is Fetcher.Outcome.Failed -> {
+            Log.w(TAG, "Fetch failed: ${outcome.reason}")
+        }
+
+        is Fetcher.Outcome.Fetched -> {
+            Log.i(TAG, "Fetched ${outcome.entries} entries, ${outcome.leftOut} left out")
+        }
+
+        Fetcher.Outcome.Rejected -> {
+            Log.w(TAG, "Home Assistant refused the refresh token; signing in again is needed")
+        }
+
+        Fetcher.Outcome.Unreadable -> {
+            Log.w(
+                TAG,
+                "The stored sign-in cannot be read on this phone; signing in again is needed",
+            )
+        }
+
+        Fetcher.Outcome.NotSignedIn -> {
+            Log.i(TAG, "Not signed in, nothing fetched")
+        }
+    }
+}
 
 /**
  * The screen's cause for what failed (D46): Home Assistant out of reach
