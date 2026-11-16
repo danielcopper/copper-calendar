@@ -164,7 +164,7 @@ class FetcherTest {
     }
 
     @Test
-    fun `a theme the app cannot read is kept for the screen with when the colours kept were fetched`() {
+    fun `a theme the app cannot read is noted for the screen with when the colours kept were fetched`() {
         signIn()
         entries(good)
         snapshots.write(Snapshot(1_000, "Daniel", emptyList(), readable))

@@ -32,7 +32,7 @@ data class Status(
     val lastFetch: LastFetch?,
     /** The last fetch, while it failed (D46). */
     val failed: FailedFetch?,
-    /** The theme the last fetch could not read, until one reads it again (D48). */
+    /** The theme a fetch could not read, while the app keeps it (D48). */
     val unreadableTheme: UnreadableTheme?,
 ) {
     /** The line under the title: who is signed in and when the last fetch was, or why signing in again is needed. */

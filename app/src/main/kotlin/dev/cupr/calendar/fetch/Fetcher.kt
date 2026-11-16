@@ -37,9 +37,9 @@ import java.time.Clock
  * the stored sign-in cannot be read on this phone, [Account.State.UNREADABLE];
  * the snapshot stays in both cases. Any other failure changes nothing but
  * the last failure kept for the sign-in screen, and the next fetch tries
- * again. A theme the app cannot read is kept for the sign-in screen too,
- * until a fetch reads Home Assistant's theme again (D48). Entries that cannot be read are left out and logged, one line
- * each; the rest are used.
+ * again. That the theme could not be read, and from which fetch the colours
+ * drawn are, is kept for the sign-in screen (D48). Entries that cannot be
+ * read are left out and logged, one line each; the rest are used.
  *
  * The log names what failed, never a token, the code or the address.
  */

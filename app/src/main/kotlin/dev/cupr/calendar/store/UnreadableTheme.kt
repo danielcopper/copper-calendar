@@ -13,7 +13,7 @@ data class UnreadableTheme(
     val keptFrom: Instant?,
 )
 
-/** Keeps the unreadable theme until a fetch reads Home Assistant's theme again or the sign-in changes (D48). */
+/** Keeps the [UnreadableTheme] for the sign-in screen; how long: D48. */
 class UnreadableThemeStore(
     private val prefs: SharedPreferences,
 ) {
