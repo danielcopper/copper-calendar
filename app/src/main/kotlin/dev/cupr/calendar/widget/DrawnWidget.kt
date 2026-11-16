@@ -327,7 +327,7 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
-        synchronized(Widgets.lock) { updateAll(context, appWidgetManager, appWidgetIds, content(context)) }
+        Widgets.withContent(context) { updateAll(context, appWidgetManager, appWidgetIds, it) }
     }
 
     override fun onAppWidgetOptionsChanged(
@@ -336,7 +336,7 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         appWidgetId: Int,
         newOptions: Bundle,
     ) {
-        synchronized(Widgets.lock) { updateOne(context, appWidgetManager, appWidgetId, content(context)) }
+        Widgets.withContent(context) { updateOne(context, appWidgetManager, appWidgetId, it) }
     }
 
     /** Updates this provider's widgets with content, which the app's own updates read once for all ([Widgets]). */
