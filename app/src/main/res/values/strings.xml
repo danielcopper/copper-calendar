@@ -62,6 +62,10 @@
     <string name="fetch_cause_refused">Anmeldung abgelehnt</string>
     <string name="fetch_cause_unexpected">unerwartete Antwort</string>
     <string name="fetch_cause_phone">Fehler auf diesem Handy</string>
+    <!-- The last fetch could not read the theme (D48), its name: the colours kept from an earlier fetch, at its time today, else its date as well; or, with none kept, the built-in ones. -->
+    <string name="theme_unreadable_today">Theme „%1$s“ nicht lesbar – Farben vom Abruf um %2$s</string>
+    <string name="theme_unreadable_day">Theme „%1$s“ nicht lesbar – Farben vom Abruf am %3$s um %2$s</string>
+    <string name="theme_unreadable_built_in">Theme „%1$s“ nicht lesbar – eingebaute Farben</string>
     <string name="sign_out">Abmelden</string>
     <!-- The month widget's weekday heads, Monday to Sunday. -->
     <string-array name="weekday_heads">

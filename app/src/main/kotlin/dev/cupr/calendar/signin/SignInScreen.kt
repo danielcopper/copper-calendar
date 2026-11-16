@@ -50,8 +50,8 @@ import java.time.ZoneId
 /**
  * Signed out: the address field and "Mit Home Assistant anmelden", which
  * opens Home Assistant's login page in a WebView (D42, D43). Signed in: who
- * is signed in, when the last fetch was, whether it failed, and "Abmelden"
- * (D46, D47). The status is read off the main thread, again each time the
+ * is signed in, when the last fetch was, whether it failed or could not read
+ * the theme, and "Abmelden" (D46, D47, D48). The status is read off the main thread, again each time the
  * screen starts ([starts]) and whenever a fetch changes state.
  */
 @Composable
@@ -135,6 +135,7 @@ private fun Content(
             val zone = ZoneId.systemDefault()
             status.line(context, now, zone)?.let { Text(it) }
             status.failedLine(context, now, zone)?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            status.themeLine(context, now, zone)?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             problem?.let { Text(stringResource(it.text), color = MaterialTheme.colorScheme.error) }
             if (status.state == Account.State.SIGNED_IN) {
                 OutlinedButton(enabled = !busy, onClick = onSignOut) { Text(stringResource(R.string.sign_out)) }

@@ -14,6 +14,7 @@ import dev.cupr.calendar.store.FailedFetchStore
 import dev.cupr.calendar.store.KeystoreKey
 import dev.cupr.calendar.store.SnapshotStore
 import dev.cupr.calendar.store.TokenCipher
+import dev.cupr.calendar.store.UnreadableThemeStore
 import dev.cupr.calendar.widget.Widgets
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -50,10 +51,17 @@ object Services {
 
     fun failures(context: Context) = FailedFetchStore(prefs(context))
 
+    fun unreadableTheme(context: Context) = UnreadableThemeStore(prefs(context))
+
     fun fetcher(context: Context) =
-        Fetcher(account(context), snapshots(context), failures(context), http, Clock.systemDefaultZone()) {
-            online(context)
-        }
+        Fetcher(
+            account(context),
+            snapshots(context),
+            failures(context),
+            unreadableTheme(context),
+            http,
+            Clock.systemDefaultZone(),
+        ) { online(context) }
 
     /** Whether the phone has a network that reaches the internet, as the system sees it now. */
     internal fun online(context: Context): Boolean {
