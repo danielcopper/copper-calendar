@@ -2,6 +2,7 @@ package dev.cupr.calendar.model
 
 import dev.cupr.calendar.sample.SampleData
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import java.time.LocalDateTime
 
@@ -40,6 +41,17 @@ class PaletteTest {
         assertEquals(0xFF359F65.toInt(), SampleData.light.colorOf(entry.copy(calendar = "calendar.family_someone")))
         for (other in listOf("calendar.family", "calendar.familyx", "calendar.personal_someone", "family_x")) {
             assertEquals(other, SampleData.light.secondaryText, SampleData.light.colorOf(entry.copy(calendar = other)))
+        }
+    }
+
+    @Test
+    fun `a palette has a colour for each calendar variable, no fewer and no more`() {
+        val calendars = Palettes.BUILT_IN.light.calendars
+        assertThrows(IllegalArgumentException::class.java) {
+            Palettes.BUILT_IN.light.copy(calendars = calendars - CalendarVariables.SPECIAL)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            Palettes.BUILT_IN.light.copy(calendars = calendars + ("zuhause-calendar-other" to 0))
         }
     }
 }

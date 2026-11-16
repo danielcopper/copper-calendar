@@ -11,20 +11,20 @@ data class Palettes(
     companion object {
         private val calendarsDark =
             mapOf(
-                "zuhause-calendar-family" to 0xFF3CB371.toInt(),
-                "zuhause-calendar-birthdays" to 0xFFFFD700.toInt(),
-                "zuhause-calendar-school" to 0xFF40E0D0.toInt(),
-                "zuhause-calendar-public" to 0xFFA9A9A9.toInt(),
-                "zuhause-calendar-special" to 0xFFFF8C00.toInt(),
+                CalendarVariables.FAMILY to 0xFF3CB371.toInt(),
+                CalendarVariables.BIRTHDAYS to 0xFFFFD700.toInt(),
+                CalendarVariables.SCHOOL to 0xFF40E0D0.toInt(),
+                CalendarVariables.PUBLIC to 0xFFA9A9A9.toInt(),
+                CalendarVariables.SPECIAL to 0xFFFF8C00.toInt(),
             )
 
         private val calendarsLight =
             mapOf(
-                "zuhause-calendar-family" to 0xFF359F65.toInt(),
-                "zuhause-calendar-birthdays" to 0xFFA38A00.toInt(),
-                "zuhause-calendar-school" to 0xFF2D9D92.toInt(),
-                "zuhause-calendar-public" to 0xFF8C8C8C.toInt(),
-                "zuhause-calendar-special" to 0xFFD67500.toInt(),
+                CalendarVariables.FAMILY to 0xFF359F65.toInt(),
+                CalendarVariables.BIRTHDAYS to 0xFFA38A00.toInt(),
+                CalendarVariables.SCHOOL to 0xFF2D9D92.toInt(),
+                CalendarVariables.PUBLIC to 0xFF8C8C8C.toInt(),
+                CalendarVariables.SPECIAL to 0xFFD67500.toInt(),
             )
 
         /**
@@ -85,19 +85,24 @@ data class Palettes(
  * calendar not named here draws in the secondary text colour.
  */
 object CalendarVariables {
+    const val FAMILY = "zuhause-calendar-family"
+    const val BIRTHDAYS = "zuhause-calendar-birthdays"
+    const val SCHOOL = "zuhause-calendar-school"
+    const val PUBLIC = "zuhause-calendar-public"
+    const val SPECIAL = "zuhause-calendar-special"
+
     private const val FAMILY_PREFIX = "calendar.family_"
-    private const val FAMILY = "zuhause-calendar-family"
 
     private val fixed =
         mapOf(
-            "calendar.contact_birthdays" to "zuhause-calendar-birthdays",
-            "calendar.schulferien_hessen" to "zuhause-calendar-school",
-            "calendar.deutschland_he" to "zuhause-calendar-public",
-            "special" to "zuhause-calendar-special",
+            "calendar.contact_birthdays" to BIRTHDAYS,
+            "calendar.schulferien_hessen" to SCHOOL,
+            "calendar.deutschland_he" to PUBLIC,
+            "special" to SPECIAL,
         )
 
     /** Every variable a calendar can take its colour from. */
-    val all: List<String> = listOf(FAMILY) + fixed.values
+    val all: List<String> = listOf(FAMILY, BIRTHDAYS, SCHOOL, PUBLIC, SPECIAL)
 
     /** The variable of calendar, an entry's calendar id; none for a calendar without a fixed colour. */
     fun of(calendar: String): String? = fixed[calendar] ?: FAMILY.takeIf { calendar.startsWith(FAMILY_PREFIX) }

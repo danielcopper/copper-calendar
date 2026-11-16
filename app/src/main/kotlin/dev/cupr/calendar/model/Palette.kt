@@ -29,9 +29,15 @@ data class Palette(
     @param:ColorInt val holiday: Int,
     /** `zuhause-sheet-shadow`, the shadow under "+" */
     @param:ColorInt val shadow: Int,
-    /** The fixed colours of calendars (`zuhause-calendar-*`), by variable ([CalendarVariables]). */
+    /** The fixed colours of calendars (`zuhause-calendar-*`), one for each variable of [CalendarVariables]. */
     val calendars: Map<String, Int>,
 ) {
+    init {
+        require(calendars.keys == CalendarVariables.all.toSet()) {
+            "A palette has a colour for each calendar variable, ${CalendarVariables.all}, not ${calendars.keys}"
+        }
+    }
+
     /** An entry's own colour, else its calendar's, else the secondary text colour. */
     @ColorInt
     fun colorOf(entry: Entry): Int =
