@@ -39,7 +39,7 @@ object Services {
     @VisibleForTesting
     var cipher: () -> TokenCipher = { AesGcmCipher(KeystoreKey::get) }
 
-    /** Where disk and network work runs, off the main thread; tests may replace it. */
+    /** Where the sign-in screen and its flow do their disk and network work, off the main thread. */
     @set:VisibleForTesting
     var io: CoroutineDispatcher = Dispatchers.IO
 
