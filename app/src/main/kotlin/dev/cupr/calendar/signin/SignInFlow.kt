@@ -6,7 +6,6 @@ import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.SignInRequest
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +30,7 @@ object SignInFlow {
         val finished: Int = 0,
     )
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob())
     private val mutable = MutableStateFlow(State())
     val state: StateFlow<State> = mutable.asStateFlow()
 
@@ -68,7 +67,7 @@ object SignInFlow {
         }
         if (!started) Log.w(SIGN_IN_TAG, "A sign-in or sign-out is under way; another was not started")
         if (started) {
-            scope.launch {
+            scope.launch(Services.io) {
                 val problem = work()
                 mutable.update { State(busy = false, problem = problem, finished = it.finished + 1) }
             }

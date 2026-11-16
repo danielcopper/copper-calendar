@@ -41,7 +41,6 @@ import dev.cupr.calendar.fetch.FetchWork
 import dev.cupr.calendar.ha.HaAddress
 import dev.cupr.calendar.ha.SignInRequest
 import dev.cupr.calendar.store.Account
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -64,7 +63,7 @@ fun SignInScreen(starts: Int) {
     val flow by SignInFlow.state.collectAsState()
     val scope = rememberCoroutineScope()
 
-    fun reload() = scope.launch { status = withContext(Dispatchers.IO) { Status.read(app) } }
+    fun reload() = scope.launch { status = withContext(Services.io) { Status.read(app) } }
 
     // Again after each sign-in or sign-out, which run in SignInFlow, beyond this screen's life.
     LaunchedEffect(starts, flow.finished) { reload() }
@@ -79,7 +78,7 @@ fun SignInScreen(starts: Int) {
             onSignIn = { address ->
                 SignInFlow.clearProblem()
                 request = SignInRequest.start(address)
-                scope.launch(Dispatchers.IO) { Services.account(app).rememberAddress(address) }
+                scope.launch(Services.io) { Services.account(app).rememberAddress(address) }
             },
             onSignOut = { SignInFlow.signOut(app) },
         )

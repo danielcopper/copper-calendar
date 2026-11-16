@@ -14,6 +14,8 @@ import dev.cupr.calendar.store.FailedFetchStore
 import dev.cupr.calendar.store.KeystoreKey
 import dev.cupr.calendar.store.SnapshotStore
 import dev.cupr.calendar.store.TokenCipher
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
 import java.io.File
 import java.time.Clock
@@ -36,6 +38,10 @@ object Services {
     /** The refresh token's cipher; tests replace it, since Robolectric has no Android Keystore. */
     @VisibleForTesting
     var cipher: () -> TokenCipher = { AesGcmCipher(KeystoreKey::get) }
+
+    /** Where disk and network work runs, off the main thread; tests may replace it. */
+    @set:VisibleForTesting
+    var io: CoroutineDispatcher = Dispatchers.IO
 
     fun account(context: Context) = Account(prefs(context), cipher())
 

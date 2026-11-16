@@ -14,7 +14,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.lifecycleScope
 import dev.cupr.calendar.app.Services
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
@@ -43,6 +42,6 @@ class SignInActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         starts++
-        lifecycleScope.launch(Dispatchers.IO) { Services.opened(applicationContext) }
+        lifecycleScope.launch(Services.io) { Services.opened(applicationContext) }
     }
 }
