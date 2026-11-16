@@ -112,9 +112,7 @@ class Fetcher(
         try {
             synchronized(LOCK) {
                 account.signIn(address, SignInRequest.CLIENT_ID, refreshToken)
-                snapshots.clear()
-                failures.clear()
-                themes.clear()
+                forgetKept()
             }
             SignIn.SignedIn
         } catch (e: CipherFailureException) {
@@ -171,12 +169,20 @@ class Fetcher(
         } finally {
             synchronized(LOCK) {
                 account.signOut()
-                snapshots.clear()
-                failures.clear()
-                themes.clear()
+                forgetKept()
             }
             Log.i(TAG, "Signed out; $asked")
         }
+    }
+
+    /**
+     * Forgets what the fetches kept for the sign-in that ends: the snapshot,
+     * the last failure and the unreadable theme.
+     */
+    private fun forgetKept() {
+        snapshots.clear()
+        failures.clear()
+        themes.clear()
     }
 
     private fun revoked(revoke: TokenClient.Revoke): String =
