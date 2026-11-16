@@ -17,8 +17,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Runs one fetch ([Fetcher]) and then updates the widgets, whatever its
- * outcome, so they show a new snapshot, how old the last one is, or that
- * signing in again is needed (D54). A failed fetch is not retried on its
+ * outcome, also when it throws, so they show a new snapshot, how old the
+ * last one is, or that signing in again is needed (D54). A failed fetch is not retried on its
  * own: the next periodic fetch tries again (D46). Without a usable sign-in
  * the periodic fetch stops, decided under the fetch's lock, until the next
  * sign-in starts it again.
@@ -28,8 +28,12 @@ class FetchWorker(
     params: WorkerParameters,
 ) : Worker(context, params) {
     override fun doWork(): Result {
-        val outcome = Services.fetcher(applicationContext).fetch { FetchWork.stopPeriodic(applicationContext) }
-        Widgets.update(applicationContext)
+        val outcome =
+            try {
+                Services.fetcher(applicationContext).fetch { FetchWork.stopPeriodic(applicationContext) }
+            } finally {
+                Widgets.update(applicationContext)
+            }
         return if (outcome is Fetcher.Outcome.Failed) Result.failure() else Result.success()
     }
 }

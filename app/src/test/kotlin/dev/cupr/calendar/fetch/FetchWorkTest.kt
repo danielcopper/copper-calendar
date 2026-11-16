@@ -12,6 +12,7 @@ import androidx.work.WorkManager
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
+import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.FakeHomeAssistant
@@ -20,6 +21,7 @@ import dev.cupr.calendar.ha.SignInRequest
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.AesGcmCipher
 import dev.cupr.calendar.store.TokenCipher
+import dev.cupr.calendar.widget.Content
 import dev.cupr.calendar.widget.DrawnWidgetProvider
 import dev.cupr.calendar.widget.Midnight
 import mockwebserver3.MockResponse
@@ -97,6 +99,25 @@ class FetchWorkTest {
         val next = manager.getWorkInfosForUniqueWork(Midnight.NAME).get().single()
         assertTrue(next.id != first.id)
         assertEquals(WorkInfo.State.ENQUEUED, next.state)
+    }
+
+    @Test
+    fun `a fetch that throws still updates the widgets`() {
+        var read = 0
+        val content = DrawnWidgetProvider.content
+        DrawnWidgetProvider.content = {
+            read++
+            Content.NoData(R.string.widget_signed_out)
+        }
+        Services.cipher = { throw IllegalStateException("no cipher") }
+        try {
+            assertThrows(IllegalStateException::class.java) { work() }
+        } finally {
+            DrawnWidgetProvider.content = content
+        }
+
+        assertEquals(1, read)
+        assertEquals(listOf(WorkInfo.State.ENQUEUED), states(Midnight.NAME))
     }
 
     @Test
