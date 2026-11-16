@@ -3,6 +3,7 @@ package dev.cupr.calendar.widget
 import android.app.Application
 import android.appwidget.AppWidgetManager
 import android.content.Intent
+import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.ListView
@@ -10,12 +11,16 @@ import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ListenableWorker
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import androidx.work.WorkQuery
 import androidx.work.testing.SynchronousExecutor
+import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
 import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.fetch.FetchWorker
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.FakeHomeAssistant
 import dev.cupr.calendar.ha.RefreshToken
@@ -141,7 +146,33 @@ class WidgetsTest {
         assertTrue(ids.all(::hasList))
         val midnight = work.getWorkInfosForUniqueWork(Midnight.NAME).get().single()
         assertEquals(WorkInfo.State.ENQUEUED, midnight.state)
-        assertTrue("${midnight.initialDelayMillis}", midnight.initialDelayMillis in 1..Duration.ofDays(1).toMillis())
+        // The night the clocks go back has 25 hours.
+        assertTrue("${midnight.initialDelayMillis}", midnight.initialDelayMillis in 1..Duration.ofHours(25).toMillis())
+    }
+
+    @Test
+    fun `the launcher's own updates draw the widgets and leave WorkManager alone`() {
+        signedInWithSnapshot()
+        val ids = widgets()
+        MonthWidgetProvider().onUpdate(context, manager, intArrayOf(ids.first()))
+        MonthWidgetProvider().onAppWidgetOptionsChanged(context, manager, ids.first(), Bundle())
+
+        assertTrue(ids.all(::hasList))
+        val queued = work.getWorkInfos(WorkQuery.fromStates(WorkInfo.State.entries)).get()
+        assertEquals(emptyList<WorkInfo>(), queued)
+    }
+
+    @Test
+    fun `a fetch redraws the widgets, from no data yet to the calendar`() {
+        Services.account(context).signIn(home.address, SignInRequest.CLIENT_ID, RefreshToken("refresh-1"))
+        val ids = widgets()
+        assertTrue(ids.all { plainText(it)?.text.toString() == "Noch keine Daten – zum Öffnen tippen" })
+
+        val fetched = TestListenableWorkerBuilder<FetchWorker>(context).build().doWork()
+
+        assertEquals(ListenableWorker.Result.success(), fetched)
+
+        assertTrue(ids.all(::hasList))
     }
 
     @Test
