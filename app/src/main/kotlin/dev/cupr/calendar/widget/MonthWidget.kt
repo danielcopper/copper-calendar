@@ -10,8 +10,6 @@ import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.render.WeekRowRenderer
-import dev.cupr.calendar.sample.SampleData
-import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.math.roundToInt
 
@@ -28,33 +26,26 @@ object MonthWidget {
     /** The plain text it shows when the system refuses its views (D40). */
     internal val TOO_FULL = R.string.widget_month_too_full
 
+    /** Draws calendar's month on the widget id and hands it to the launcher. */
     fun update(
         context: Context,
         manager: AppWidgetManager,
         id: Int,
+        calendar: Content.Calendar,
     ) {
         val options = manager.getAppWidgetOptions(id)
         val width = DrawnWidget.widthDp(options, TAG, id)
         val height = WidgetHeight.of(options, TAG, id)
-        val drawn = draw(context, width, id, BitmapLimit.limitBytes(context, TAG, id), height)
+        val drawn = draw(context, width, id, BitmapLimit.limitBytes(context, TAG, id), calendar, height)
         DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
     }
 
     /**
-     * The widget at widthDp, for the sample month while the app has no
-     * other data: its "today" is the sample's ([SampleData.clock]). The
-     * widget's id only names it in the log.
-     */
-    fun views(
-        context: Context,
-        widthDp: Int,
-        id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
-    ): RemoteViews = draw(context, widthDp, id, BitmapLimit.limitBytes(context, TAG, id)).views
-
-    /**
-     * The widget at widthDp and the bytes of its bitmaps. The month's cells
-     * show at most two entries each, so it leaves nothing out for the limit;
-     * the log warns when its weeks pass it, and [DrawnWidget.push] falls back.
+     * The widget at widthDp showing the month of calendar's today, and the
+     * bytes of its bitmaps; the widget's id only names it in the log. The
+     * month's cells show at most two entries each, so it leaves nothing out
+     * for the limit; the log warns when its weeks pass it, and
+     * [DrawnWidget.push] falls back.
      * Its list scrolls so the current week stands on top in a widget of
      * height, or to its end when the weeks from the current one on fit, and
      * only into view without a height ([TodayOnTop.scroll], D27).
@@ -64,10 +55,11 @@ object MonthWidget {
         widthDp: Int,
         id: Int,
         limit: Long,
+        calendar: Content.Calendar,
         height: WidgetHeight? = null,
     ): Drawn {
-        val today = LocalDate.now(SampleData.clock)
-        val view = MonthLayout.build(YearMonth.from(today), SampleData.entries, today)
+        val today = calendar.today
+        val view = MonthLayout.build(YearMonth.from(today), calendar.entries, today)
         val scale = Scale(context.resources.displayMetrics.density)
         // The drawn rows and header span the widget less the card's inset at both sides.
         val widthPx = scale.px(widthDp - 2 * PhoneMonth.CARD_INSET).roundToInt()
@@ -77,8 +69,8 @@ object MonthWidget {
         val views = RemoteViews(context.packageName, R.layout.widget_month)
         val title = ChromeRenderer.title(view.month)
         val headerPx =
-            DrawnWidget.fixedParts(context, views, kept, title, today, scale) { chrome, palette ->
-                chrome.header(view.month, widthPx, scale, palette)
+            DrawnWidget.fixedParts(context, views, kept, title, calendar, scale) { chrome, palette, note ->
+                chrome.header(view.month, widthPx, scale, palette, note)
             }
         val heightsPx = view.weeks.map { rows.heightPx(it, scale) }
         val needed = kept.bytes + heightsPx.sumOf { BitmapLimit.bytes(widthPx, it) }
@@ -90,8 +82,8 @@ object MonthWidget {
         )
         val items =
             view.weeks.map { week ->
-                val light = kept.keep(rows.render(week, widthPx, scale, SampleData.light))
-                val dark = kept.keep(rows.render(week, widthPx, scale, SampleData.dark))
+                val light = kept.keep(rows.render(week, widthPx, scale, calendar.palettes.light))
+                val dark = kept.keep(rows.render(week, widthPx, scale, calendar.palettes.dark))
                 week.days
                     .first()
                     .date

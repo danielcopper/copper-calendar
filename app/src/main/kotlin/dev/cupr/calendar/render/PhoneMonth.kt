@@ -9,8 +9,8 @@ package dev.cupr.calendar.render
  * - `infra/homeassistant/config/dashboards/zuhause.yaml`: the calendar page's
  *   month styles at phone size (these measures) and the rules MonthLayout
  *   ports;
- * - `infra/homeassistant/config/themes/zuhause.yaml`: the colours in
- *   SampleData;
+ * - `infra/homeassistant/config/themes/zuhause.yaml`: the colours of the
+ *   built-in palettes ([dev.cupr.calendar.model.Palettes.BUILT_IN]);
  * - `infra/homeassistant/config/www/zuhause/events/`: the drawings in
  *   assets/drawings, unchanged copies;
  *

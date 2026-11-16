@@ -1,6 +1,7 @@
 package dev.cupr.calendar.ha
 
 import androidx.annotation.ColorInt
+import dev.cupr.calendar.model.CalendarVariables
 import dev.cupr.calendar.model.Palette
 import dev.cupr.calendar.model.Palettes
 import kotlinx.serialization.json.JsonObject
@@ -61,10 +62,7 @@ object ThemePalettes {
         accentSoft = mode.color("zuhause-accent-soft", default.accentSoft),
         holiday = mode.color("zuhause-calendar-holiday", default.holiday),
         shadow = mode.color("zuhause-sheet-shadow", default.shadow),
-        calendars =
-            Palettes.CALENDAR_VARIABLES.mapValues { (calendar, variable) ->
-                mode.color(variable, default.calendars.getValue(calendar))
-            },
+        calendars = CalendarVariables.all.associateWith { mode.color(it, default.calendars.getValue(it)) },
     )
 
     /** One mode's variables: its own, else the theme's top level. */

@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import dev.cupr.calendar.signin.SignInActivity
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
 
@@ -106,6 +107,7 @@ object Taps {
     private const val DAY = "dev.cupr.calendar.tap.DAY"
     private const val UID = "dev.cupr.calendar.tap.UID"
     private const val TEMPLATE_REQUEST = 100
+    private const val SIGN_IN_REQUEST = 101
 
     /** The extras of a tap: alone, the fill-in of a list row's cell. */
     fun fillIn(tap: Tap): Intent {
@@ -124,6 +126,22 @@ object Taps {
             context,
             tap.element.ordinal,
             fillIn(tap).setClass(context, TapActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
+    /**
+     * The app's sign-in screen, for a widget without data or without a
+     * usable sign-in (D50, D52), started as the app's icon starts it, so a
+     * screen already open comes to the front instead of a second one.
+     */
+    fun signIn(context: Context): PendingIntent =
+        PendingIntent.getActivity(
+            context,
+            SIGN_IN_REQUEST,
+            Intent(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_LAUNCHER)
+                .setClass(context, SignInActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 

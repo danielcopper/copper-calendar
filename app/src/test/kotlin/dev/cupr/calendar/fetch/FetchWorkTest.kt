@@ -20,6 +20,7 @@ import dev.cupr.calendar.ha.SignInRequest
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.AesGcmCipher
 import dev.cupr.calendar.store.TokenCipher
+import dev.cupr.calendar.widget.Midnight
 import mockwebserver3.MockResponse
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -78,6 +79,22 @@ class FetchWorkTest {
         assertEquals(ListenableWorker.Result.success(), work())
 
         assertEquals("Daniel", Services.snapshots(context).read()!!.user)
+    }
+
+    @Test
+    fun `each fetch updates the widgets, a failed one too, which schedules midnight anew`() {
+        signIn()
+        assertEquals(ListenableWorker.Result.success(), work())
+        val first = manager.getWorkInfosForUniqueWork(Midnight.NAME).get().single()
+        assertEquals(WorkInfo.State.ENQUEUED, first.state)
+
+        home.close()
+        assertEquals(ListenableWorker.Result.failure(), work())
+
+        // Replaced: the first one is gone, a new one waits.
+        val next = manager.getWorkInfosForUniqueWork(Midnight.NAME).get().single()
+        assertTrue(next.id != first.id)
+        assertEquals(WorkInfo.State.ENQUEUED, next.state)
     }
 
     @Test

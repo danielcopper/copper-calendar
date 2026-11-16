@@ -14,6 +14,7 @@ import dev.cupr.calendar.store.FailedFetchStore
 import dev.cupr.calendar.store.KeystoreKey
 import dev.cupr.calendar.store.SnapshotStore
 import dev.cupr.calendar.store.TokenCipher
+import dev.cupr.calendar.widget.Widgets
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
@@ -61,19 +62,27 @@ object Services {
         return capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
     }
 
-    /** Keeps a new sign-in and fetches at once (D46); true when signed in. */
+    /**
+     * Keeps a new sign-in, updates the widgets, which have no snapshot to
+     * draw until the first fetch, and fetches at once (D46, D54); true when
+     * signed in.
+     */
     fun signIn(
         context: Context,
         request: SignInRequest,
         code: AuthorizationCode,
     ): Boolean {
         val signedIn = fetcher(context).signIn(request, code) == Fetcher.SignIn.SignedIn
-        if (signedIn) FetchWork.start(context)
+        if (signedIn) {
+            Widgets.update(context)
+            FetchWork.start(context)
+        }
         return signedIn
     }
 
     /**
-     * Signs out (D47). The fetches stop before and again after it, so a
+     * Signs out (D47) and updates the widgets, which then say that no one is
+     * signed in (D50). The fetches stop before and again after it, so a
      * fetch scheduled while it waits for a running one, when the screen
      * opens, does not outlive it.
      */
@@ -81,6 +90,7 @@ object Services {
         FetchWork.stop(context)
         fetcher(context).signOut()
         FetchWork.stop(context)
+        Widgets.update(context)
     }
 
     /** The app's screen opened: while signed in, it fetches at once and keeps the periodic fetch (D46). */

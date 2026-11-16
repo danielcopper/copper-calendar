@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The card behind the drawn rows, the sample light palette's card and
-         card border (SampleData.light; a test keeps them equal). -->
+    <!-- The card behind the drawn rows, the built-in light palette's card and
+         card border (Palettes.BUILT_IN; a test keeps them equal). They stay
+         these whatever the theme says (D48). -->
     <color name="widget_card">#FFFFFFFF</color>
     <color name="widget_card_border">#FFDDE2E9</color>
     <!-- The plain text a widget shows instead of its drawing (widget_plain.xml): the palette's text. -->

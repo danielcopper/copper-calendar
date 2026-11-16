@@ -2,7 +2,8 @@ package dev.cupr.calendar.sample
 
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.model.Kinds
-import dev.cupr.calendar.model.Palette
+import dev.cupr.calendar.model.Palettes
+import dev.cupr.calendar.widget.Content
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -11,11 +12,9 @@ import java.time.YearMonth
 import java.time.ZoneId
 
 /**
- * SAMPLE DATA, not real data. The entries of a sample month and the two
- * palettes of the theme "Zuhause" (its file is named in
- * [dev.cupr.calendar.render.PhoneMonth]). They stand in until Home Assistant
- * delivers entries (D16) and the theme (D17); the widget and the tests both
- * draw from them.
+ * SAMPLE DATA, not real data: the entries of a sample month, which the tests
+ * and the widget picker's previews draw with the built-in palettes (D55);
+ * the widgets on the home screen draw only the snapshot.
  */
 object SampleData {
     val zone: ZoneId = ZoneId.of("Europe/Berlin")
@@ -26,9 +25,10 @@ object SampleData {
 
     val month: YearMonth = YearMonth.of(2026, 11)
 
-    // Calendars. The family calendar's id is neutral here; the fixed ones
-    // are Home Assistant's (the dashboard's calendar_colors).
-    const val FAMILY = "calendar.family"
+    // Calendars. The family calendar's id is a neutral one of the form the
+    // app colours by (CalendarVariables); the fixed ones are Home Assistant's
+    // (the dashboard's calendar_colors).
+    const val FAMILY = "calendar.family_sample"
     const val BIRTHDAYS = "calendar.contact_birthdays"
     const val SCHOOL_HOLIDAYS = "calendar.schulferien_hessen"
     const val PUBLIC_HOLIDAYS = "calendar.deutschland_he"
@@ -40,55 +40,13 @@ object SampleData {
     private const val LIGHTSKYBLUE = 0xFF87CEFA.toInt()
     private const val STEELBLUE = 0xFF4682B4.toInt()
 
-    val dark =
-        Palette(
-            card = 0xFF1A1F25.toInt(),
-            cardBorder = 0xFF262C34.toInt(),
-            text = 0xFFECEEF1.toInt(),
-            secondaryText = 0xFFA3ACB7.toInt(),
-            tertiaryText = 0xFF7D8793.toInt(),
-            divider = 0xFF262C34.toInt(),
-            accent = 0xFF6FB1FF.toInt(),
-            onAccent = 0xFF0D1A2A.toInt(),
-            // The accent at 16 % opacity.
-            accentSoft = 0x296FB1FF,
-            holiday = 0xFFFF7A7A.toInt(),
-            // Black at half opacity.
-            shadow = 0x80000000.toInt(),
-            calendars =
-                mapOf(
-                    FAMILY to 0xFF3CB371.toInt(),
-                    BIRTHDAYS to 0xFFFFD700.toInt(),
-                    SCHOOL_HOLIDAYS to 0xFF40E0D0.toInt(),
-                    PUBLIC_HOLIDAYS to 0xFFA9A9A9.toInt(),
-                    SPECIAL to 0xFFFF8C00.toInt(),
-                ),
-        )
+    /** The built-in palettes, which the tests and the previews draw with. */
+    val light = Palettes.BUILT_IN.light
+    val dark = Palettes.BUILT_IN.dark
 
-    val light =
-        Palette(
-            card = 0xFFFFFFFF.toInt(),
-            cardBorder = 0xFFDDE2E9.toInt(),
-            text = 0xFF161B22.toInt(),
-            secondaryText = 0xFF5B6573.toInt(),
-            tertiaryText = 0xFF666E7A.toInt(),
-            divider = 0xFFE6EAF0.toInt(),
-            accent = 0xFF1F6FD6.toInt(),
-            onAccent = 0xFFFFFFFF.toInt(),
-            // The accent at 12 % opacity.
-            accentSoft = 0x1F1F6FD6,
-            holiday = 0xFFB52222.toInt(),
-            // The light text colour at 18 % opacity.
-            shadow = 0x2E161B22,
-            calendars =
-                mapOf(
-                    FAMILY to 0xFF359F65.toInt(),
-                    BIRTHDAYS to 0xFFA38A00.toInt(),
-                    SCHOOL_HOLIDAYS to 0xFF2D9D92.toInt(),
-                    PUBLIC_HOLIDAYS to 0xFF8C8C8C.toInt(),
-                    SPECIAL to 0xFFD67500.toInt(),
-                ),
-        )
+    /** The sample month as a widget draws it, today the sample's, fresh and signed in. */
+    fun calendar(entries: List<Entry> = this.entries): Content.Calendar =
+        Content.Calendar(entries, Palettes.BUILT_IN, LocalDate.now(clock))
 
     /**
      * Each entry has a UID, except the special days and public holidays,

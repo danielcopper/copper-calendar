@@ -9,22 +9,9 @@ data class Palettes(
     val dark: Palette,
 ) {
     companion object {
-        /**
-         * The calendars with a fixed colour in the theme, by the id an entry
-         * names them with, and the theme variable of each: the dashboard's
-         * `calendar_colors` (its file is named in
-         * [dev.cupr.calendar.render.PhoneMonth]).
-         */
-        val CALENDAR_VARIABLES: Map<String, String> =
-            mapOf(
-                "calendar.contact_birthdays" to "zuhause-calendar-birthdays",
-                "calendar.schulferien_hessen" to "zuhause-calendar-school",
-                "calendar.deutschland_he" to "zuhause-calendar-public",
-                "special" to "zuhause-calendar-special",
-            )
-
         private val calendarsDark =
             mapOf(
+                "zuhause-calendar-family" to 0xFF3CB371.toInt(),
                 "zuhause-calendar-birthdays" to 0xFFFFD700.toInt(),
                 "zuhause-calendar-school" to 0xFF40E0D0.toInt(),
                 "zuhause-calendar-public" to 0xFFA9A9A9.toInt(),
@@ -33,6 +20,7 @@ data class Palettes(
 
         private val calendarsLight =
             mapOf(
+                "zuhause-calendar-family" to 0xFF359F65.toInt(),
                 "zuhause-calendar-birthdays" to 0xFFA38A00.toInt(),
                 "zuhause-calendar-school" to 0xFF2D9D92.toInt(),
                 "zuhause-calendar-public" to 0xFF8C8C8C.toInt(),
@@ -44,8 +32,9 @@ data class Palettes(
          * homelab's theme file (named in [dev.cupr.calendar.render.PhoneMonth]).
          * They stand in for a theme the app does not have or cannot read, and
          * each of their colours for a variable the theme lacks (D17). The
-         * card, its border and the plain text are Android resources of the
-         * same values (`values/colors.xml`, `values-night/colors.xml`).
+         * card, its border, the fade of "Woche quer" and the plain texts are
+         * Android resources of these values (`values/colors.xml`,
+         * `values-night/colors.xml`) and stay so whatever the theme says (D48).
          */
         val BUILT_IN =
             Palettes(
@@ -64,7 +53,7 @@ data class Palettes(
                         holiday = 0xFFB52222.toInt(),
                         // The light text colour at 18 % opacity.
                         shadow = 0x2E161B22,
-                        calendars = CALENDAR_VARIABLES.mapValues { (_, variable) -> calendarsLight.getValue(variable) },
+                        calendars = calendarsLight,
                     ),
                 dark =
                     Palette(
@@ -81,8 +70,35 @@ data class Palettes(
                         holiday = 0xFFFF7A7A.toInt(),
                         // Black at half opacity.
                         shadow = 0x80000000.toInt(),
-                        calendars = CALENDAR_VARIABLES.mapValues { (_, variable) -> calendarsDark.getValue(variable) },
+                        calendars = calendarsDark,
                     ),
             )
     }
+}
+
+/**
+ * Which theme variable colours the entries of a calendar that have no own
+ * colour (D16, D49): the dashboard's `calendar_colors` (its file is named in
+ * [dev.cupr.calendar.render.PhoneMonth]), with the family calendar by the
+ * start of its id, so no person's id is written here. The dashboard takes a
+ * calendar's colour in Nextcloud first, which the app never receives; a
+ * calendar not named here draws in the secondary text colour.
+ */
+object CalendarVariables {
+    private const val FAMILY_PREFIX = "calendar.family_"
+    private const val FAMILY = "zuhause-calendar-family"
+
+    private val fixed =
+        mapOf(
+            "calendar.contact_birthdays" to "zuhause-calendar-birthdays",
+            "calendar.schulferien_hessen" to "zuhause-calendar-school",
+            "calendar.deutschland_he" to "zuhause-calendar-public",
+            "special" to "zuhause-calendar-special",
+        )
+
+    /** Every variable a calendar can take its colour from. */
+    val all: List<String> = listOf(FAMILY) + fixed.values
+
+    /** The variable of calendar, an entry's calendar id; none for a calendar without a fixed colour. */
+    fun of(calendar: String): String? = fixed[calendar] ?: FAMILY.takeIf { calendar.startsWith(FAMILY_PREFIX) }
 }

@@ -22,13 +22,13 @@ class ThemePalettesTest {
             "secondary-text-color":"#a3acb7","zuhause-text-tertiary":"#7d8793","divider-color":"#262c34",
             "primary-color":"#6fb1ff","text-primary-color":"#0d1a2a","zuhause-accent-soft":"rgba(111, 177, 255, 0.16)",
             "zuhause-calendar-holiday":"#ff7a7a","zuhause-sheet-shadow":"rgba(0, 0, 0, 0.5)",
-            "zuhause-calendar-birthdays":"#ffd700","zuhause-calendar-school":"#40e0d0",
+            "zuhause-calendar-family":"#3cb371","zuhause-calendar-birthdays":"#ffd700","zuhause-calendar-school":"#40e0d0",
             "zuhause-calendar-public":"#a9a9a9","zuhause-calendar-special":"#ff8c00"},
           "light":{"card-background-color":"#ffffff","ha-card-border-color":"#dde2e9","primary-text-color":"#161b22",
             "secondary-text-color":"#5b6573","zuhause-text-tertiary":"#666e7a","divider-color":"#e6eaf0",
             "primary-color":"#1f6fd6","text-primary-color":"#ffffff","zuhause-accent-soft":"rgba(31, 111, 214, 0.12)",
             "zuhause-calendar-holiday":"#b52222","zuhause-sheet-shadow":"rgba(22, 27, 34, 0.18)",
-            "zuhause-calendar-birthdays":"#a38a00","zuhause-calendar-school":"#2d9d92",
+            "zuhause-calendar-family":"#359f65","zuhause-calendar-birthdays":"#a38a00","zuhause-calendar-school":"#2d9d92",
             "zuhause-calendar-public":"#8c8c8c","zuhause-calendar-special":"#d67500"}}}
         """.trimIndent()
 

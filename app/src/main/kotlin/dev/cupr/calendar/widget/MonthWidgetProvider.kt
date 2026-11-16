@@ -11,5 +11,6 @@ class MonthWidgetProvider : DrawnWidgetProvider() {
         context: Context,
         manager: AppWidgetManager,
         id: Int,
-    ) = MonthWidget.update(context, manager, id)
+        calendar: Content.Calendar,
+    ) = MonthWidget.update(context, manager, id, calendar)
 }

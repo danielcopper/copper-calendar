@@ -29,6 +29,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -44,6 +45,9 @@ import kotlin.math.roundToInt
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class WeekColumnsWidgetTest {
+    @get:Rule
+    val sampleContent = SampleContent()
+
     private val application = ApplicationProvider.getApplicationContext<Application>()
     private val manager = AppWidgetManager.getInstance(application)
     private val wednesday = LocalDate.of(2026, 11, 11)

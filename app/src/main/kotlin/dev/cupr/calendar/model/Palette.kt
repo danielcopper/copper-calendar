@@ -29,10 +29,11 @@ data class Palette(
     @param:ColorInt val holiday: Int,
     /** `zuhause-sheet-shadow`, the shadow under "+" */
     @param:ColorInt val shadow: Int,
-    /** The fixed colours of calendars (`zuhause-calendar-*`), by calendar. */
+    /** The fixed colours of calendars (`zuhause-calendar-*`), by variable ([CalendarVariables]). */
     val calendars: Map<String, Int>,
 ) {
     /** An entry's own colour, else its calendar's, else the secondary text colour. */
     @ColorInt
-    fun colorOf(entry: Entry): Int = entry.color ?: calendars[entry.calendar] ?: secondaryText
+    fun colorOf(entry: Entry): Int =
+        entry.color ?: CalendarVariables.of(entry.calendar)?.let(calendars::get) ?: secondaryText
 }

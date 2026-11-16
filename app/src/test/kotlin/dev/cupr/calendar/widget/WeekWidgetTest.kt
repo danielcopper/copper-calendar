@@ -30,6 +30,7 @@ import dev.cupr.calendar.week.WeekLayout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -43,6 +44,9 @@ import kotlin.math.roundToInt
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class WeekWidgetTest {
+    @get:Rule
+    val sampleContent = SampleContent()
+
     private companion object {
         const val ROW_PX = 600
     }
@@ -255,7 +259,7 @@ class WeekWidgetTest {
     ): Pair<ListView, Int> {
         val height = WidgetHeight(heightDp, null)
         return WidgetHost.scrolledToTarget(application, heightDp, { context, _ ->
-            WeekWidget.draw(context, widthDp, days, 1, Long.MAX_VALUE, height = height).views
+            WeekWidget.draw(context, widthDp, days, 1, Long.MAX_VALUE, SampleData.calendar(), height).views
         }, widthDp)
     }
 
@@ -316,7 +320,7 @@ class WeekWidgetTest {
         assertTrue("${list.paddingBottom}", list.paddingBottom > 0)
         val height = WidgetHeight(WidgetHost.HEIGHT_DP, null)
         WidgetHost.reapplied(application, list.rootView) { context, width ->
-            WeekWidget.draw(context, width, WeekDays.MONDAY_TO_SUNDAY, 1, Long.MAX_VALUE, height = height).views
+            WeekWidget.draw(context, width, WeekDays.MONDAY_TO_SUNDAY, 1, Long.MAX_VALUE, SampleData.calendar(), height).views
         }
         assertEquals(6, WidgetHost.scrollToTarget(list))
         assertEquals(0, list.paddingBottom)

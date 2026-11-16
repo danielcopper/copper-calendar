@@ -1,23 +1,26 @@
 package dev.cupr.calendar.widget
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Log
 import android.widget.RemoteViews
 import androidx.annotation.StringRes
+import androidx.annotation.VisibleForTesting
 import dev.cupr.calendar.R
 import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.days.longName
 import dev.cupr.calendar.model.Palette
 import dev.cupr.calendar.month.Week
 import dev.cupr.calendar.render.ChromeRenderer
+import dev.cupr.calendar.render.HeaderNote
 import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
-import dev.cupr.calendar.sample.SampleData
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
 import java.time.LocalDate
@@ -153,9 +156,11 @@ internal object DrawnWidget {
     }
 
     /**
-     * The header and "+": the header drawn light and dark by header with the
-     * renderer of the fixed parts, named by description and opening the
-     * calendar page; "+" opening a new entry on today. Returns the drawn
+     * The header and "+" of calendar: the header drawn light and dark by
+     * header with the renderer of the fixed parts and the calendar's notice
+     * at its right, named by description and the notice, and opening the
+     * calendar page, or the sign-in screen while the notice asks to sign in
+     * again (D52); "+" opening a new entry on today. Returns the drawn
      * header's height in px, which the list's height leaves out.
      */
     fun fixedParts(
@@ -163,19 +168,24 @@ internal object DrawnWidget {
         views: RemoteViews,
         kept: Kept,
         description: String,
-        today: LocalDate,
+        calendar: Content.Calendar,
         scale: Scale,
-        header: (ChromeRenderer, Palette) -> Bitmap,
+        header: (ChromeRenderer, Palette, HeaderNote?) -> Bitmap,
     ): Int {
         val chrome = chrome(context)
-        val light = kept.keep(header(chrome, SampleData.light))
+        val notice = calendar.notice
+        val note = notice?.let { HeaderNote(it.text, accent = it is Notice.SignInAgain) }
+        val palettes = calendar.palettes
+        val light = kept.keep(header(chrome, palettes.light, note))
         views.setImageViewBitmap(R.id.header_light, light)
-        views.setImageViewBitmap(R.id.header_dark, kept.keep(header(chrome, SampleData.dark)))
-        views.setContentDescription(R.id.header, description)
-        views.setOnClickPendingIntent(R.id.header, Taps.pendingIntent(context, Tap.Header))
-        views.setImageViewBitmap(R.id.fab_light, kept.keep(chrome.fab(scale, SampleData.light)))
-        views.setImageViewBitmap(R.id.fab_dark, kept.keep(chrome.fab(scale, SampleData.dark)))
-        views.setOnClickPendingIntent(R.id.fab, Taps.pendingIntent(context, Tap.New(today)))
+        views.setImageViewBitmap(R.id.header_dark, kept.keep(header(chrome, palettes.dark, note)))
+        views.setContentDescription(R.id.header, notice?.let { "$description, ${it.text}" } ?: description)
+        val headerTap =
+            if (notice is Notice.SignInAgain) Taps.signIn(context) else Taps.pendingIntent(context, Tap.Header)
+        views.setOnClickPendingIntent(R.id.header, headerTap)
+        views.setImageViewBitmap(R.id.fab_light, kept.keep(chrome.fab(scale, palettes.light)))
+        views.setImageViewBitmap(R.id.fab_dark, kept.keep(chrome.fab(scale, palettes.dark)))
+        views.setOnClickPendingIntent(R.id.fab, Taps.pendingIntent(context, Tap.New(calendar.today)))
         return light.height
     }
 
@@ -269,21 +279,27 @@ internal object DrawnWidget {
         }
     }
 
-    /** The plain views of a widget that cannot show its drawing: text on its card, opening the calendar page. */
+    /**
+     * The plain views of a widget that shows a text instead of its drawing:
+     * text on its card, opening tap, by default the calendar page.
+     */
     fun plainViews(
         context: Context,
         @StringRes text: Int,
+        tap: PendingIntent = Taps.pendingIntent(context, Tap.Header),
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_plain)
         views.setTextViewText(R.id.plain_text, context.getString(text))
-        views.setOnClickPendingIntent(R.id.plain_text, Taps.pendingIntent(context, Tap.Header))
+        views.setOnClickPendingIntent(R.id.plain_text, tap)
         return views
     }
 }
 
 /**
  * A provider of a drawn widget: drawn anew on each update and whenever its
- * size changes. Each widget is updated on its own: when its update throws an
+ * size changes, from what the app has to show ([Content]); without a
+ * calendar to draw, it shows [Content.NoData]'s plain text, which opens the
+ * sign-in screen (D50). Each widget is updated on its own: when its update throws an
  * IllegalArgumentException or an IllegalStateException, which a check in
  * the drawing throws, the log says so and the widget shows the plain text
  * [R.string.widget_failed], which opens the calendar page; the others are
@@ -295,11 +311,12 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
     /** The log's tag. */
     protected abstract val tag: String
 
-    /** Draws the widget id and hands it to the launcher. */
+    /** Draws calendar on the widget id and hands it to the launcher. */
     protected abstract fun update(
         context: Context,
         manager: AppWidgetManager,
         id: Int,
+        calendar: Content.Calendar,
     )
 
     override fun onUpdate(
@@ -307,7 +324,7 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
-        appWidgetIds.forEach { updateOne(context, appWidgetManager, it) }
+        updateAll(context, appWidgetManager, appWidgetIds, content(context))
     }
 
     override fun onAppWidgetOptionsChanged(
@@ -316,20 +333,45 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         appWidgetId: Int,
         newOptions: Bundle,
     ) {
-        updateOne(context, appWidgetManager, appWidgetId)
+        updateOne(context, appWidgetManager, appWidgetId, content(context))
     }
+
+    /** Updates this provider's widgets with content, which the app's own updates read once for all ([Widgets]). */
+    internal fun updateAll(
+        context: Context,
+        manager: AppWidgetManager,
+        ids: IntArray,
+        content: Content,
+    ) {
+        ids.forEach { updateOne(context, manager, it, content) }
+    }
+
+    /** This provider's widgets on the home screen. */
+    internal fun ids(
+        context: Context,
+        manager: AppWidgetManager,
+    ): IntArray = manager.getAppWidgetIds(ComponentName(context, javaClass))
 
     private fun updateOne(
         context: Context,
         manager: AppWidgetManager,
         id: Int,
+        content: Content,
     ) {
-        try {
-            update(context, manager, id)
-        } catch (e: IllegalArgumentException) {
-            failed(context, manager, id, e)
-        } catch (e: IllegalStateException) {
-            failed(context, manager, id, e)
+        when (content) {
+            is Content.NoData -> {
+                manager.updateAppWidget(id, DrawnWidget.plainViews(context, content.text, Taps.signIn(context)))
+            }
+
+            is Content.Calendar -> {
+                try {
+                    update(context, manager, id, content)
+                } catch (e: IllegalArgumentException) {
+                    failed(context, manager, id, e)
+                } catch (e: IllegalStateException) {
+                    failed(context, manager, id, e)
+                }
+            }
         }
     }
 
@@ -341,5 +383,15 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
     ) {
         Log.e(tag, "Widget $id: could not be drawn", error)
         manager.updateAppWidget(id, DrawnWidget.plainViews(context, R.string.widget_failed))
+    }
+
+    companion object {
+        /**
+         * What the widgets show now ([Content.read]), read once per update of
+         * a provider's widgets and once for all in the app's own updates
+         * ([Widgets]); tests replace it to draw the sample month.
+         */
+        @VisibleForTesting
+        internal var content: (Context) -> Content = { Content.read(it) }
     }
 }

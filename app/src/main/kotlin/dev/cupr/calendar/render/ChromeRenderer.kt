@@ -41,18 +41,22 @@ class ChromeRenderer(
         require(weekdays.size == DAYS_IN_WEEK) { "The header needs $DAYS_IN_WEEK weekday heads, not ${weekdays.size}" }
     }
 
-    /** "NOVEMBER 2026" and the chevron at the right, then the weekday heads, one per column. */
+    /**
+     * "NOVEMBER 2026" and the chevron at the right, or note instead of the
+     * chevron, then the weekday heads, one per column.
+     */
     fun header(
         month: YearMonth,
         widthPx: Int,
         scale: Scale,
         palette: Palette,
-    ): Bitmap = draw(title(month), null, weekdays, widthPx, scale, palette)
+        note: HeaderNote? = null,
+    ): Bitmap = draw(title(month), null, weekdays, widthPx, scale, palette, note)
 
     /**
      * A week widget's header: its title ("DIESE WOCHE") and at the right its
-     * range ("9.–15. Nov.") and the chevron; with from, below them the weekday
-     * heads one per column, from that weekday on.
+     * range ("9.–15. Nov.") and the chevron, or note instead of both; with
+     * from, below them the weekday heads one per column, from that weekday on.
      */
     fun weekHeader(
         title: String,
@@ -61,7 +65,8 @@ class ChromeRenderer(
         widthPx: Int,
         scale: Scale,
         palette: Palette,
-    ): Bitmap = draw(title, range, from?.let(::heads), widthPx, scale, palette)
+        note: HeaderNote? = null,
+    ): Bitmap = draw(title, range, from?.let(::heads), widthPx, scale, palette, note)
 
     /** The weekday heads of a week from first on, in order. */
     internal fun heads(first: DayOfWeek): List<String> =
@@ -74,6 +79,7 @@ class ChromeRenderer(
         widthPx: Int,
         scale: Scale,
         palette: Palette,
+        note: HeaderNote?,
     ): Bitmap {
         val headPaint = fonts.paint(scale, HEAD_FONT, FontWeight.BOLD, palette.tertiaryText)
         headPaint.letterSpacing = LETTER_SPACING
@@ -89,7 +95,12 @@ class ChromeRenderer(
         val rowHeight = scale.px(TITLE_ROW)
         val chevron = scale.px(CHEVRON)
         var end = widthPx - chevron
-        if (range != null) {
+        if (note != null) {
+            val (shown, x) = atRight(note.text, widthPx.toFloat(), scale)
+            val notePaint = rangePaint(scale, if (note.accent) palette.accent else palette.tertiaryText)
+            canvas.drawText(shown, x, notePaint.baselineIn(rowTop, rowHeight), notePaint)
+            end = x
+        } else if (range != null) {
             val (shown, x) = range(range, widthPx, scale)
             val rangePaint = rangePaint(scale, palette.tertiaryText)
             canvas.drawText(shown, x, rangePaint.baselineIn(rowTop, rowHeight), rangePaint)
@@ -104,8 +115,10 @@ class ChromeRenderer(
             end - scale.px(TITLE_GAP),
             title,
         )
-        icons.path(CHEVRON_ICON)?.let {
-            canvas.drawIcon(it, widthPx - chevron, rowTop + (rowHeight - chevron) / 2, chevron, palette.tertiaryText)
+        if (note == null) {
+            icons.path(CHEVRON_ICON)?.let {
+                canvas.drawIcon(it, widthPx - chevron, rowTop + (rowHeight - chevron) / 2, chevron, palette.tertiaryText)
+            }
         }
 
         if (heads != null) {
@@ -127,10 +140,20 @@ class ChromeRenderer(
         range: String,
         widthPx: Int,
         scale: Scale,
+    ): Pair<String, Float> = atRight(range, widthPx - scale.px(CHEVRON) - scale.px(RANGE_GAP), scale)
+
+    /**
+     * A text in the range's type ending at end: the text, cut with "…"
+     * where it is wider than the room before end, and the x it starts at,
+     * never left of the header.
+     */
+    internal fun atRight(
+        text: String,
+        end: Float,
+        scale: Scale,
     ): Pair<String, Float> {
         val paint = rangePaint(scale, 0)
-        val end = widthPx - scale.px(CHEVRON) - scale.px(RANGE_GAP)
-        val shown = paint.cut(range, end)
+        val shown = paint.cut(text, end)
         return shown to end - paint.measureText(shown)
     }
 
@@ -184,3 +207,13 @@ class ChromeRenderer(
             "${month.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale.GERMAN)} ${month.year}"
     }
 }
+
+/**
+ * A text a header shows at its right instead of a week's range and the
+ * chevron, in the range's type: muted ("Stand 14:30", D51), or in the accent
+ * colour ("Neu anmelden", D52).
+ */
+data class HeaderNote(
+    val text: String,
+    val accent: Boolean,
+)
