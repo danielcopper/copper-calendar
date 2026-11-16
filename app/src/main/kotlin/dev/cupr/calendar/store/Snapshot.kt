@@ -3,7 +3,7 @@ package dev.cupr.calendar.store
 import android.util.Log
 import androidx.core.util.AtomicFile
 import dev.cupr.calendar.ha.EntryParser
-import dev.cupr.calendar.model.Entry
+import dev.cupr.calendar.ha.ParsedEntries
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -32,8 +32,12 @@ data class Snapshot(
     val fetchedAt: Instant
         get() = Instant.ofEpochMilli(fetchedAtMillis)
 
-    /** The entries, read again as at the fetch; the ones kept all could be read then. */
-    fun entries(zone: ZoneId): List<Entry> = EntryParser.parse(JsonArray(entryJson), zone).entries
+    /**
+     * The entries read again, in zone. All of them could be read at the
+     * fetch, but not necessarily now (another zone, another rule of the
+     * parser), so the problems come with them for the caller to log.
+     */
+    fun parse(zone: ZoneId): ParsedEntries = EntryParser.parse(JsonArray(entryJson), zone)
 }
 
 /**

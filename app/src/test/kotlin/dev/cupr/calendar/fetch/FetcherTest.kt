@@ -96,7 +96,7 @@ class FetcherTest {
         val snapshot = snapshots.read()!!
         assertEquals(now, snapshot.fetchedAt)
         assertEquals("Daniel", snapshot.user)
-        assertEquals(listOf("Anna"), snapshot.entries(ZoneId.of("Europe/Berlin")).map { it.title })
+        assertEquals(listOf("Anna"), snapshot.parse(ZoneId.of("Europe/Berlin")).entries.map { it.title })
         assertEquals("#1f6fd6", (snapshot.theme!!["primary-color"] as JsonPrimitive).content)
         assertTrue(logs, logs.contains("Entry 1 (\"Broken\") left out:"))
         val form = home.requests.first().second
