@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- The card behind the drawn rows, the built-in light palette's card and
-         card border (Palettes.BUILT_IN; a test keeps them equal). They stay
-         these whatever the theme says (D48). -->
+         card border (Palettes.BUILT_IN; a test keeps them equal; D48). -->
     <color name="widget_card">#FFFFFFFF</color>
     <color name="widget_card_border">#FFDDE2E9</color>
-    <!-- The plain text a widget shows instead of its drawing (widget_plain.xml): the palette's text. -->
+    <!-- The plain text a widget shows instead of its drawing (widget_plain.xml): the built-in palette's text. -->
     <color name="widget_text">#FF161B22</color>
     <!-- The card's colour, clear: where the fade at the bottom of "Woche quer"
          begins (widget_fade.xml). -->

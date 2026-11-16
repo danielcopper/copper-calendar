@@ -146,7 +146,8 @@ internal object TodayOnTop {
             height == null -> {
                 views.setViewPadding(R.id.list, 0, 0, 0, 0)
                 views.setScrollPosition(R.id.list, today)
-                // Not "no appWidgetMaxHeight": views() passes no height either; WidgetHeight.of warns of a launcher's.
+                // Not "no appWidgetMaxHeight": the tests' sample views (SampleViews) pass no height either;
+                // WidgetHeight.of warns of a launcher's.
                 "; today is row $today, scrolls it into view: no height"
             }
 

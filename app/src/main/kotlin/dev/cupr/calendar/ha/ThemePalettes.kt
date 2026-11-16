@@ -14,8 +14,8 @@ import kotlin.math.roundToInt
  * `modes.dark`; a variable a mode does not set is the theme's own at its
  * top level, as the frontend applies them. A variable the theme does not
  * have is the built-in palette's ([Palettes.BUILT_IN]) and named in
- * [Read.Readable.missing]. A value that is no colour the app reads, or
- * `modes` or a mode that is no object, makes the theme unreadable.
+ * [Read.Readable.missing]. A read variable whose value is no colour the app
+ * reads, or `modes` or a mode that is no object, makes the theme unreadable.
  */
 object ThemePalettes {
     sealed interface Read {
@@ -25,7 +25,7 @@ object ThemePalettes {
             val missing: List<String>,
         ) : Read
 
-        /** Why the theme cannot be read: the variable and its value, which are colours, not secrets. */
+        /** Why the theme cannot be read: the variable and its value, a theme's value, never a secret. */
         data class Unreadable(
             val reason: String,
         ) : Read

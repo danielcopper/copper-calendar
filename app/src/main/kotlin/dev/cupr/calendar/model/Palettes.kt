@@ -31,10 +31,10 @@ data class Palettes(
          * The built-in palettes: the theme "Zuhause"'s values, copied from
          * homelab's theme file (named in [dev.cupr.calendar.render.PhoneMonth]).
          * They stand in for a theme the app does not have or cannot read, and
-         * each of their colours for a variable the theme lacks (D17). The
-         * card, its border, the fade of "Woche quer" and the plain texts are
-         * Android resources of these values (`values/colors.xml`,
-         * `values-night/colors.xml`) and stay so whatever the theme says (D48).
+         * each of their colours for a variable the theme lacks (D17). Some of
+         * the widgets' parts are Android resources of these values
+         * (`values/colors.xml`, `values-night/colors.xml`), which the theme
+         * does not change (D48).
          */
         val BUILT_IN =
             Palettes(
