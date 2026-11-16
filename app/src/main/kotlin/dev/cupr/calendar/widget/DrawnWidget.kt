@@ -12,6 +12,7 @@ import android.widget.RemoteViews
 import androidx.annotation.StringRes
 import androidx.annotation.VisibleForTesting
 import dev.cupr.calendar.R
+import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.days.longName
 import dev.cupr.calendar.model.Palette
@@ -337,6 +338,14 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         newOptions: Bundle,
     ) {
         Widgets.withContent(context) { updateOne(context, appWidgetManager, appWidgetId, it) }
+    }
+
+    /** Forgets the settings of the widgets removed from the home screen. */
+    override fun onDeleted(
+        context: Context,
+        appWidgetIds: IntArray,
+    ) {
+        Services.widgetSettings(context).remove(appWidgetIds)
     }
 
     /** Updates this provider's widgets with content, which the app's own updates read once for all ([Widgets]). */

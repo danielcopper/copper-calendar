@@ -15,6 +15,7 @@ import dev.cupr.calendar.store.KeystoreKey
 import dev.cupr.calendar.store.SnapshotStore
 import dev.cupr.calendar.store.TokenCipher
 import dev.cupr.calendar.store.UnreadableThemeStore
+import dev.cupr.calendar.store.WidgetSettingsStore
 import dev.cupr.calendar.widget.Widgets
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +31,7 @@ import java.util.concurrent.TimeUnit
  */
 object Services {
     private const val ACCOUNT = "account"
+    private const val WIDGETS = "widgets"
     private const val SNAPSHOT = "snapshot.json"
     private const val CALL_TIMEOUT_SECONDS = 30L
 
@@ -52,6 +54,10 @@ object Services {
     fun failures(context: Context) = FailedFetchStore(prefs(context))
 
     fun unreadableTheme(context: Context) = UnreadableThemeStore(prefs(context))
+
+    /** Each widget's settings from its setup, apart from the sign-in's preferences. */
+    fun widgetSettings(context: Context) =
+        WidgetSettingsStore(context.getSharedPreferences(WIDGETS, Context.MODE_PRIVATE))
 
     fun fetcher(context: Context) =
         Fetcher(

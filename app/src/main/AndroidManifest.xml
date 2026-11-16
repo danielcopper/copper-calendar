@@ -91,6 +91,19 @@
             </intent-filter>
         </activity>
 
+        <!-- A widget's setup, opened from the launcher's long-press menu: each
+             widget declares it with configuration_optional, so placing one
+             opens nothing, and reconfigurable (widget_*_info.xml). Exported,
+             as the launcher starts it; it shows only this app's widgets. -->
+        <activity
+            android:name=".setup.SetupActivity"
+            android:exported="true"
+            android:theme="@style/Theme.CopperCalendar">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- Shows nothing: opens a tapped element's target and finishes (D23). -->
         <activity
             android:name=".tap.TapActivity"

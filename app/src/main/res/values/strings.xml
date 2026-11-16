@@ -67,6 +67,24 @@
     <string name="theme_unreadable_day">Theme „%1$s“ nicht lesbar – Farben vom Abruf am %3$s um %2$s</string>
     <string name="theme_unreadable_built_in">Theme „%1$s“ nicht lesbar – eingebaute Farben</string>
     <string name="sign_out">Abmelden</string>
+    <!-- A widget's setup (design.md, Setup app): its title with the widget picker's name for it, its calendars (D11), the week widgets' days (D20), when it returns to today (D27), the corner of "+", and saving. -->
+    <string name="setup_title">Widget „%1$s“</string>
+    <string name="setup_calendars">Kalender</string>
+    <string name="setup_no_calendars">Noch keine Kalender – sie erscheinen nach dem ersten Abruf</string>
+    <string name="setup_days">Tage</string>
+    <string name="setup_days_monday_to_sunday">Montag bis Sonntag</string>
+    <string name="setup_days_from_today">Heute und die sechs Tage danach</string>
+    <string name="setup_back_to_today">Zurück zu heute</string>
+    <string name="setup_back_each_update">Bei jeder Aktualisierung</string>
+    <string name="setup_back_midnight">Nur um Mitternacht</string>
+    <string name="setup_back_never">Nie</string>
+    <string name="setup_back_every_15">Alle 15 Minuten</string>
+    <string name="setup_back_every_30">Alle 30 Minuten</string>
+    <string name="setup_back_every_60">Alle 60 Minuten</string>
+    <string name="setup_plus_corner">Ecke für „+“</string>
+    <string name="setup_plus_bottom_right">Unten rechts</string>
+    <string name="setup_plus_bottom_left">Unten links</string>
+    <string name="setup_save">Speichern</string>
     <!-- The month widget's weekday heads, Monday to Sunday. -->
     <string-array name="weekday_heads">
         <item>Mo</item>
