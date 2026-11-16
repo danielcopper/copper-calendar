@@ -111,6 +111,31 @@ class FetcherTest {
     }
 
     @Test
+    fun `a theme the app can read replaces the last snapshot's theme`() {
+        signIn()
+        entries(good)
+        snapshots.write(Snapshot(1_000, "Daniel", emptyList(), readable))
+
+        fetcher.fetch()
+
+        assertEquals("#1f6fd6", (snapshots.read()!!.theme!!["primary-color"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `Home Assistant without the theme leaves the snapshot without one, also after one with a theme`() {
+        signIn()
+        entries(good)
+        snapshots.write(Snapshot(1_000, "Daniel", emptyList(), readable))
+        home.themes = """{"Other":{}}"""
+
+        fetcher.fetch()
+
+        assertNull(snapshots.read()!!.theme)
+        val expected = "Home Assistant has no theme \"Zuhause\"; the widgets draw with the built-in colours"
+        assertTrue(logs, logs.contains(expected))
+    }
+
+    @Test
     fun `a theme the app cannot read keeps the last snapshot's theme`() {
         signIn()
         entries(good)
