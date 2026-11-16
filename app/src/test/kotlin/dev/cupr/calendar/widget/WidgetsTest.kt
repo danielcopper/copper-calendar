@@ -230,7 +230,7 @@ class WidgetsTest {
     /**
      * An update of the app that read before a sign-out and waits there, while
      * second, an update after the sign-out, reads that no one is signed in:
-     * second either waits for it or, unserialised, finishes before it.
+     * second waits for it, blocked, or, unserialised, finishes before it.
      */
     private fun afterReadBeforeSignOut(second: () -> Unit) {
         val read = CountDownLatch(1)
@@ -245,18 +245,21 @@ class WidgetsTest {
                 Content.NoData(R.string.widget_signed_out)
             }
         }
+        val before = thread(name = "before") { Widgets.redraw(context) }
+        var after: Thread? = null
         try {
-            val before = thread(name = "before") { Widgets.redraw(context) }
             assertTrue(read.await(5, TimeUnit.SECONDS))
-            val after = thread(name = "after") { second() }
+            val waiting = thread(name = "after") { second() }
+            after = waiting
             val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
-            while (after.isAlive && after.state != Thread.State.BLOCKED && System.nanoTime() < until) {
+            while (waiting.isAlive && waiting.state != Thread.State.BLOCKED && System.nanoTime() < until) {
                 Thread.yield()
             }
+            assertEquals(Thread.State.BLOCKED, waiting.state)
+        } finally {
             release.countDown()
             before.join()
-            after.join()
-        } finally {
+            after?.join()
             DrawnWidgetProvider.content = content
         }
     }
@@ -275,6 +278,15 @@ class WidgetsTest {
         val id = widgets().first()
 
         afterReadBeforeSignOut { MonthWidgetProvider().onUpdate(context, manager, intArrayOf(id)) }
+
+        assertEquals("Nicht angemeldet – zum Anmelden tippen", plainText(id)?.text.toString())
+    }
+
+    @Test
+    fun `a resized widget's update waits for an update of the app that is under way`() {
+        val id = widgets().first()
+
+        afterReadBeforeSignOut { MonthWidgetProvider().onAppWidgetOptionsChanged(context, manager, id, Bundle()) }
 
         assertEquals("Nicht angemeldet – zum Anmelden tippen", plainText(id)?.text.toString())
     }
