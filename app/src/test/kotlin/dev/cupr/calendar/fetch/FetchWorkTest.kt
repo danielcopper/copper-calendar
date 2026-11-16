@@ -12,6 +12,7 @@ import androidx.work.WorkManager
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
+import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.FakeHomeAssistant
@@ -20,11 +21,15 @@ import dev.cupr.calendar.ha.SignInRequest
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.AesGcmCipher
 import dev.cupr.calendar.store.TokenCipher
+import dev.cupr.calendar.widget.Content
+import dev.cupr.calendar.widget.DrawnWidgetProvider
+import dev.cupr.calendar.widget.Midnight
 import mockwebserver3.MockResponse
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -78,6 +83,57 @@ class FetchWorkTest {
         assertEquals(ListenableWorker.Result.success(), work())
 
         assertEquals("Daniel", Services.snapshots(context).read()!!.user)
+    }
+
+    @Test
+    fun `each fetch updates the widgets, a failed one too, which schedules midnight anew`() {
+        signIn()
+        assertEquals(ListenableWorker.Result.success(), work())
+        val first = manager.getWorkInfosForUniqueWork(Midnight.NAME).get().single()
+        assertEquals(WorkInfo.State.ENQUEUED, first.state)
+
+        home.close()
+        assertEquals(ListenableWorker.Result.failure(), work())
+
+        // Replaced: the first one is gone, a new one waits.
+        val next = manager.getWorkInfosForUniqueWork(Midnight.NAME).get().single()
+        assertTrue(next.id != first.id)
+        assertEquals(WorkInfo.State.ENQUEUED, next.state)
+    }
+
+    @Test
+    fun `a fetch that throws still updates the widgets`() {
+        var read = 0
+        val content = DrawnWidgetProvider.content
+        DrawnWidgetProvider.content = {
+            read++
+            Content.NoData(R.string.widget_signed_out)
+        }
+        Services.cipher = { throw IllegalStateException("no cipher") }
+        try {
+            assertThrows(IllegalStateException::class.java) { work() }
+        } finally {
+            DrawnWidgetProvider.content = content
+        }
+
+        assertEquals(1, read)
+        assertEquals(listOf(WorkInfo.State.ENQUEUED), states(Midnight.NAME))
+    }
+
+    @Test
+    fun `a fetch that throws keeps its exception when the widgets' update throws too`() {
+        val content = DrawnWidgetProvider.content
+        DrawnWidgetProvider.content = { throw IllegalArgumentException("the widgets cannot be read") }
+        Services.cipher = { throw IllegalStateException("no cipher") }
+        val thrown =
+            try {
+                assertThrows(IllegalStateException::class.java) { work() }
+            } finally {
+                DrawnWidgetProvider.content = content
+            }
+
+        assertEquals("no cipher", thrown.message)
+        assertEquals(listOf("the widgets cannot be read"), thrown.suppressed.map { it.message })
     }
 
     @Test
@@ -184,6 +240,22 @@ class FetchWorkTest {
 
         home.token = { FakeHomeAssistant.json("""{"refresh_token":"refresh-1","token_type":"Bearer"}""") }
         assertTrue(Services.signIn(context, SignInRequest.start(home.address), AuthorizationCode("code-1")))
+        assertEquals(listOf(WorkInfo.State.ENQUEUED, WorkInfo.State.ENQUEUED), scheduled)
+    }
+
+    @Test
+    fun `a sign-in whose widget update throws still schedules the fetches`() {
+        home.token = { FakeHomeAssistant.json("""{"refresh_token":"refresh-1","token_type":"Bearer"}""") }
+        val content = DrawnWidgetProvider.content
+        DrawnWidgetProvider.content = { throw IllegalStateException("the widgets cannot be read") }
+        try {
+            assertThrows(IllegalStateException::class.java) {
+                Services.signIn(context, SignInRequest.start(home.address), AuthorizationCode("code-1"))
+            }
+        } finally {
+            DrawnWidgetProvider.content = content
+        }
+
         assertEquals(listOf(WorkInfo.State.ENQUEUED, WorkInfo.State.ENQUEUED), scheduled)
     }
 

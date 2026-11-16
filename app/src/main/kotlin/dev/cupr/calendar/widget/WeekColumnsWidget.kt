@@ -5,17 +5,14 @@ import android.content.Context
 import android.view.View
 import android.widget.RemoteViews
 import dev.cupr.calendar.R
-import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.month.MonthLayout
 import dev.cupr.calendar.month.Week
 import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.render.WeekRowRenderer
-import dev.cupr.calendar.sample.SampleData
 import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.week.WeekLayout
-import java.time.LocalDate
 import kotlin.math.roundToInt
 
 /**
@@ -48,6 +45,7 @@ object WeekColumnsWidget {
         context: Context,
         manager: AppWidgetManager,
         id: Int,
+        calendar: Content.Calendar,
     ) {
         val options = manager.getAppWidgetOptions(id)
         val width = DrawnWidget.widthDp(options, TAG, id)
@@ -60,27 +58,16 @@ object WeekColumnsWidget {
                 id,
             )
         val limit = BitmapLimit.limitBytes(context, TAG, id)
-        val drawn = draw(context, width, height, WeekDays.MONDAY_TO_SUNDAY, id, limit)
+        val drawn = draw(context, width, height, WeekDays.MONDAY_TO_SUNDAY, id, limit, calendar)
         DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
     }
 
     /**
-     * The widget at widthDp × heightDp showing days, for the sample entries
-     * while the app has no other data: its "today" is the sample's
-     * ([SampleData.clock]). The widget's id only names it in the log.
-     */
-    fun views(
-        context: Context,
-        widthDp: Int,
-        heightDp: Int = DEFAULT_HEIGHT_DP,
-        days: WeekDays = WeekDays.MONDAY_TO_SUNDAY,
-        id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
-    ): RemoteViews = draw(context, widthDp, heightDp, days, id, BitmapLimit.limitBytes(context, TAG, id)).views
-
-    /**
-     * The widget at widthDp × heightDp and the bytes of its bitmaps, kept
-     * within limit: when its row would pass it, the tallest days leave out
-     * their last entries for the month's "+N" until it fits ([leaveOutOne]).
+     * The widget at widthDp × heightDp showing days of calendar, from its
+     * today, and the bytes of its bitmaps, kept within limit: when its row
+     * would pass it, the tallest days leave out their last entries for the
+     * month's "+N" until it fits ([leaveOutOne]). The widget's id only names
+     * it in the log.
      */
     internal fun draw(
         context: Context,
@@ -89,9 +76,9 @@ object WeekColumnsWidget {
         days: WeekDays,
         id: Int,
         limit: Long,
-        entries: List<Entry> = SampleData.entries,
+        calendar: Content.Calendar,
     ): Drawn {
-        val today = LocalDate.now(SampleData.clock)
+        val today = calendar.today
         val dates = days.dates(today)
         val scale = Scale(context.resources.displayMetrics.density)
         // The drawn row and header span the widget less the card's inset at both sides.
@@ -103,10 +90,10 @@ object WeekColumnsWidget {
         val range = WeekLayout.range(dates.first(), dates.last())
         val views = RemoteViews(context.packageName, R.layout.widget_week_columns)
         val headerPx =
-            DrawnWidget.fixedParts(context, views, kept, "$title, $range", today, scale) { chrome, palette ->
-                chrome.weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette)
+            DrawnWidget.fixedParts(context, views, kept, "$title, $range", calendar, scale) { chrome, palette, note ->
+                chrome.weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette, note)
             }
-        val full = MonthLayout.week(dates, entries, today)
+        val full = MonthLayout.week(dates, calendar.entries, today)
         // Room for the fade's blank room counted in, as a row that has to be capped is taller than its list.
         val fadeDp = FADE_DP.toFloat()
         val bytesOf = { week: Week -> BitmapLimit.bytes(widthPx, rows.heightPx(week, scale, fadeDp)) }
@@ -125,8 +112,8 @@ object WeekColumnsWidget {
         val faded = overflows(rows, week, scale, heightDp, headerPx)
         val blank = if (faded) fadeDp else 0f
         views.setViewVisibility(R.id.fade, if (faded) View.VISIBLE else View.GONE)
-        val light = kept.keep(rows.render(week, widthPx, scale, SampleData.light, blank))
-        val dark = kept.keep(rows.render(week, widthPx, scale, SampleData.dark, blank))
+        val light = kept.keep(rows.render(week, widthPx, scale, calendar.palettes.light, blank))
+        val dark = kept.keep(rows.render(week, widthPx, scale, calendar.palettes.dark, blank))
         DrawnWidget.list(
             context,
             views,

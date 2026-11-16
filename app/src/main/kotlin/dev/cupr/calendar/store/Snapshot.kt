@@ -3,7 +3,7 @@ package dev.cupr.calendar.store
 import android.util.Log
 import androidx.core.util.AtomicFile
 import dev.cupr.calendar.ha.EntryParser
-import dev.cupr.calendar.model.Entry
+import dev.cupr.calendar.ha.ParsedEntries
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -17,8 +17,9 @@ import java.time.ZoneId
 
 /**
  * Home Assistant's last good answer (D6, D45): [entryJson], the entries the
- * app could read, as Home Assistant sent them; the theme "Zuhause" (none
- * when Home Assistant had no theme of that name, D17); the signed-in user's
+ * app could read, as Home Assistant sent them; the theme "Zuhause", one the
+ * app could read (none when Home Assistant had no theme of that name, D17,
+ * and the last snapshot's when it could not read the new one); the signed-in user's
  * name; and when it was fetched. Replaced whole by each successful fetch,
  * deleted by each new sign-in and by signing out.
  */
@@ -32,8 +33,12 @@ data class Snapshot(
     val fetchedAt: Instant
         get() = Instant.ofEpochMilli(fetchedAtMillis)
 
-    /** The entries, read again as at the fetch; the ones kept all could be read then. */
-    fun entries(zone: ZoneId): List<Entry> = EntryParser.parse(JsonArray(entryJson), zone).entries
+    /**
+     * The entries read again, in zone. All of them could be read at the
+     * fetch, but not necessarily now (another zone, another rule of the
+     * parser), so the problems come with them for the caller to log.
+     */
+    fun parse(zone: ZoneId): ParsedEntries = EntryParser.parse(JsonArray(entryJson), zone)
 }
 
 /**

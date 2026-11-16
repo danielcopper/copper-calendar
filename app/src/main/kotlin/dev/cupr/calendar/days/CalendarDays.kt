@@ -26,6 +26,12 @@ private val LONG_NAME = DateTimeFormatter.ofPattern("EEEE, d. MMMM", Locale.GERM
 val CLOCK_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 /**
+ * A day with Java's German short month name, "9. Nov.": a week header's
+ * range, the day a stale snapshot's header names.
+ */
+val DAY_AND_MONTH: DateTimeFormatter = DateTimeFormatter.ofPattern("d. MMM", Locale.GERMAN)
+
+/**
  * The dashboard's rule `calendar_days` as the month and the week share it
  * (the dashboard's file is named in [dev.cupr.calendar.render.PhoneMonth]):
  * which entries a run of days shows, the day each stands on, and their order

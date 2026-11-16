@@ -11,5 +11,6 @@ class WeekColumnsWidgetProvider : DrawnWidgetProvider() {
         context: Context,
         manager: AppWidgetManager,
         id: Int,
-    ) = WeekColumnsWidget.update(context, manager, id)
+        calendar: Content.Calendar,
+    ) = WeekColumnsWidget.update(context, manager, id, calendar)
 }

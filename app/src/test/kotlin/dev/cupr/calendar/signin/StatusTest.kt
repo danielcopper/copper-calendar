@@ -8,6 +8,7 @@ import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.FailedFetch
 import dev.cupr.calendar.store.FetchCause
 import dev.cupr.calendar.store.Snapshot
+import dev.cupr.calendar.store.UnreadableTheme
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -29,7 +30,8 @@ class StatusTest {
         state: Account.State,
         fetchedAt: Instant? = null,
         failed: FailedFetch? = null,
-    ) = Status(state, "https://home.example", fetchedAt?.let { LastFetch("Daniel", it) }, failed)
+        theme: UnreadableTheme? = null,
+    ) = Status(state, "https://home.example", fetchedAt?.let { LastFetch("Daniel", it) }, failed, theme)
 
     @Test
     fun `signed in, the line names the user and today's fetch time`() {
@@ -106,13 +108,32 @@ class StatusTest {
     }
 
     @Test
-    fun `the status reads the address without its slash, the snapshot's user and time, and the last failure`() {
+    fun `while the theme could not be read, a line says since when the colours are, or that they are built in`() {
+        assertEquals(
+            "Theme „Zuhause“ nicht lesbar – Farben vom Abruf um 14:30",
+            status(Account.State.SIGNED_IN, theme = UnreadableTheme(today)).themeLine(context, now, berlin),
+        )
+        assertEquals(
+            "Theme „Zuhause“ nicht lesbar – Farben vom Abruf am 11. November um 18:30",
+            status(Account.State.SIGNED_IN, theme = UnreadableTheme(yesterday)).themeLine(context, now, berlin),
+        )
+        assertEquals(
+            "Theme „Zuhause“ nicht lesbar – eingebaute Farben",
+            status(Account.State.SIGNED_IN, theme = UnreadableTheme(null)).themeLine(context, now, berlin),
+        )
+        assertNull(status(Account.State.SIGNED_IN, today).themeLine(context, now, berlin))
+        assertNull(status(Account.State.REJECTED, theme = UnreadableTheme(today)).themeLine(context, now, berlin))
+    }
+
+    @Test
+    fun `the status reads the address without its slash, the snapshot, the last failure and the theme`() {
         Services.account(context).rememberAddress(HaAddress("https://home.example/".toHttpUrl()))
         Services.snapshots(context).write(Snapshot(1_000, "Daniel", emptyList()))
         Services
             .failures(
                 context,
             ).write(FailedFetch(Instant.ofEpochMilli(2_000), FetchCause.UNEXPECTED))
+        Services.unreadableTheme(context).write(UnreadableTheme(Instant.ofEpochMilli(500)))
 
         assertEquals(
             Status(
@@ -120,6 +141,7 @@ class StatusTest {
                 "https://home.example",
                 LastFetch("Daniel", Instant.ofEpochMilli(1_000)),
                 FailedFetch(Instant.ofEpochMilli(2_000), FetchCause.UNEXPECTED),
+                UnreadableTheme(Instant.ofEpochMilli(500)),
             ),
             Status.read(context),
         )

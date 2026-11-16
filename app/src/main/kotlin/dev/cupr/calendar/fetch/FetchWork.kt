@@ -12,23 +12,29 @@ import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.app.runThen
+import dev.cupr.calendar.widget.Widgets
 import java.util.concurrent.TimeUnit
 
 /**
- * Runs one fetch ([Fetcher]). A failed fetch is not retried on its own: the
- * next periodic fetch tries again (D46). Without a usable sign-in the
- * periodic fetch stops, decided under the fetch's lock, until the next
- * sign-in starts it again.
+ * Runs one fetch ([Fetcher]) and then updates the widgets, whatever its
+ * outcome, also when it throws, so they show a new snapshot, how old the
+ * last one is, or that signing in again is needed (D54). A failed fetch
+ * is not retried on its own: the next periodic fetch tries again (D46).
+ * Without a usable sign-in the periodic fetch stops, decided under the
+ * fetch's lock, until the next sign-in starts it again.
  */
 class FetchWorker(
     context: Context,
     params: WorkerParameters,
 ) : Worker(context, params) {
-    override fun doWork(): Result =
-        when (Services.fetcher(applicationContext).fetch { FetchWork.stopPeriodic(applicationContext) }) {
-            is Fetcher.Outcome.Failed -> Result.failure()
-            else -> Result.success()
-        }
+    override fun doWork(): Result {
+        val outcome =
+            runThen({ Services.fetcher(applicationContext).fetch { FetchWork.stopPeriodic(applicationContext) } }) {
+                Widgets.update(applicationContext)
+            }
+        return if (outcome is Fetcher.Outcome.Failed) Result.failure() else Result.success()
+    }
 }
 
 /**

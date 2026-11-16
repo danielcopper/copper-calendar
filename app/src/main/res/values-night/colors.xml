@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The sample dark palette's card and card border (SampleData.dark). -->
+    <!-- The built-in dark palette's card and card border (Palettes.BUILT_IN). -->
     <color name="widget_card">#FF1A1F25</color>
     <color name="widget_card_border">#FF262C34</color>
     <color name="widget_text">#FFECEEF1</color>

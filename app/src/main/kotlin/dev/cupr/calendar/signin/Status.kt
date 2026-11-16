@@ -5,9 +5,11 @@ import androidx.annotation.StringRes
 import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.days.CLOCK_TIME
+import dev.cupr.calendar.ha.HaClient
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.FailedFetch
 import dev.cupr.calendar.store.FetchCause
+import dev.cupr.calendar.store.UnreadableTheme
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -30,6 +32,8 @@ data class Status(
     val lastFetch: LastFetch?,
     /** The last fetch, while it failed (D46). */
     val failed: FailedFetch?,
+    /** The theme a fetch could not read, while the app keeps it (D48). */
+    val unreadableTheme: UnreadableTheme?,
 ) {
     /** The line under the title: who is signed in and when the last fetch was, or why signing in again is needed. */
     fun line(
@@ -62,6 +66,22 @@ data class Status(
         failed?.takeIf { state == Account.State.SIGNED_IN }?.let {
             val cause = context.getString(it.cause.text)
             at(context, it.at, now, zone, R.string.fetch_failed_today, R.string.fetch_failed_day, cause)
+        }
+
+    /**
+     * The line under them while signed in and the last fetch could not read
+     * the theme: since when the colours drawn are, or that they are the
+     * built-in ones.
+     */
+    fun themeLine(
+        context: Context,
+        now: Instant,
+        zone: ZoneId,
+    ): String? =
+        unreadableTheme?.takeIf { state == Account.State.SIGNED_IN }?.let { theme ->
+            val today = R.string.theme_unreadable_today
+            theme.keptFrom?.let { at(context, it, now, zone, today, R.string.theme_unreadable_day, HaClient.THEME) }
+                ?: context.getString(R.string.theme_unreadable_built_in, HaClient.THEME)
         }
 
     /** [today]'s text with [subject] and the time when [at] is today, else [day]'s with its date as well. */
@@ -99,7 +119,10 @@ data class Status(
     companion object {
         private val DAY = DateTimeFormatter.ofPattern("d. MMMM", Locale.GERMAN)
 
-        /** Reads the account, the snapshot and the last failure; off the main thread, the snapshot is a file. */
+        /**
+         * Reads the account, the snapshot, the last failure and the unreadable
+         * theme; off the main thread, the snapshot is a file.
+         */
         fun read(context: Context): Status {
             val account = Services.account(context)
             val snapshot = Services.snapshots(context).read()
@@ -113,6 +136,7 @@ data class Status(
                         .orEmpty(),
                 lastFetch = snapshot?.let { LastFetch(it.user, it.fetchedAt) },
                 failed = Services.failures(context).read(),
+                unreadableTheme = Services.unreadableTheme(context).read(),
             )
         }
     }

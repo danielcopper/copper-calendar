@@ -9,6 +9,7 @@ import dev.cupr.calendar.ha.HaAddress
 import dev.cupr.calendar.ha.HaClient
 import dev.cupr.calendar.ha.RefreshToken
 import dev.cupr.calendar.ha.SignInRequest
+import dev.cupr.calendar.ha.ThemePalettes
 import dev.cupr.calendar.ha.TokenClient
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.CipherFailureException
@@ -17,7 +18,10 @@ import dev.cupr.calendar.store.FailedFetchStore
 import dev.cupr.calendar.store.FetchCause
 import dev.cupr.calendar.store.Snapshot
 import dev.cupr.calendar.store.SnapshotStore
+import dev.cupr.calendar.store.UnreadableTheme
+import dev.cupr.calendar.store.UnreadableThemeStore
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import okhttp3.OkHttpClient
 import java.io.IOException
 import java.time.Clock
@@ -33,8 +37,9 @@ import java.time.Clock
  * the stored sign-in cannot be read on this phone, [Account.State.UNREADABLE];
  * the snapshot stays in both cases. Any other failure changes nothing but
  * the last failure kept for the sign-in screen, and the next fetch tries
- * again. Entries that cannot be read are left out and logged, one line
- * each; the rest are used.
+ * again. That the theme could not be read, and from which fetch the colours
+ * drawn are, is kept for the sign-in screen (D48). Entries that cannot be
+ * read are left out and logged, one line each; the rest are used.
  *
  * The log names what failed, never a token, the code or the address.
  */
@@ -42,6 +47,7 @@ class Fetcher(
     private val account: Account,
     private val snapshots: SnapshotStore,
     private val failures: FailedFetchStore,
+    private val themes: UnreadableThemeStore,
     private val http: OkHttpClient,
     private val clock: Clock,
     /** Whether the phone has a network now; a fetch that cannot reach Home Assistant without one says so. */
@@ -77,9 +83,10 @@ class Fetcher(
 
     /**
      * Trades the code [request]'s redirect carried for a refresh token and
-     * keeps it; the snapshot and the last failure of an earlier sign-in go
-     * (D45). When the token cannot be sealed, Home Assistant is asked to end
-     * it again, so it is not left valid there unused, and nothing is kept.
+     * keeps it; the snapshot, the last failure and the unreadable theme of
+     * an earlier sign-in go (D45, D48). When the token cannot be sealed,
+     * Home Assistant is asked to end it again, so it is not left valid there
+     * unused, and nothing is kept.
      */
     fun signIn(
         request: SignInRequest,
@@ -106,8 +113,7 @@ class Fetcher(
         try {
             synchronized(LOCK) {
                 account.signIn(address, SignInRequest.CLIENT_ID, refreshToken)
-                snapshots.clear()
-                failures.clear()
+                forgetKept()
             }
             SignIn.SignedIn
         } catch (e: CipherFailureException) {
@@ -131,39 +137,13 @@ class Fetcher(
             outcome
         }
 
-    private fun log(outcome: Outcome) {
-        when (outcome) {
-            is Outcome.Failed -> {
-                Log.w(TAG, "Fetch failed: ${outcome.reason}")
-            }
-
-            is Outcome.Fetched -> {
-                Log.i(TAG, "Fetched ${outcome.entries} entries, ${outcome.leftOut} left out")
-            }
-
-            Outcome.Rejected -> {
-                Log.w(TAG, "Home Assistant refused the refresh token; signing in again is needed")
-            }
-
-            Outcome.Unreadable -> {
-                Log.w(
-                    TAG,
-                    "The stored sign-in cannot be read on this phone; signing in again is needed",
-                )
-            }
-
-            Outcome.NotSignedIn -> {
-                Log.i(TAG, "Not signed in, nothing fetched")
-            }
-        }
-    }
-
     /**
      * Signs out ("Abmelden", D47): asks Home Assistant to end the refresh
-     * token, then forgets the token and deletes the snapshot and the last
-     * failure; the address stays. Waits for a fetch that is running, so it
-     * cannot write its snapshot afterwards. The local sign-in goes even when
-     * asking Home Assistant fails or the stored token cannot be read.
+     * token, then forgets the token and deletes the snapshot, the last
+     * failure and the unreadable theme; the address stays. Waits for a
+     * fetch that is running, so it cannot write its snapshot afterwards. The
+     * local sign-in goes even when asking Home Assistant fails or the stored
+     * token cannot be read.
      */
     fun signOut() {
         var asked = "Home Assistant was not asked to end the refresh token"
@@ -191,11 +171,20 @@ class Fetcher(
         } finally {
             synchronized(LOCK) {
                 account.signOut()
-                snapshots.clear()
-                failures.clear()
+                forgetKept()
             }
             Log.i(TAG, "Signed out; $asked")
         }
+    }
+
+    /**
+     * Forgets what the fetches kept for the sign-in that ends: the snapshot,
+     * the last failure and the unreadable theme.
+     */
+    private fun forgetKept() {
+        snapshots.clear()
+        failures.clear()
+        themes.clear()
     }
 
     private fun revoked(revoke: TokenClient.Revoke): String =
@@ -271,13 +260,12 @@ class Fetcher(
         entries: JsonArray,
         userAndTheme: HaClient.UserAndTheme,
     ): Outcome {
-        if (userAndTheme.theme == null) Log.w(TAG, "Home Assistant has no theme \"${HaClient.THEME}\"")
         val parsed = EntryParser.parse(entries, clock.zone)
         parsed.problems.forEach { Log.w(TAG, it) }
+        val theme = themeToKeep(userAndTheme.theme, { snapshots.read() }, { themes.read() })
         return try {
-            snapshots.write(
-                Snapshot(clock.millis(), userAndTheme.user, parsed.read.map { it.json }, userAndTheme.theme),
-            )
+            snapshots.write(Snapshot(clock.millis(), userAndTheme.user, parsed.read.map { it.json }, theme.json))
+            if (theme.unreadable == null) themes.clear() else themes.write(theme.unreadable)
             Outcome.Fetched(parsed.read.size, entries.size - parsed.read.size)
         } catch (e: IOException) {
             Outcome.Failed("the snapshot cannot be written: ${e.javaClass.simpleName}", FetchCause.PHONE)
@@ -285,8 +273,6 @@ class Fetcher(
     }
 
     private companion object {
-        const val TAG = "Fetch"
-
         /** Home Assistant's refresh tokens expire after 90 days unused (`auth/const.py` at Core 2026.11.1). */
         const val UNTIL_UNUSED = "it stays valid there until it goes 90 days unused"
 
@@ -296,6 +282,35 @@ class Fetcher(
          * write the account and the snapshot one after the other.
          */
         val LOCK = Any()
+    }
+}
+
+private const val TAG = "Fetch"
+
+private fun log(outcome: Fetcher.Outcome) {
+    when (outcome) {
+        is Fetcher.Outcome.Failed -> {
+            Log.w(TAG, "Fetch failed: ${outcome.reason}")
+        }
+
+        is Fetcher.Outcome.Fetched -> {
+            Log.i(TAG, "Fetched ${outcome.entries} entries, ${outcome.leftOut} left out")
+        }
+
+        Fetcher.Outcome.Rejected -> {
+            Log.w(TAG, "Home Assistant refused the refresh token; signing in again is needed")
+        }
+
+        Fetcher.Outcome.Unreadable -> {
+            Log.w(
+                TAG,
+                "The stored sign-in cannot be read on this phone; signing in again is needed",
+            )
+        }
+
+        Fetcher.Outcome.NotSignedIn -> {
+            Log.i(TAG, "Not signed in, nothing fetched")
+        }
     }
 }
 
@@ -314,3 +329,49 @@ private fun causeOf(
         FailureKind.REFUSED -> FetchCause.REFUSED
         FailureKind.UNEXPECTED -> FetchCause.UNEXPECTED
     }
+
+/**
+ * The theme a new snapshot keeps, and, when the app could not read Home
+ * Assistant's, what the sign-in screen says of it.
+ */
+private class ThemeToKeep(
+    val json: JsonObject?,
+    val unreadable: UnreadableTheme?,
+)
+
+/**
+ * The theme to keep in the new snapshot (D17, D48): the one Home Assistant
+ * sent when the app can read it, the variables it lacks logged; none when
+ * Home Assistant has no theme of that name; and when it cannot be read, the
+ * last snapshot's ([last]), so a bad theme never replaces a good one, or
+ * none, with when the theme kept was fetched: when the last theme was itself
+ * kept from an earlier fetch ([carried]), that fetch's time, else the last
+ * snapshot's. Without a theme the widgets draw with the built-in palettes.
+ */
+private fun themeToKeep(
+    theme: JsonObject?,
+    last: () -> Snapshot?,
+    carried: () -> UnreadableTheme?,
+): ThemeToKeep {
+    if (theme == null) {
+        Log.w(TAG, "Home Assistant has no theme \"${HaClient.THEME}\"; the widgets draw with the built-in colours")
+        return ThemeToKeep(null, null)
+    }
+    return when (val read = ThemePalettes.read(theme)) {
+        is ThemePalettes.Read.Readable -> {
+            if (read.missing.isNotEmpty()) {
+                Log.w(TAG, "The theme lacks ${read.missing.joinToString()}; the built-in colours stand in for them")
+            }
+            ThemeToKeep(theme, null)
+        }
+
+        is ThemePalettes.Read.Unreadable -> {
+            val snapshot = last()
+            val kept = snapshot?.theme
+            val what = if (kept == null) "the built-in colours" else "the last snapshot's theme"
+            Log.w(TAG, "The theme cannot be read (${read.reason}); keeping $what")
+            val keptFrom = snapshot?.takeIf { kept != null }?.let { carried()?.keptFrom ?: it.fetchedAt }
+            ThemeToKeep(kept, UnreadableTheme(keptFrom))
+        }
+    }
+}

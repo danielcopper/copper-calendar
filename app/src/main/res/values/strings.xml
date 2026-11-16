@@ -28,6 +28,13 @@
     <string name="widget_month_too_full">Monat zu voll – im Kalender öffnen</string>
     <!-- A widget whose drawing failed (D40); a tap opens the calendar page. -->
     <string name="widget_failed">Kalender konnte nicht gezeichnet werden – im Kalender öffnen</string>
+    <!-- A widget with no calendar to draw (D50): signed out, or signed in before the first snapshot; a tap opens the sign-in screen. -->
+    <string name="widget_signed_out">Nicht angemeldet – zum Anmelden tippen</string>
+    <string name="widget_no_data">Noch keine Daten – zum Öffnen tippen</string>
+    <!-- The header's right side: when the last successful fetch was, once it is older than an hour (D51), its time today ("14:30") or its day before yesterday ("9. Nov."), and its time yesterday; and that the sign-in is no longer usable (D52). -->
+    <string name="widget_stale">Stand %1$s</string>
+    <string name="widget_stale_yesterday">Stand gestern %1$s</string>
+    <string name="widget_sign_in_again">Neu anmelden</string>
     <!-- A tap's target cannot be opened (D25): no app handles a target the Home Assistant app would open; any other case, also one this app may not start. -->
     <string name="target_home_assistant_missing">Home-Assistant-App nicht gefunden</string>
     <string name="target_not_openable">Ziel lässt sich nicht öffnen</string>
@@ -55,6 +62,10 @@
     <string name="fetch_cause_refused">Anmeldung abgelehnt</string>
     <string name="fetch_cause_unexpected">unerwartete Antwort</string>
     <string name="fetch_cause_phone">Fehler auf diesem Handy</string>
+    <!-- The last fetch could not read the theme (D48), its name: the colours kept from an earlier fetch, at its time today, else its date as well; or, with none kept, the built-in ones. -->
+    <string name="theme_unreadable_today">Theme „%1$s“ nicht lesbar – Farben vom Abruf um %2$s</string>
+    <string name="theme_unreadable_day">Theme „%1$s“ nicht lesbar – Farben vom Abruf am %3$s um %2$s</string>
+    <string name="theme_unreadable_built_in">Theme „%1$s“ nicht lesbar – eingebaute Farben</string>
     <string name="sign_out">Abmelden</string>
     <!-- The month widget's weekday heads, Monday to Sunday. -->
     <string-array name="weekday_heads">

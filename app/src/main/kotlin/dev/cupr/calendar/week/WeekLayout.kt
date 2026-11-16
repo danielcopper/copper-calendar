@@ -5,6 +5,7 @@ import dev.cupr.calendar.R
 import dev.cupr.calendar.days.CLOCK_TIME
 import dev.cupr.calendar.days.CalendarDays
 import dev.cupr.calendar.days.DAYS_IN_WEEK
+import dev.cupr.calendar.days.DAY_AND_MONTH
 import dev.cupr.calendar.days.isWeekend
 import dev.cupr.calendar.days.longName
 import dev.cupr.calendar.model.Entry
@@ -13,9 +14,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
-import java.util.Locale
 
 /** The days a week widget shows, set per widget (D20), and its header's title. */
 enum class WeekDays(
@@ -124,8 +123,6 @@ sealed interface Addition {
  * Timed entries ending today are not marked over.
  */
 object WeekLayout {
-    private val dayAndMonth = DateTimeFormatter.ofPattern("d. MMM", Locale.GERMAN)
-
     /** The days of dates, which run on without a gap. */
     fun build(
         dates: List<LocalDate>,
@@ -159,11 +156,11 @@ object WeekLayout {
         first: LocalDate,
         last: LocalDate,
     ): String {
-        val end = last.format(dayAndMonth)
+        val end = last.format(DAY_AND_MONTH)
         return if (YearMonth.from(first) == YearMonth.from(last)) {
             "${first.dayOfMonth}.–$end"
         } else {
-            "${first.format(dayAndMonth)} – $end"
+            "${first.format(DAY_AND_MONTH)} – $end"
         }
     }
 

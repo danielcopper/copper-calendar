@@ -16,7 +16,6 @@ mise run install  # builds the debug APK and installs it with adb
 ```
 
 `install` needs a phone that adb is connected to: pair it once with `adb pair` (Wireless debugging on the phone), then `adb connect <address>`; adb is in `~/Android/Sdk/platform-tools`.
-For now the widgets show sample data for November 2026.
 
 ## License
 

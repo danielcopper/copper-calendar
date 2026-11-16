@@ -15,7 +15,11 @@ import dev.cupr.calendar.store.FetchCause
 import dev.cupr.calendar.store.Snapshot
 import dev.cupr.calendar.store.SnapshotStore
 import dev.cupr.calendar.store.TokenCipher
+import dev.cupr.calendar.store.UnreadableTheme
+import dev.cupr.calendar.store.UnreadableThemeStore
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -46,10 +50,12 @@ class FetcherTest {
     private val snapshotFile = File(context.filesDir, "snapshot.json")
     private val snapshots = SnapshotStore(snapshotFile)
     private val failures = FailedFetchStore(prefs)
+    private val themes = UnreadableThemeStore(prefs)
     private val now = Instant.parse("2026-11-12T09:30:00Z")
     private val clock = Clock.fixed(now, ZoneId.of("Europe/Berlin"))
     private val fetcher = fetcher(account)
     private val old = Snapshot(1, "Daniel", emptyList())
+    private val readable = Json.parseToJsonElement("""{"primary-color":"#123456"}""").jsonObject
 
     private val good =
         """{"start":"2026-11-14","end":"2026-11-15","all_day":true,"title":"Anna","calendar":"calendar.contact_birthdays"}"""
@@ -61,7 +67,8 @@ class FetcherTest {
     /** Another Fetcher on the same files, as the app makes one for each use. */
     private var online = true
 
-    private fun fetcher(account: Account) = Fetcher(account, snapshots, failures, OkHttpClient(), clock) { online }
+    private fun fetcher(account: Account) =
+        Fetcher(account, snapshots, failures, themes, OkHttpClient(), clock) { online }
 
     private val code = AuthorizationCode("code-1")
 
@@ -96,12 +103,160 @@ class FetcherTest {
         val snapshot = snapshots.read()!!
         assertEquals(now, snapshot.fetchedAt)
         assertEquals("Daniel", snapshot.user)
-        assertEquals(listOf("Anna"), snapshot.entries(ZoneId.of("Europe/Berlin")).map { it.title })
+        assertEquals(listOf("Anna"), snapshot.parse(ZoneId.of("Europe/Berlin")).entries.map { it.title })
         assertEquals("#1f6fd6", (snapshot.theme!!["primary-color"] as JsonPrimitive).content)
         assertTrue(logs, logs.contains("Entry 1 (\"Broken\") left out:"))
         val form = home.requests.first().second
         assertEquals("refresh-1", form["refresh_token"])
         assertEquals("http://127.0.0.1:47123/", form["client_id"])
+    }
+
+    @Test
+    fun `a theme the app can read replaces the last snapshot's theme`() {
+        signIn()
+        entries(good)
+        snapshots.write(Snapshot(1_000, "Daniel", emptyList(), readable))
+
+        fetcher.fetch()
+
+        assertEquals("#1f6fd6", (snapshots.read()!!.theme!!["primary-color"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `Home Assistant without the theme leaves the snapshot without one, also after one with a theme`() {
+        signIn()
+        entries(good)
+        snapshots.write(Snapshot(1_000, "Daniel", emptyList(), readable))
+        home.themes = """{"Other":{}}"""
+
+        fetcher.fetch()
+
+        assertNull(snapshots.read()!!.theme)
+        val expected = "Home Assistant has no theme \"Zuhause\"; the widgets draw with the built-in colours"
+        assertTrue(logs, logs.contains(expected))
+    }
+
+    @Test
+    fun `a theme the app cannot read keeps the last snapshot's theme`() {
+        signIn()
+        entries(good)
+        fetcher.fetch()
+        home.themes = """{"Zuhause":{"modes":{"light":{"primary-color":"var(--accent)"}}}}"""
+
+        assertEquals(Fetcher.Outcome.Fetched(entries = 1, leftOut = 0), fetcher.fetch())
+
+        assertEquals("#1f6fd6", (snapshots.read()!!.theme!!["primary-color"] as JsonPrimitive).content)
+        assertTrue(logs, logs.contains("The theme cannot be read (light primary-color is not a colour"))
+        assertTrue(logs, logs.contains("keeping the last snapshot's theme"))
+    }
+
+    @Test
+    fun `a theme the app cannot read and no snapshot before keeps no theme`() {
+        signIn()
+        entries(good)
+        home.themes = """{"Zuhause":{"modes":[]}}"""
+
+        fetcher.fetch()
+
+        assertNull(snapshots.read()!!.theme)
+        val expected = "The theme cannot be read (modes is not an object); keeping the built-in colours"
+        assertTrue(logs, logs.contains(expected))
+    }
+
+    @Test
+    fun `a theme the app cannot read is noted for the screen with when the colours kept were fetched`() {
+        signIn()
+        entries(good)
+        snapshots.write(Snapshot(1_000, "Daniel", emptyList(), readable))
+        home.themes = """{"Zuhause":{"modes":[]}}"""
+
+        fetcher.fetch()
+        assertEquals(UnreadableTheme(Instant.ofEpochMilli(1_000)), themes.read())
+
+        // The theme kept now is the one of the fetch at 1,000, not the snapshot written just now.
+        fetcher.fetch()
+        assertEquals(UnreadableTheme(Instant.ofEpochMilli(1_000)), themes.read())
+        assertEquals(readable, snapshots.read()!!.theme)
+    }
+
+    @Test
+    fun `a theme the app cannot read and none kept says the built-in colours draw`() {
+        signIn()
+        entries(good)
+        snapshots.write(Snapshot(1_000, "Daniel", emptyList()))
+        home.themes = """{"Zuhause":{"modes":[]}}"""
+
+        fetcher.fetch()
+
+        assertEquals(UnreadableTheme(null), themes.read())
+    }
+
+    @Test
+    fun `a fetch that reads the theme again, or finds none, forgets the unreadable one`() {
+        signIn()
+        entries(good)
+        themes.write(UnreadableTheme(Instant.EPOCH))
+
+        fetcher.fetch()
+        assertNull(themes.read())
+
+        themes.write(UnreadableTheme(Instant.EPOCH))
+        home.themes = """{"Other":{}}"""
+        fetcher.fetch()
+        assertNull(themes.read())
+    }
+
+    @Test
+    fun `a fetch that fails keeps the unreadable theme`() {
+        signIn()
+        themes.write(UnreadableTheme(Instant.EPOCH))
+        home.close()
+
+        fetcher.fetch()
+
+        assertEquals(UnreadableTheme(Instant.EPOCH), themes.read())
+    }
+
+    @Test
+    fun `a snapshot that cannot be written leaves the unreadable theme's note as it was`() {
+        signIn()
+        entries(good)
+        File(snapshotFile.path + ".new", "blocking").mkdirs()
+
+        // A readable theme does not forget the note when its snapshot is not written.
+        themes.write(UnreadableTheme(Instant.EPOCH))
+        assertTrue(fetcher.fetch() is Fetcher.Outcome.Failed)
+        assertEquals(UnreadableTheme(Instant.EPOCH), themes.read())
+
+        // An unreadable one does not note itself when its snapshot is not written.
+        themes.clear()
+        home.themes = """{"Zuhause":{"modes":[]}}"""
+        assertTrue(fetcher.fetch() is Fetcher.Outcome.Failed)
+        assertNull(themes.read())
+    }
+
+    @Test
+    fun `a new sign-in and signing out forget the unreadable theme`() {
+        themes.write(UnreadableTheme(Instant.EPOCH))
+        val request = SignInRequest.start(home.address)
+        home.challenge = request.authorizeUrl.queryParameter("code_challenge")
+        assertEquals(Fetcher.SignIn.SignedIn, fetcher.signIn(request, code))
+        assertNull(themes.read())
+
+        themes.write(UnreadableTheme(Instant.EPOCH))
+        fetcher.signOut()
+        assertNull(themes.read())
+    }
+
+    @Test
+    fun `the variables a theme lacks are logged and the theme kept`() {
+        signIn()
+        entries(good)
+
+        fetcher.fetch()
+
+        assertEquals("#1f6fd6", (snapshots.read()!!.theme!!["primary-color"] as JsonPrimitive).content)
+        assertTrue(logs, logs.contains("The theme lacks light card-background-color, light ha-card-border-color"))
     }
 
     @Test
@@ -414,7 +569,7 @@ class FetcherTest {
         val gate = CountDownLatch(1)
         home.statesGate = gate
         val impatient = OkHttpClient.Builder().readTimeout(200, TimeUnit.MILLISECONDS).build()
-        val fetcher = Fetcher(account, snapshots, failures, impatient, clock) { online }
+        val fetcher = Fetcher(account, snapshots, failures, themes, impatient, clock) { online }
         try {
             assertEquals(FetchCause.TIMEOUT, (fetcher.fetch() as Fetcher.Outcome.Failed).cause)
             online = false

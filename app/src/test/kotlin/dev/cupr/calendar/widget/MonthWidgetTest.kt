@@ -23,6 +23,7 @@ import dev.cupr.calendar.tap.Taps
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -36,6 +37,9 @@ import kotlin.math.roundToInt
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class MonthWidgetTest {
+    @get:Rule
+    val sampleContent = SampleContent()
+
     private val application = ApplicationProvider.getApplicationContext<Application>()
     private val manager = AppWidgetManager.getInstance(application)
 
@@ -80,7 +84,7 @@ class MonthWidgetTest {
     private fun scrolled(heightDp: Int): Pair<ListView, Int> {
         val height = WidgetHeight(heightDp, null)
         return WidgetHost.scrolledToTarget(application, heightDp, { context, width ->
-            MonthWidget.draw(context, width, 1, Long.MAX_VALUE, height).views
+            MonthWidget.draw(context, width, 1, Long.MAX_VALUE, SampleData.calendar(), height).views
         })
     }
 
@@ -121,7 +125,7 @@ class MonthWidgetTest {
         assertTrue("${list.paddingBottom}", list.paddingBottom > 0)
         val height = WidgetHeight(WidgetHost.HEIGHT_DP, null)
         WidgetHost.reapplied(application, list.rootView) { context, width ->
-            MonthWidget.draw(context, width, 1, Long.MAX_VALUE, height).views
+            MonthWidget.draw(context, width, 1, Long.MAX_VALUE, SampleData.calendar(), height).views
         }
         assertEquals(5, WidgetHost.scrollToTarget(list))
         assertEquals(0, list.paddingBottom)

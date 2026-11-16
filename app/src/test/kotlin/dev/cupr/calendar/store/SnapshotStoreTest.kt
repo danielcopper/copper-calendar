@@ -49,7 +49,11 @@ class SnapshotStoreTest {
         assertEquals(Instant.ofEpochMilli(1_794_470_400_000), store.read()!!.fetchedAt)
         assertEquals(
             listOf(LocalDate.of(2026, 11, 11).atStartOfDay()),
-            store.read()!!.entries(ZoneId.of("Europe/Berlin")).map { it.start },
+            store
+                .read()!!
+                .parse(ZoneId.of("Europe/Berlin"))
+                .entries
+                .map { it.start },
         )
     }
 

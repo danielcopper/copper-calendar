@@ -6,8 +6,9 @@ import androidx.work.Configuration
 /**
  * The app's Application, for WorkManager's on-demand initialization: the
  * manifest removes WorkManager's start-up initializer, so its database opens
- * only when a fetch is scheduled or watched, not with every process the
- * widgets' updates start (D46).
+ * only when the app schedules or watches work, a fetch or the update at
+ * midnight, not with every process the launcher's widget updates start
+ * (D46, D54).
  */
 class CopperApp :
     Application(),

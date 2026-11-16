@@ -7,13 +7,11 @@ import android.util.TypedValue
 import android.widget.RemoteViews
 import dev.cupr.calendar.R
 import dev.cupr.calendar.days.longName
-import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.render.DayRowRenderer
 import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.render.WeekTexts
-import dev.cupr.calendar.sample.SampleData
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
 import dev.cupr.calendar.week.DayEntry
@@ -36,38 +34,29 @@ object WeekWidget {
     /** The plain text it shows when the system refuses its views (D40). */
     internal val TOO_FULL = R.string.widget_week_too_full
 
+    /** Draws calendar's week on the widget id and hands it to the launcher. */
     fun update(
         context: Context,
         manager: AppWidgetManager,
         id: Int,
+        calendar: Content.Calendar,
     ) {
         val options = manager.getAppWidgetOptions(id)
         val width = DrawnWidget.widthDp(options, TAG, id)
         val height = WidgetHeight.of(options, TAG, id)
         val limit = BitmapLimit.limitBytes(context, TAG, id)
-        val drawn = draw(context, width, WeekDays.MONDAY_TO_SUNDAY, id, limit, height = height)
+        val drawn = draw(context, width, WeekDays.MONDAY_TO_SUNDAY, id, limit, calendar, height)
         DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
     }
 
     /**
-     * The widget at widthDp showing days, for the sample entries while the
-     * app has no other data: its "today" is the sample's
-     * ([SampleData.clock]). The widget's id only names it in the log.
-     */
-    fun views(
-        context: Context,
-        widthDp: Int,
-        days: WeekDays = WeekDays.MONDAY_TO_SUNDAY,
-        id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
-    ): RemoteViews = draw(context, widthDp, days, id, BitmapLimit.limitBytes(context, TAG, id)).views
-
-    /**
-     * The widget at widthDp and the bytes of its bitmaps, kept within limit:
-     * when its rows would pass it, the fullest days leave out their last
-     * entries for a "+N weitere" line until they fit ([leaveOutOne]). Its
-     * list scrolls so today stands on top in a widget of height, or to its
-     * end when the days from today on fit, and only into view without a
-     * height ([TodayOnTop.scroll], D27).
+     * The widget at widthDp showing days of calendar, from its today, and
+     * the bytes of its bitmaps, kept within limit: when its rows would pass
+     * it, the fullest days leave out their last entries for a "+N weitere"
+     * line until they fit ([leaveOutOne]). The widget's id only names it in
+     * the log. Its list scrolls so today stands on top in a widget of
+     * height, or to its end when the days from today on fit, and only into
+     * view without a height ([TodayOnTop.scroll], D27).
      */
     internal fun draw(
         context: Context,
@@ -75,10 +64,10 @@ object WeekWidget {
         days: WeekDays,
         id: Int,
         limit: Long,
-        entries: List<Entry> = SampleData.entries,
+        calendar: Content.Calendar,
         height: WidgetHeight? = null,
     ): Drawn {
-        val today = LocalDate.now(SampleData.clock)
+        val today = calendar.today
         val dates = days.dates(today)
         val scale = Scale(context.resources.displayMetrics.density)
         val headerWidthPx = scale.px(widthDp - 2 * PhoneMonth.CARD_INSET).roundToInt()
@@ -92,10 +81,10 @@ object WeekWidget {
         val range = WeekLayout.range(dates.first(), dates.last())
         val views = RemoteViews(context.packageName, R.layout.widget_week)
         val headerPx =
-            DrawnWidget.fixedParts(context, views, kept, "$title, $range", today, scale) { chrome, palette ->
-                chrome.weekHeader(title, range, null, headerWidthPx, scale, palette)
+            DrawnWidget.fixedParts(context, views, kept, "$title, $range", calendar, scale) { chrome, palette, note ->
+                chrome.weekHeader(title, range, null, headerWidthPx, scale, palette, note)
             }
-        val full = WeekLayout.build(dates, entries, today)
+        val full = WeekLayout.build(dates, calendar.entries, today)
         val bytesOf = { days: List<WeekDay> -> days.sumOf { BitmapLimit.bytes(rowPx, rows.heightPx(it, scale)) } }
         val capped = BitmapLimit.capped(full, limit - kept.bytes, bytesOf, ::leaveOutOne)
         val week = capped.drawn
@@ -110,8 +99,8 @@ object WeekWidget {
         )
         val items =
             week.map { day ->
-                val light = kept.keep(rows.render(day, rowPx, scale, SampleData.light))
-                val dark = kept.keep(rows.render(day, rowPx, scale, SampleData.dark))
+                val light = kept.keep(rows.render(day, rowPx, scale, calendar.palettes.light))
+                val dark = kept.keep(rows.render(day, rowPx, scale, calendar.palettes.dark))
                 day.date.toEpochDay() to row(context, rows, day, light, dark, scale)
             }
         DrawnWidget.list(context, views, items)
