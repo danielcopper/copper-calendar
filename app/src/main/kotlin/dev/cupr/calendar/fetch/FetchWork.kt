@@ -19,10 +19,10 @@ import java.util.concurrent.TimeUnit
 /**
  * Runs one fetch ([Fetcher]) and then updates the widgets, whatever its
  * outcome, also when it throws, so they show a new snapshot, how old the
- * last one is, or that signing in again is needed (D54). A failed fetch is not retried on its
- * own: the next periodic fetch tries again (D46). Without a usable sign-in
- * the periodic fetch stops, decided under the fetch's lock, until the next
- * sign-in starts it again.
+ * last one is, or that signing in again is needed (D54). A failed fetch
+ * is not retried on its own: the next periodic fetch tries again (D46).
+ * Without a usable sign-in the periodic fetch stops, decided under the
+ * fetch's lock, until the next sign-in starts it again.
  */
 class FetchWorker(
     context: Context,

@@ -84,8 +84,9 @@ class Fetcher(
     /**
      * Trades the code [request]'s redirect carried for a refresh token and
      * keeps it; the snapshot, the last failure and the unreadable theme of
-     * an earlier sign-in go (D45, D48). When the token cannot be sealed, Home Assistant is asked to end
-     * it again, so it is not left valid there unused, and nothing is kept.
+     * an earlier sign-in go (D45, D48). When the token cannot be sealed,
+     * Home Assistant is asked to end it again, so it is not left valid there
+     * unused, and nothing is kept.
      */
     fun signIn(
         request: SignInRequest,
@@ -139,9 +140,10 @@ class Fetcher(
     /**
      * Signs out ("Abmelden", D47): asks Home Assistant to end the refresh
      * token, then forgets the token and deletes the snapshot, the last
-     * failure and the unreadable theme; the address stays. Waits for a fetch that is running, so it
-     * cannot write its snapshot afterwards. The local sign-in goes even when
-     * asking Home Assistant fails or the stored token cannot be read.
+     * failure and the unreadable theme; the address stays. Waits for a
+     * fetch that is running, so it cannot write its snapshot afterwards. The
+     * local sign-in goes even when asking Home Assistant fails or the stored
+     * token cannot be read.
      */
     fun signOut() {
         var asked = "Home Assistant was not asked to end the refresh token"
