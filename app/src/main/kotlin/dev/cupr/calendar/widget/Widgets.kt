@@ -2,6 +2,7 @@ package dev.cupr.calendar.widget
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.util.Log
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
@@ -76,15 +77,34 @@ object Midnight {
     }
 }
 
-/** Redraws every widget at midnight and schedules the next midnight ([Midnight]). */
+/**
+ * Redraws every widget at midnight and schedules the next midnight
+ * ([Midnight]). A redraw that fails is logged and the next midnight is
+ * scheduled all the same (D54).
+ */
 class MidnightWorker(
     context: Context,
     params: WorkerParameters,
 ) : Worker(context, params) {
+    // A failure of the redraw must not end the midnight chain (D54).
+    @Suppress("TooGenericExceptionCaught")
     override fun doWork(): Result {
-        Widgets.redraw(applicationContext)
+        try {
+            Widgets.redraw(applicationContext)
+        } catch (e: RuntimeException) {
+            // The exception's class and where it was thrown, not its message, which may quote an entry.
+            Log.e(
+                TAG,
+                "Midnight: the widgets could not be redrawn (${e.javaClass.name} at ${e.stackTrace.firstOrNull()}); " +
+                    "the next midnight is scheduled all the same",
+            )
+        }
         // Appended to this job, as replacing it would cancel this job while it runs.
         Midnight.schedule(applicationContext, ExistingWorkPolicy.APPEND_OR_REPLACE)
         return Result.success()
+    }
+
+    private companion object {
+        const val TAG = "Widgets"
     }
 }

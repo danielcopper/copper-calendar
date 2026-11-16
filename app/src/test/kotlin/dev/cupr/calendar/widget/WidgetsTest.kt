@@ -31,6 +31,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -38,6 +39,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowLog
 import java.time.Clock
 import java.time.Duration
 import java.time.LocalDateTime
@@ -189,6 +191,27 @@ class WidgetsTest {
         Services.signOut(context)
 
         for (id in ids) assertEquals("Nicht angemeldet – zum Anmelden tippen", plainText(id)?.text.toString())
+    }
+
+    @Test
+    fun `a midnight whose redraw fails logs it and still schedules the next midnight`() {
+        val content = DrawnWidgetProvider.content
+        DrawnWidgetProvider.content = { throw IllegalStateException("Anna stands on 2026-11-12") }
+        try {
+            Midnight.schedule(context, ExistingWorkPolicy.REPLACE)
+            val first = work.getWorkInfosForUniqueWork(Midnight.NAME).get().single().id
+
+            checkNotNull(WorkManagerTestInitHelper.getTestDriver(context)).setInitialDelayMet(first)
+
+            val infos = work.getWorkInfosForUniqueWork(Midnight.NAME).get().associate { it.id to it.state }
+            assertEquals(WorkInfo.State.SUCCEEDED, infos[first])
+            assertEquals(listOf(WorkInfo.State.ENQUEUED), infos.filterKeys { it != first }.values.toList())
+            val logged = ShadowLog.getLogsForTag("Widgets").filter { it.type == Log.ERROR }.map { it.msg }
+            assertTrue("$logged", logged.single().contains("IllegalStateException"))
+            assertFalse("$logged", logged.single().contains("Anna"))
+        } finally {
+            DrawnWidgetProvider.content = content
+        }
     }
 
     @Test
