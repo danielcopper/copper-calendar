@@ -9,6 +9,7 @@ import dev.cupr.calendar.ha.HaAddress
 import dev.cupr.calendar.ha.HaClient
 import dev.cupr.calendar.ha.RefreshToken
 import dev.cupr.calendar.ha.SignInRequest
+import dev.cupr.calendar.ha.ThemePalettes
 import dev.cupr.calendar.ha.TokenClient
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.CipherFailureException
@@ -18,6 +19,7 @@ import dev.cupr.calendar.store.FetchCause
 import dev.cupr.calendar.store.Snapshot
 import dev.cupr.calendar.store.SnapshotStore
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import okhttp3.OkHttpClient
 import java.io.IOException
 import java.time.Clock
@@ -271,16 +273,44 @@ class Fetcher(
         entries: JsonArray,
         userAndTheme: HaClient.UserAndTheme,
     ): Outcome {
-        if (userAndTheme.theme == null) Log.w(TAG, "Home Assistant has no theme \"${HaClient.THEME}\"")
         val parsed = EntryParser.parse(entries, clock.zone)
         parsed.problems.forEach { Log.w(TAG, it) }
         return try {
             snapshots.write(
-                Snapshot(clock.millis(), userAndTheme.user, parsed.read.map { it.json }, userAndTheme.theme),
+                Snapshot(clock.millis(), userAndTheme.user, parsed.read.map { it.json }, checked(userAndTheme.theme)),
             )
             Outcome.Fetched(parsed.read.size, entries.size - parsed.read.size)
         } catch (e: IOException) {
             Outcome.Failed("the snapshot cannot be written: ${e.javaClass.simpleName}", FetchCause.PHONE)
+        }
+    }
+
+    /**
+     * The theme to keep in the new snapshot (D17): the one Home Assistant
+     * sent when the app can read it, the variables it lacks logged; none when
+     * Home Assistant has no theme of that name; and when it cannot be read,
+     * the last snapshot's, so a bad theme never replaces a good one, or none.
+     * Without a theme the widgets draw with the built-in palettes.
+     */
+    private fun checked(theme: JsonObject?): JsonObject? {
+        if (theme == null) {
+            Log.w(TAG, "Home Assistant has no theme \"${HaClient.THEME}\"; the widgets draw with the built-in colours")
+            return null
+        }
+        return when (val read = ThemePalettes.read(theme)) {
+            is ThemePalettes.Read.Readable -> {
+                if (read.missing.isNotEmpty()) {
+                    Log.w(TAG, "The theme lacks ${read.missing.joinToString()}; the built-in colours stand in for them")
+                }
+                theme
+            }
+
+            is ThemePalettes.Read.Unreadable -> {
+                val last = snapshots.read()?.theme
+                val kept = if (last == null) "the built-in colours" else "the last snapshot's theme"
+                Log.w(TAG, "The theme cannot be read (${read.reason}); keeping $kept")
+                last
+            }
         }
     }
 

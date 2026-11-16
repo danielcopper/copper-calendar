@@ -105,6 +105,43 @@ class FetcherTest {
     }
 
     @Test
+    fun `a theme the app cannot read keeps the last snapshot's theme`() {
+        signIn()
+        entries(good)
+        fetcher.fetch()
+        home.themes = """{"Zuhause":{"modes":{"light":{"primary-color":"var(--accent)"}}}}"""
+
+        assertEquals(Fetcher.Outcome.Fetched(entries = 1, leftOut = 0), fetcher.fetch())
+
+        assertEquals("#1f6fd6", (snapshots.read()!!.theme!!["primary-color"] as JsonPrimitive).content)
+        assertTrue(logs, logs.contains("The theme cannot be read (light primary-color is not a colour"))
+        assertTrue(logs, logs.contains("keeping the last snapshot's theme"))
+    }
+
+    @Test
+    fun `a theme the app cannot read and no snapshot before keeps no theme`() {
+        signIn()
+        entries(good)
+        home.themes = """{"Zuhause":{"modes":[]}}"""
+
+        fetcher.fetch()
+
+        assertNull(snapshots.read()!!.theme)
+        assertTrue(logs, logs.contains("The theme cannot be read (modes is not an object); keeping the built-in colours"))
+    }
+
+    @Test
+    fun `the variables a theme lacks are logged and the theme kept`() {
+        signIn()
+        entries(good)
+
+        fetcher.fetch()
+
+        assertEquals("#1f6fd6", (snapshots.read()!!.theme!!["primary-color"] as JsonPrimitive).content)
+        assertTrue(logs, logs.contains("The theme lacks light card-background-color, light ha-card-border-color"))
+    }
+
+    @Test
     fun `no token lands in the preferences or the snapshot`() {
         signIn()
         entries(good)

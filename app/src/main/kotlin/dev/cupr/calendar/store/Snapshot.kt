@@ -17,8 +17,9 @@ import java.time.ZoneId
 
 /**
  * Home Assistant's last good answer (D6, D45): [entryJson], the entries the
- * app could read, as Home Assistant sent them; the theme "Zuhause" (none
- * when Home Assistant had no theme of that name, D17); the signed-in user's
+ * app could read, as Home Assistant sent them; the theme "Zuhause", one the
+ * app could read (none when Home Assistant had no theme of that name, D17,
+ * and the last snapshot's when it could not read the new one); the signed-in user's
  * name; and when it was fetched. Replaced whole by each successful fetch,
  * deleted by each new sign-in and by signing out.
  */
