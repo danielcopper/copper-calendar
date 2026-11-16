@@ -218,6 +218,24 @@ class FetcherTest {
     }
 
     @Test
+    fun `a snapshot that cannot be written leaves the unreadable theme's note as it was`() {
+        signIn()
+        entries(good)
+        File(snapshotFile.path + ".new", "blocking").mkdirs()
+
+        // A readable theme does not forget the note when its snapshot is not written.
+        themes.write(UnreadableTheme(Instant.EPOCH))
+        assertTrue(fetcher.fetch() is Fetcher.Outcome.Failed)
+        assertEquals(UnreadableTheme(Instant.EPOCH), themes.read())
+
+        // An unreadable one does not note itself when its snapshot is not written.
+        themes.clear()
+        home.themes = """{"Zuhause":{"modes":[]}}"""
+        assertTrue(fetcher.fetch() is Fetcher.Outcome.Failed)
+        assertNull(themes.read())
+    }
+
+    @Test
     fun `a new sign-in and signing out forget the unreadable theme`() {
         themes.write(UnreadableTheme(Instant.EPOCH))
         val request = SignInRequest.start(home.address)
