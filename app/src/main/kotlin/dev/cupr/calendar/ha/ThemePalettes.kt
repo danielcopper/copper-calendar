@@ -108,14 +108,25 @@ object ThemePalettes {
     internal fun parseColor(text: String): Int? = CssColors.parse(text) ?: rgb(text.trim())
 
     @ColorInt
-    private fun rgb(text: String): Int? =
-        RGB.matchEntire(text)?.groupValues?.let { groups ->
-            val (red, green, blue) = groups.subList(1, ALPHA).map { it.toInt() }
-            val opacity = groups[ALPHA].ifEmpty { null }?.toDouble() ?: 1.0
-            val alpha = (opacity * MAX).roundToInt()
-            ((alpha shl ALPHA_SHIFT) or (red shl RED_SHIFT) or (green shl GREEN_SHIFT) or blue)
-                .takeIf { listOf(red, green, blue).all { it <= MAX } && opacity <= 1.0 }
-        }
+    private fun rgb(text: String): Int? {
+        val parts =
+            RGB
+                .matchEntire(text)
+                ?.groupValues
+                ?.get(1)
+                ?.split(',')
+                .orEmpty()
+        val numbers =
+            parts
+                .mapIndexedNotNull { index, part ->
+                    (if (index < CHANNELS) CHANNEL else OPACITY).matchEntire(part)?.groupValues?.get(1)
+                }.takeIf { it.size == parts.size && it.size in CHANNELS..CHANNELS + 1 } ?: return null
+        val (red, green, blue) = numbers.take(CHANNELS).map { it.toInt() }
+        val opacity = numbers.getOrNull(CHANNELS)?.toDouble() ?: 1.0
+        val alpha = (opacity * MAX).roundToInt()
+        return ((alpha shl ALPHA_SHIFT) or (red shl RED_SHIFT) or (green shl GREEN_SHIFT) or blue)
+            .takeIf { listOf(red, green, blue).all { it <= MAX } && opacity <= 1.0 }
+    }
 
     private class UnreadableThemeException(
         message: String,
@@ -124,9 +135,11 @@ object ThemePalettes {
     private const val LIGHT = "light"
     private const val DARK = "dark"
     private const val MAX = 255
-    private const val ALPHA = 4
+    private const val CHANNELS = 3
     private const val ALPHA_SHIFT = 24
     private const val RED_SHIFT = 16
     private const val GREEN_SHIFT = 8
-    private val RGB = Regex("""rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(\d*\.?\d+)\s*)?\)""")
+    private val RGB = Regex("""rgba?\(([^)]*)\)""")
+    private val CHANNEL = Regex("""\s*(\d{1,3})\s*""")
+    private val OPACITY = Regex("""\s*(\d*\.?\d+)\s*""")
 }

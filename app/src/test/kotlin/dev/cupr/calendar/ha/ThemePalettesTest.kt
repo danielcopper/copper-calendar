@@ -109,4 +109,34 @@ class ThemePalettesTest {
         assertNull(ThemePalettes.parseColor("rgb(0, 0)"))
         assertNull(ThemePalettes.parseColor("hsl(0, 0%, 0%)"))
     }
+
+    @Test
+    fun `rgb and rgba take either part count and whitespace around every part`() {
+        assertEquals(0x80010203.toInt(), ThemePalettes.parseColor("rgb(1, 2, 3, 0.5)"))
+        assertEquals(0xFF010203.toInt(), ThemePalettes.parseColor("rgba(1, 2, 3)"))
+        assertEquals(0x80010203.toInt(), ThemePalettes.parseColor("rgba( 1 ,\t2\n, 3 , 0.5 )"))
+        assertEquals(0xFF010203.toInt(), ThemePalettes.parseColor("rgba(001,02,3,1)"))
+    }
+
+    @Test
+    fun `rgb with a missing, extra or malformed part is no colour`() {
+        listOf(
+            "rgb(1, , 3)",
+            "rgb(, 2, 3)",
+            "rgba(1, 2, 3,)",
+            "rgba(1, 2, 3, 0.5, 1)",
+            "rgb(1, 2, 3, , 0.5)",
+            "rgb(0001, 2, 3)",
+            "rgb(1.0, 2, 3)",
+            "rgba(1, 2, 3, 1.)",
+            "rgba(1, 2, 3, 0..5)",
+            "rgba(1, 2, 3, 50%)",
+            "rgb (1, 2, 3)",
+            "RGB(1, 2, 3)",
+            "rgb(1, 2, 3",
+            "rgb(1 2 3)",
+            "rgb(1, 2, 3))",
+            "rgb()",
+        ).forEach { assertNull(it, ThemePalettes.parseColor(it)) }
+    }
 }
