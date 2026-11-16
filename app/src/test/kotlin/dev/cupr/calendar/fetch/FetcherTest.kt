@@ -67,7 +67,8 @@ class FetcherTest {
     /** Another Fetcher on the same files, as the app makes one for each use. */
     private var online = true
 
-    private fun fetcher(account: Account) = Fetcher(account, snapshots, failures, themes, OkHttpClient(), clock) { online }
+    private fun fetcher(account: Account) =
+        Fetcher(account, snapshots, failures, themes, OkHttpClient(), clock) { online }
 
     private val code = AuthorizationCode("code-1")
 

@@ -285,7 +285,12 @@ class WidgetsTest {
         DrawnWidgetProvider.content = { throw IllegalStateException("Anna stands on 2026-11-12") }
         try {
             Midnight.schedule(context, ExistingWorkPolicy.REPLACE)
-            val first = work.getWorkInfosForUniqueWork(Midnight.NAME).get().single().id
+            val first =
+                work
+                    .getWorkInfosForUniqueWork(Midnight.NAME)
+                    .get()
+                    .single()
+                    .id
 
             checkNotNull(WorkManagerTestInitHelper.getTestDriver(context)).setInitialDelayMet(first)
 

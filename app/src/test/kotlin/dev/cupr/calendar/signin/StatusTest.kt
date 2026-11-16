@@ -108,7 +108,7 @@ class StatusTest {
     }
 
     @Test
-    fun `while the last fetch could not read the theme, a line says since when the colours are, or that they are built in`() {
+    fun `while the theme could not be read, a line says since when the colours are, or that they are built in`() {
         assertEquals(
             "Theme „Zuhause“ nicht lesbar – Farben vom Abruf um 14:30",
             status(Account.State.SIGNED_IN, theme = UnreadableTheme(today)).themeLine(context, now, berlin),
@@ -126,7 +126,7 @@ class StatusTest {
     }
 
     @Test
-    fun `the status reads the address without its slash, the snapshot's user and time, the last failure and the theme`() {
+    fun `the status reads the address without its slash, the snapshot, the last failure and the theme`() {
         Services.account(context).rememberAddress(HaAddress("https://home.example/".toHttpUrl()))
         Services.snapshots(context).write(Snapshot(1_000, "Daniel", emptyList()))
         Services

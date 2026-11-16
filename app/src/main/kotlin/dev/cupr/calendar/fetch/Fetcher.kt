@@ -322,7 +322,10 @@ private fun causeOf(
         FailureKind.UNEXPECTED -> FetchCause.UNEXPECTED
     }
 
-/** The theme a new snapshot keeps, and, when the app could not read Home Assistant's, what the sign-in screen says of it. */
+/**
+ * The theme a new snapshot keeps, and, when the app could not read Home
+ * Assistant's, what the sign-in screen says of it.
+ */
 private class ThemeToKeep(
     val json: JsonObject?,
     val unreadable: UnreadableTheme?,

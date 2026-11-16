@@ -79,9 +79,9 @@ data class Status(
         zone: ZoneId,
     ): String? =
         unreadableTheme?.takeIf { state == Account.State.SIGNED_IN }?.let { theme ->
-            theme.keptFrom?.let {
-                at(context, it, now, zone, R.string.theme_unreadable_today, R.string.theme_unreadable_day, HaClient.THEME)
-            } ?: context.getString(R.string.theme_unreadable_built_in, HaClient.THEME)
+            val today = R.string.theme_unreadable_today
+            theme.keptFrom?.let { at(context, it, now, zone, today, R.string.theme_unreadable_day, HaClient.THEME) }
+                ?: context.getString(R.string.theme_unreadable_built_in, HaClient.THEME)
         }
 
     /** [today]'s text with [subject] and the time when [at] is today, else [day]'s with its date as well. */
