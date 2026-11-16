@@ -174,14 +174,17 @@ internal object DrawnWidget {
     ): Int {
         val chrome = chrome(context)
         val notice = calendar.notice
-        val note = notice?.let { HeaderNote(it.text, accent = it is Notice.SignInAgain) }
+        val (note, headerTap) =
+            when (notice) {
+                null -> null to Taps.pendingIntent(context, Tap.Header)
+                is Notice.Stale -> HeaderNote(notice.text, accent = false) to Taps.pendingIntent(context, Tap.Header)
+                is Notice.SignInAgain -> HeaderNote(notice.text, accent = true) to Taps.signIn(context)
+            }
         val palettes = calendar.palettes
         val light = kept.keep(header(chrome, palettes.light, note))
         views.setImageViewBitmap(R.id.header_light, light)
         views.setImageViewBitmap(R.id.header_dark, kept.keep(header(chrome, palettes.dark, note)))
         views.setContentDescription(R.id.header, notice?.let { "$description, ${it.text}" } ?: description)
-        val headerTap =
-            if (notice is Notice.SignInAgain) Taps.signIn(context) else Taps.pendingIntent(context, Tap.Header)
         views.setOnClickPendingIntent(R.id.header, headerTap)
         views.setImageViewBitmap(R.id.fab_light, kept.keep(chrome.fab(scale, palettes.light)))
         views.setImageViewBitmap(R.id.fab_dark, kept.keep(chrome.fab(scale, palettes.dark)))

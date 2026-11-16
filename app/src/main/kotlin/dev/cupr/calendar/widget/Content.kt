@@ -90,7 +90,7 @@ sealed interface Content {
                         Notice.SignInAgain(context.getString(R.string.widget_sign_in_again))
                     }
 
-                    else -> {
+                    Account.State.SIGNED_IN, Account.State.SIGNED_OUT -> {
                         stale(context, snapshot.fetchedAt, clock)?.let(Notice::Stale)
                     }
                 }
