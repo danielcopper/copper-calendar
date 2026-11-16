@@ -6,6 +6,7 @@ import androidx.annotation.StringRes
 import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.days.CLOCK_TIME
+import dev.cupr.calendar.days.DAY_AND_MONTH
 import dev.cupr.calendar.ha.ThemePalettes
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.model.Palettes
@@ -16,8 +17,6 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /**
  * What the widgets show (D2): the snapshot's calendar, or a plain text when
@@ -46,8 +45,6 @@ sealed interface Content {
 
         /** How old the last successful fetch may be before the header says when it was (D51). */
         val STALE_AFTER: Duration = Duration.ofHours(1)
-
-        private val DAY = DateTimeFormatter.ofPattern("d. MMM", Locale.GERMAN)
 
         /** What the widgets show now, from the sign-in and the snapshot the app keeps. */
         fun read(
@@ -113,7 +110,7 @@ sealed interface Content {
             return when (local.toLocalDate()) {
                 today -> context.getString(R.string.widget_stale, local.format(CLOCK_TIME))
                 today.minusDays(1) -> context.getString(R.string.widget_stale_yesterday, local.format(CLOCK_TIME))
-                else -> context.getString(R.string.widget_stale, local.format(DAY))
+                else -> context.getString(R.string.widget_stale, local.format(DAY_AND_MONTH))
             }
         }
 
