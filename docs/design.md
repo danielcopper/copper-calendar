@@ -42,3 +42,13 @@ A tap on a Home Assistant target first starts the Home Assistant app as its icon
 ## Setup app
 
 Per widget: which calendars it shows (D11), the tap targets above, the corner of "+", for the week widgets their days, Monday to Sunday or from today (D20), and when it returns to today (D27). The week's layout is not a setting: rows and columns are two widgets (D19). Once for the app: sign-in with Home Assistant (D9, D10).
+
+## Sign-in screen
+
+The app's one screen so far, opened from its launcher icon, in the phone's own colours, light or dark with the system (D41).
+
+- Signed out: a field for the Home Assistant address, kept once entered (D42), and "Mit Home Assistant anmelden", which shows Home Assistant's own login page inside the app (D43). When the page does not load or its certificate is not trusted, "Home Assistant nicht erreichbar – Adresse und Verbindung prüfen"; when the sign-in does not come about for another reason, "Anmeldung fehlgeschlagen – bitte noch einmal versuchen"; going back from the page says nothing.
+- Signed in: "Angemeldet als …, letzter Abruf um …" (on an earlier day "am 11. November um …"), or "Angemeldet, noch kein Abruf", and "Abmelden" (D47). While the last fetch failed, a line under it says "Letzter Abruf fehlgeschlagen um …: " and its cause in plain words, such as "kein Netz" or "Sensor nicht gefunden" (D46).
+- Refused by Home Assistant: "Home Assistant hat die Anmeldung abgelehnt – bitte neu anmelden"; the stored sign-in not readable on this phone: "Gespeicherte Anmeldung auf diesem Handy nicht lesbar – bitte neu anmelden"; each with the field and the button (D45, D46).
+
+Each time the screen opens while signed in, the app fetches (D46).

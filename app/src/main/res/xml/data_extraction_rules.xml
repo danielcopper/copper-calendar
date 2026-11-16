@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Nothing is backed up or moved to a new device; the app keeps no data of
-     its own yet. -->
+<!-- Nothing is backed up or moved to a new device: the sign-in's refresh
+     token is sealed with a key that stays in this phone's Keystore, and the
+     snapshot is fetched anew after signing in. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="root" path="." />

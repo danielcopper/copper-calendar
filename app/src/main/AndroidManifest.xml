@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Home Assistant over its one address, the Nabu Casa URL (D9). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Whether a fetch that cannot reach Home Assistant had a network at all (D46). -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- The apps that open Home Assistant's navigate links, so a tap can
          start the one that handles its target as its icon does (D30). The
@@ -15,6 +21,7 @@
     </queries>
 
     <application
+        android:name=".app.CopperApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
@@ -60,6 +67,29 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_week_columns_info" />
         </receiver>
+
+        <!-- WorkManager starts on demand (CopperApp, D46), not with every process. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
+        <!-- The app's screen: signing in with Home Assistant and out again. -->
+        <activity
+            android:name=".signin.SignInActivity"
+            android:exported="true"
+            android:theme="@style/Theme.CopperCalendar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <!-- Shows nothing: opens a tapped element's target and finishes (D23). -->
         <activity

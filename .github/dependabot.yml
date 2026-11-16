@@ -15,3 +15,5 @@ updates:
       # Held at the catalog's Kotlin; gradle/libs.versions.toml says why and
       # until when.
       - dependency-name: org.jetbrains.kotlin:kotlin-gradle-plugin
+      - dependency-name: org.jetbrains.kotlin.plugin.compose
+      - dependency-name: org.jetbrains.kotlin.plugin.serialization

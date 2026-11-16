@@ -1,0 +1,6 @@
+# Additions to detekt's default rules (buildUponDefaultConfig in build.gradle.kts).
+naming:
+  FunctionNaming:
+    # Composables are named like classes (Compose's API guidelines); .editorconfig says the same for ktlint.
+    ignoreAnnotated:
+      - Composable

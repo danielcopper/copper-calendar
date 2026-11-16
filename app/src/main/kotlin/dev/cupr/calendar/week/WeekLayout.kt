@@ -2,6 +2,7 @@ package dev.cupr.calendar.week
 
 import androidx.annotation.StringRes
 import dev.cupr.calendar.R
+import dev.cupr.calendar.days.CLOCK_TIME
 import dev.cupr.calendar.days.CalendarDays
 import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.days.isWeekend
@@ -123,7 +124,6 @@ sealed interface Addition {
  * Timed entries ending today are not marked over.
  */
 object WeekLayout {
-    private val clock = DateTimeFormatter.ofPattern("HH:mm")
     private val dayAndMonth = DateTimeFormatter.ofPattern("d. MMM", Locale.GERMAN)
 
     /** The days of dates, which run on without a gap. */
@@ -182,8 +182,8 @@ object WeekLayout {
         val time =
             when {
                 !placed.timed -> null
-                placed.multi || !entry.end.isAfter(entry.start) -> entry.start.format(clock)
-                else -> "${entry.start.format(clock)}–${endOfDay(entry.end, placed.first)}"
+                placed.multi || !entry.end.isAfter(entry.start) -> entry.start.format(CLOCK_TIME)
+                else -> "${entry.start.format(CLOCK_TIME)}–${endOfDay(entry.end, placed.first)}"
             }
         return DayEntry(entry, time, addition)
     }
@@ -204,7 +204,7 @@ object WeekLayout {
     private fun endOfDay(
         end: LocalDateTime,
         day: LocalDate,
-    ): String = if (end.toLocalDate() == day) end.format(clock) else MIDNIGHT
+    ): String = if (end.toLocalDate() == day) end.format(CLOCK_TIME) else MIDNIGHT
 
     private const val MIDNIGHT = "24:00"
 }

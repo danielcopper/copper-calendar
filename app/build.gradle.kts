@@ -11,6 +11,8 @@ class RenderDir(
 
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
 }
@@ -32,6 +34,18 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             enableUnitTestCoverage = true
+        }
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    packaging {
+        jniLibs {
+            // Compose's one native library; without an NDK AGP cannot strip it and says so on every build. It
+            // ships as AndroidX builds it either way.
+            keepDebugSymbols += "**/libandroidx.graphics.path.so"
         }
     }
 
@@ -100,6 +114,7 @@ ktlint {
 
 detekt {
     buildUponDefaultConfig = true
+    config.setFrom("detekt.yml")
     source.setFrom("src/main/kotlin", "src/test/kotlin")
 }
 
@@ -111,8 +126,16 @@ dependencyLocking {
 dependencies {
     implementation(libs.androidx.core)
     implementation(libs.androidsvg)
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.material3)
+    implementation(libs.activity.compose)
+    implementation(libs.work.runtime)
+    implementation(libs.okhttp)
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.robolectric)
+    testImplementation(libs.work.testing)
+    testImplementation(libs.okhttp.mockwebserver)
 }
