@@ -119,7 +119,7 @@ class ThemePalettesTest {
     }
 
     @Test
-    fun `rgb with a missing, extra or malformed part is no colour`() {
+    fun `rgb with a missing, extra or malformed part, or a malformed rgb( ), is no colour`() {
         listOf(
             "rgb(1, , 3)",
             "rgb(, 2, 3)",
