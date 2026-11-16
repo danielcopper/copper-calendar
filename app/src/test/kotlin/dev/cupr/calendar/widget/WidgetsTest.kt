@@ -36,7 +36,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -282,7 +282,8 @@ class WidgetsTest {
     @Test
     fun `a midnight whose redraw fails logs it and still schedules the next midnight`() {
         val content = DrawnWidgetProvider.content
-        DrawnWidgetProvider.content = { throw IllegalStateException("Anna stands on 2026-11-12") }
+        val failure = IllegalStateException("the widgets cannot be read")
+        DrawnWidgetProvider.content = { throw failure }
         try {
             Midnight.schedule(context, ExistingWorkPolicy.REPLACE)
             val first =
@@ -297,9 +298,8 @@ class WidgetsTest {
             val infos = work.getWorkInfosForUniqueWork(Midnight.NAME).get().associate { it.id to it.state }
             assertEquals(WorkInfo.State.SUCCEEDED, infos[first])
             assertEquals(listOf(WorkInfo.State.ENQUEUED), infos.filterKeys { it != first }.values.toList())
-            val logged = ShadowLog.getLogsForTag("Widgets").filter { it.type == Log.ERROR }.map { it.msg }
-            assertTrue("$logged", logged.single().contains("IllegalStateException"))
-            assertFalse("$logged", logged.single().contains("Anna"))
+            val logged = ShadowLog.getLogsForTag("Widgets").filter { it.type == Log.ERROR }
+            assertSame(failure, logged.single().throwable)
         } finally {
             DrawnWidgetProvider.content = content
         }

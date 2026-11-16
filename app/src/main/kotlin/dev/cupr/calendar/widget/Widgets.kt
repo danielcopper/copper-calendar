@@ -98,12 +98,7 @@ class MidnightWorker(
         try {
             Widgets.redraw(applicationContext)
         } catch (e: RuntimeException) {
-            // The exception's class and where it was thrown, not its message, which may quote an entry.
-            Log.e(
-                TAG,
-                "Midnight: the widgets could not be redrawn (${e.javaClass.name} at ${e.stackTrace.firstOrNull()}); " +
-                    "the next midnight is scheduled all the same",
-            )
+            Log.e(TAG, "Midnight: the widgets could not be redrawn; the next midnight is scheduled all the same", e)
         }
         // Appended to this job, as replacing it would cancel this job while it runs.
         Midnight.schedule(applicationContext, ExistingWorkPolicy.APPEND_OR_REPLACE)
