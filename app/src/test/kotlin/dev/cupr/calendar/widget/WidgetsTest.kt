@@ -16,6 +16,7 @@ import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
 import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.FakeHomeAssistant
 import dev.cupr.calendar.ha.RefreshToken
 import dev.cupr.calendar.ha.SignInRequest
@@ -167,6 +168,16 @@ class WidgetsTest {
             header.performClick()
             assertEquals(Tap.Header, Taps.read(checkNotNull(shadowOf(context).nextStartedActivity)))
         }
+    }
+
+    @Test
+    fun `a new sign-in turns every widget to the text that there is no data yet`() {
+        val ids = widgets()
+        home.token = { FakeHomeAssistant.json("""{"refresh_token":"refresh-1","token_type":"Bearer"}""") }
+
+        assertTrue(Services.signIn(context, SignInRequest.start(home.address), AuthorizationCode("code-1")))
+
+        for (id in ids) assertEquals("Noch keine Daten – zum Öffnen tippen", plainText(id)?.text.toString())
     }
 
     @Test
