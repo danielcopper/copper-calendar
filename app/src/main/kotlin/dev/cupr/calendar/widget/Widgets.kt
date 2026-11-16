@@ -32,11 +32,20 @@ object Widgets {
         Midnight.schedule(context, ExistingWorkPolicy.REPLACE)
     }
 
+    /**
+     * Held from reading what to show to handing it to the launcher, by the
+     * app's updates and the launcher's, so an update that read before a
+     * sign-out cannot hand its calendar over after the sign-out's update.
+     */
+    internal val lock = Any()
+
     /** Redraws every widget from what the app keeps now ([DrawnWidgetProvider.content]). */
     internal fun redraw(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
-        val content = DrawnWidgetProvider.content(context)
-        providers.forEach { it.updateAll(context, manager, it.ids(context, manager), content) }
+        synchronized(lock) {
+            val content = DrawnWidgetProvider.content(context)
+            providers.forEach { it.updateAll(context, manager, it.ids(context, manager), content) }
+        }
     }
 }
 

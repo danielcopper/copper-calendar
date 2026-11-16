@@ -44,7 +44,10 @@ import java.time.Clock
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import javax.crypto.KeyGenerator
+import kotlin.concurrent.thread
 
 /** The widgets on the home screen: what they show from the app's state, their updates, and midnight (D50–D54). */
 @RunWith(RobolectricTestRunner::class)
@@ -191,6 +194,58 @@ class WidgetsTest {
         Services.signOut(context)
 
         for (id in ids) assertEquals("Nicht angemeldet – zum Anmelden tippen", plainText(id)?.text.toString())
+    }
+
+    /**
+     * An update of the app that read before a sign-out and waits there, while
+     * second, an update after the sign-out, reads that no one is signed in:
+     * second either waits for it or, unserialised, finishes before it.
+     */
+    private fun afterReadBeforeSignOut(second: () -> Unit) {
+        val read = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val content = DrawnWidgetProvider.content
+        DrawnWidgetProvider.content = {
+            if (Thread.currentThread().name == "before") {
+                read.countDown()
+                release.await()
+                Content.NoData(R.string.widget_no_data)
+            } else {
+                Content.NoData(R.string.widget_signed_out)
+            }
+        }
+        try {
+            val before = thread(name = "before") { Widgets.redraw(context) }
+            assertTrue(read.await(5, TimeUnit.SECONDS))
+            val after = thread(name = "after") { second() }
+            val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+            while (after.isAlive && after.state != Thread.State.BLOCKED && System.nanoTime() < until) {
+                Thread.yield()
+            }
+            release.countDown()
+            before.join()
+            after.join()
+        } finally {
+            DrawnWidgetProvider.content = content
+        }
+    }
+
+    @Test
+    fun `an update that read before a sign-out hands its views over before the sign-out's update`() {
+        val id = widgets().first()
+
+        afterReadBeforeSignOut { Widgets.redraw(context) }
+
+        assertEquals("Nicht angemeldet – zum Anmelden tippen", plainText(id)?.text.toString())
+    }
+
+    @Test
+    fun `the launcher's update waits for an update of the app that is under way`() {
+        val id = widgets().first()
+
+        afterReadBeforeSignOut { MonthWidgetProvider().onUpdate(context, manager, intArrayOf(id)) }
+
+        assertEquals("Nicht angemeldet – zum Anmelden tippen", plainText(id)?.text.toString())
     }
 
     @Test
