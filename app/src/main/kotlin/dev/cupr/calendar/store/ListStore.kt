@@ -13,7 +13,7 @@ enum class ListState(
 ) : StoredChoice {
     /**
      * The next update builds the list anew: the widget shows plain views,
-     * the app was updated, or the widget is new.
+     * the app was updated, the phone restarted, or the widget is new.
      */
     TO_BUILD("to_build"),
 
@@ -61,8 +61,8 @@ class ListStore(
 
     /**
      * Forgets the lists of the widgets ids: removed from the home screen,
-     * showing plain views, or the app updated; a list kept again is to
-     * build.
+     * showing plain views, the app updated, or the phone restarted; a list
+     * kept again is to build.
      */
     fun forget(ids: IntArray) =
         prefs.edit {

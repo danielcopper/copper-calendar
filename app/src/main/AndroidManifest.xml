@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Whether a fetch that cannot reach Home Assistant had a network at all (D46). -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- A restart of the phone builds the widgets' lists anew (D59). -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- The apps that open Home Assistant's navigate links, so a tap can
          start the one that handles its target as its icon does (D30). The
@@ -68,13 +70,14 @@
                 android:resource="@xml/widget_week_columns_info" />
         </receiver>
 
-        <!-- The app updated, the widgets' lists are built anew (D59); only the
-             system sends this broadcast, to this app alone. -->
+        <!-- The app updated or the phone restarted, the widgets' lists are
+             built anew (D59); only the system sends these broadcasts. -->
         <receiver
-            android:name=".widget.AppUpdatedReceiver"
+            android:name=".widget.ListsRebuiltReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
 

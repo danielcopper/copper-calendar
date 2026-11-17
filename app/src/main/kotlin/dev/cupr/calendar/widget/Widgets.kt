@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit
  * through each provider alone and leave WorkManager alone, so it does not
  * start with every process they start (D46). Besides: the redraw of one
  * widget whose settings were just saved ([saved]), and forgetting the
- * widgets' lists after an update of the app ([appUpdated]).
+ * widgets' lists after the system built them anew ([listsRebuilt]).
  */
 object Widgets {
     private const val TAG = "Widgets"
@@ -76,14 +76,15 @@ object Widgets {
     }
 
     /**
-     * Forgets the lists of the month's and "Woche"'s widgets after an update
-     * of the app ([AppUpdatedReceiver]): the system shows each widget's first
-     * layout again and asks for an update, which builds the list anew, so the
-     * update after it scrolls to today (D59). It takes the redraws' lock
-     * ([withContent]), so a redraw running meanwhile cannot keep its list's
-     * state over the forgetting.
+     * Forgets the lists of the month's and "Woche"'s widgets, which the
+     * system built anew for cause ([ListsRebuiltReceiver]), so they are to
+     * build (D59). It takes the redraws' lock ([withContent]), so a redraw
+     * running meanwhile cannot keep its list's state over the forgetting.
      */
-    fun appUpdated(context: Context) {
+    fun listsRebuilt(
+        context: Context,
+        cause: String,
+    ) {
         val manager = AppWidgetManager.getInstance(context)
         val ids =
             synchronized(lock) {
@@ -91,7 +92,7 @@ object Widgets {
                     Settings.lists(context).forget(it.toIntArray())
                 }
             }
-        Log.i(TAG, "The app was updated: the lists of widgets $ids are built anew")
+        Log.i(TAG, "$cause: the lists of widgets $ids are built anew")
     }
 
     /**

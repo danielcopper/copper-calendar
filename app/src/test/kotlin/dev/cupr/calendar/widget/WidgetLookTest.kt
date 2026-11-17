@@ -212,7 +212,7 @@ class WidgetLookTest {
         shadow.setAlwaysRecreateViewsDuringUpdate(true)
         val list = { id: Int -> shadowOf(shadow.getViewFor(id).findViewById<ListView>(R.id.list)) }
 
-        AppUpdatedReceiver().onReceive(context, Intent(Intent.ACTION_MY_PACKAGE_REPLACED))
+        ListsRebuiltReceiver().onReceive(context, Intent(Intent.ACTION_MY_PACKAGE_REPLACED))
         assertEquals(listOf(ListState.TO_BUILD, ListState.TO_BUILD), listOf(month, week).map { lists.state(it) })
         assertEquals(listOf(null, null), listOf(month, week).map { lists.lastScroll(it) })
         Widgets.update(context)
@@ -240,7 +240,7 @@ class WidgetLookTest {
             }
         drawing.await()
 
-        val updated = thread { Widgets.appUpdated(context) }
+        val updated = thread { Widgets.listsRebuilt(context, "The app was updated") }
         updated.join(WAIT_MS)
         val waited = updated.isAlive
         drawn.countDown()
@@ -252,19 +252,35 @@ class WidgetLookTest {
     }
 
     @Test
-    fun `the app's update receiver takes only the broadcast that the app was updated`() {
+    fun `after a restart of the phone, the month's and woche's lists are to build`() {
+        val month = shadow.createWidget(MonthWidgetProvider::class.java, R.layout.widget_month)
+        val week = shadow.createWidget(WeekWidgetProvider::class.java, R.layout.widget_week)
+        for (id in listOf(month, week)) lists.keep(id, ListState.SETTLED, now)
+        ShadowLog.clear()
+
+        ListsRebuiltReceiver().onReceive(context, Intent(Intent.ACTION_BOOT_COMPLETED))
+
+        assertEquals(listOf(ListState.TO_BUILD, ListState.TO_BUILD), listOf(month, week).map { lists.state(it) })
+        assertEquals(
+            "The phone was restarted: the lists of widgets [$month, $week] are built anew",
+            ShadowLog.getLogsForTag("Widgets").single().msg,
+        )
+    }
+
+    @Test
+    fun `the lists' receiver takes only the broadcasts that the app was updated and that the phone restarted`() {
         val month = shadow.createWidget(MonthWidgetProvider::class.java, R.layout.widget_month)
         lists.keep(month, ListState.SETTLED, now)
 
-        AppUpdatedReceiver().onReceive(context, Intent(Intent.ACTION_PACKAGE_REPLACED))
+        ListsRebuiltReceiver().onReceive(context, Intent(Intent.ACTION_PACKAGE_REPLACED))
+        ListsRebuiltReceiver().onReceive(context, Intent(Intent.ACTION_LOCKED_BOOT_COMPLETED))
         assertEquals(ListState.SETTLED, lists.state(month))
 
-        val receivers =
-            context.packageManager.queryBroadcastReceivers(
-                Intent(Intent.ACTION_MY_PACKAGE_REPLACED).setPackage(context.packageName),
-                0,
-            )
-        assertEquals(listOf(AppUpdatedReceiver::class.java.name), receivers.map { it.activityInfo.name })
+        for (action in listOf(Intent.ACTION_MY_PACKAGE_REPLACED, Intent.ACTION_BOOT_COMPLETED)) {
+            val receivers =
+                context.packageManager.queryBroadcastReceivers(Intent(action).setPackage(context.packageName), 0)
+            assertEquals(action, listOf(ListsRebuiltReceiver::class.java.name), receivers.map { it.activityInfo.name })
+        }
     }
 
     @Test
