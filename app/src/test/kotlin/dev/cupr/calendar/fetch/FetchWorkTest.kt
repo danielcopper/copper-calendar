@@ -18,6 +18,7 @@ import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.FakeHomeAssistant
 import dev.cupr.calendar.ha.RefreshToken
 import dev.cupr.calendar.ha.SignInRequest
+import dev.cupr.calendar.signin.Status
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.AesGcmCipher
 import dev.cupr.calendar.store.FetchInterval
@@ -222,6 +223,15 @@ class FetchWorkTest {
 
         assertEquals(30L, periodicMinutes)
         assertEquals(FetchInterval.EVERY_30_MINUTES, Services.appSettings(context).fetchInterval())
+    }
+
+    @Test
+    fun `the app's screen shows the interval set`() {
+        assertEquals(FetchInterval.EVERY_15_MINUTES, Status.read(context).fetchInterval)
+
+        Services.setFetchInterval(context, FetchInterval.EVERY_60_MINUTES)
+
+        assertEquals(FetchInterval.EVERY_60_MINUTES, Status.read(context).fetchInterval)
     }
 
     @Test

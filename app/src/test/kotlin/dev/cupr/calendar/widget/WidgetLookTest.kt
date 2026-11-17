@@ -3,6 +3,7 @@ package dev.cupr.calendar.widget
 import android.app.Application
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.ListView
@@ -213,6 +214,34 @@ class WidgetLookTest {
         assertEquals(0, shadowOf(list).smoothScrolledPosition)
         val log = ShadowLog.getLogsForTag(MonthWidget.TAG).single { it.type == Log.INFO }.msg
         assertTrue(log, log.endsWith("; today is row 2, keeps its position: not scrolled to today: no height"))
+    }
+
+    @Test
+    fun `set never, a widget of a reported height keeps its position too, padded for today on top`() {
+        val id = shadow.createWidget(WeekWidgetProvider::class.java, R.layout.widget_week)
+        settings.write(id, WidgetSettings(backToToday = BackToToday.NEVER))
+        shadow.setAlwaysRecreateViewsDuringUpdate(true)
+        val options =
+            Bundle().apply {
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 200)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 300)
+            }
+        manager.updateAppWidgetOptions(id, options)
+        ShadowLog.clear()
+
+        WeekWidgetProvider().onAppWidgetOptionsChanged(context, manager, id, options)
+
+        val list = shadow.getViewFor(id).findViewById<ListView>(R.id.list)
+        assertEquals(0, shadowOf(list).smoothScrolledPosition)
+        assertEquals(84, list.paddingBottom)
+        val log = ShadowLog.getLogsForTag(WeekWidget.TAG).single { it.type == Log.INFO }.msg
+        assertTrue(
+            log,
+            log.endsWith(
+                "; today is row 2, keeps its position: not scrolled to today, bottom padding 84 px; " +
+                    "300 dp (appWidgetMaxHeight, 200 dp least)",
+            ),
+        )
     }
 
     @Test
