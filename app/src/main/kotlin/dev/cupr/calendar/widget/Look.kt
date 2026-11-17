@@ -21,8 +21,8 @@ import java.time.Instant
  * leaves out are gone from the calendar it draws ([Content.Calendar.without]).
  */
 data class Look(
-    val days: WeekDays = WeekDays.MONDAY_TO_SUNDAY,
-    val corner: PlusCorner = PlusCorner.BOTTOM_RIGHT,
+    val days: WeekDays = WidgetSettings.DEFAULT.days,
+    val corner: PlusCorner = WidgetSettings.DEFAULT.plusCorner,
     val scroll: Boolean = true,
 ) {
     /**

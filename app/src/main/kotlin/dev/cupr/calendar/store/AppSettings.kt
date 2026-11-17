@@ -12,6 +12,12 @@ enum class FetchInterval(
     EVERY_15_MINUTES(minutes = 15, stored = "15"),
     EVERY_30_MINUTES(minutes = 30, stored = "30"),
     EVERY_60_MINUTES(minutes = 60, stored = "60"),
+    ;
+
+    companion object {
+        /** The interval until another is set. */
+        val DEFAULT = EVERY_15_MINUTES
+    }
 }
 
 /** The settings set once for the app, not per widget; signing out keeps them. */
@@ -23,7 +29,7 @@ class AppSettingsStore(
         prefs.choice(
             FETCH_INTERVAL,
             FetchInterval.entries,
-            FetchInterval.EVERY_15_MINUTES,
+            FetchInterval.DEFAULT,
             TAG,
             "The stored fetch interval",
         )

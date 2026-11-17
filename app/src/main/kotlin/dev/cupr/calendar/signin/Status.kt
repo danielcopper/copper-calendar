@@ -37,7 +37,7 @@ data class Status(
     /** The theme a fetch could not read, while the app keeps it (D48). */
     val unreadableTheme: UnreadableTheme?,
     /** How often the app fetches, set on this screen. */
-    val fetchInterval: FetchInterval = FetchInterval.EVERY_15_MINUTES,
+    val fetchInterval: FetchInterval = FetchInterval.DEFAULT,
 ) {
     /** The line under the title: who is signed in and when the last fetch was, or why signing in again is needed. */
     fun line(
