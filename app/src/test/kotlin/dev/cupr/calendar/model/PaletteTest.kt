@@ -1,5 +1,7 @@
 package dev.cupr.calendar.model
 
+import dev.cupr.calendar.model.CalendarVariables.FAMILY
+import dev.cupr.calendar.model.CalendarVariables.SCHOOL
 import dev.cupr.calendar.sample.SampleData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
@@ -12,7 +14,44 @@ class PaletteTest {
         Entry(start = noon, end = noon.plusHours(1), allDay = false, title = "T", calendar = SampleData.BIRTHDAYS)
 
     @Test
-    fun `an entry's own colour wins`() {
+    fun `the dashboard's fixed colour beats the entry's own colour and its calendar's`() {
+        val dashboard = DashboardColor.Fixed(0xFF8855A8.toInt())
+
+        for (palette in listOf(SampleData.light, SampleData.dark)) {
+            assertEquals(0xFF8855A8.toInt(), palette.colorOf(entry.copy(dashboardColor = dashboard)))
+            assertEquals(
+                0xFF8855A8.toInt(),
+                palette.colorOf(entry.copy(color = 0xFF123456.toInt(), dashboardColor = dashboard)),
+            )
+        }
+    }
+
+    @Test
+    fun `the dashboard's theme variable takes the mode's colour, whatever the calendar`() {
+        val family = entry.copy(calendar = "calendar.a", dashboardColor = DashboardColor.ThemeVariable(FAMILY))
+
+        assertEquals(0xFF359F65.toInt(), SampleData.light.colorOf(family))
+        assertEquals(0xFF3CB371.toInt(), SampleData.dark.colorOf(family))
+        val school = entry.copy(color = 0xFF123456.toInt(), dashboardColor = DashboardColor.ThemeVariable(SCHOOL))
+        assertEquals(0xFF2D9D92.toInt(), SampleData.light.colorOf(school))
+        assertEquals(0xFF40E0D0.toInt(), SampleData.dark.colorOf(school))
+    }
+
+    @Test
+    fun `the dashboard's secondary text colour is the mode's, also for a calendar with a colour`() {
+        val grey = entry.copy(color = 0xFF123456.toInt(), dashboardColor = DashboardColor.SecondaryText)
+
+        assertEquals(SampleData.light.secondaryText, SampleData.light.colorOf(grey))
+        assertEquals(SampleData.dark.secondaryText, SampleData.dark.colorOf(grey))
+    }
+
+    @Test
+    fun `a theme variable the palettes have no colour for is no dashboard colour`() {
+        assertThrows(IllegalArgumentException::class.java) { DashboardColor.ThemeVariable("zuhause-calendar-other") }
+    }
+
+    @Test
+    fun `without the dashboard's colour, an entry's own colour wins`() {
         assertEquals(0xFF123456.toInt(), SampleData.dark.colorOf(entry.copy(color = 0xFF123456.toInt())))
     }
 

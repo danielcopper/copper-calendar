@@ -1,8 +1,11 @@
 package dev.cupr.calendar.ha
 
+import dev.cupr.calendar.model.CalendarVariables
+import dev.cupr.calendar.model.DashboardColor
 import dev.cupr.calendar.model.Entry
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -141,12 +144,93 @@ class EntryParserTest {
         assertEquals(emptyList<String>(), parsed.problems)
     }
 
+    /** An entry of calendar.a with its own colour and the dashboard's colour, sent as resolved. */
+    private fun resolved(color: String) =
+        """{"start":"2026-11-14","end":"2026-11-15","all_day":true,"title":"Resolved","calendar":"calendar.a",""" +
+            """"color":"hotpink","resolved_color":$color}"""
+
+    @Test
+    fun `the dashboard's colour is read as a fixed colour from hex or a CSS colour name`() {
+        val parsed = parse("[${resolved("\"#8855a8\"")},${resolved("\"steelblue\"")},${resolved("\"#abc\"")}]")
+
+        assertEquals(
+            listOf(0xFF8855A8, 0xFF4682B4, 0xFFAABBCC).map { DashboardColor.Fixed(it.toInt()) },
+            parsed.entries.map { it.dashboardColor },
+        )
+        assertEquals(emptyList<String>(), parsed.problems)
+    }
+
+    @Test
+    fun `the dashboard's colour is read as each calendar's theme variable or the secondary text colour`() {
+        val tokens = CalendarVariables.all + "secondary-text-color"
+
+        val parsed = parse(tokens.joinToString(",", "[", "]") { resolved("\"var(--$it)\"") })
+
+        assertEquals(
+            CalendarVariables.all.map { DashboardColor.ThemeVariable(it) } + DashboardColor.SecondaryText,
+            parsed.entries.map { it.dashboardColor },
+        )
+        assertEquals(emptyList<String>(), parsed.problems)
+    }
+
+    @Test
+    fun `a dashboard's colour the app cannot read is dropped and named, and the entry kept with its own colour`() {
+        val unreadable =
+            listOf(
+                "\"nocolour\"",
+                "\"var(--zuhause-calendar-other)\"",
+                "\"var(--primary-color)\"",
+                "\"var(--zuhause-calendar-family\"",
+                "\"\"",
+                "12",
+            )
+
+        val parsed = parse(unreadable.joinToString(",", "[", "]") { resolved(it) })
+
+        assertEquals(List(unreadable.size) { "Resolved" }, parsed.entries.map { it.title })
+        assertEquals(List(unreadable.size) { null }, parsed.entries.map { it.dashboardColor })
+        assertEquals(List(unreadable.size) { 0xFFFF69B4.toInt() }, parsed.entries.map { it.color })
+        assertEquals(
+            unreadable.mapIndexed { index, value ->
+                "Entry $index (\"Resolved\"): resolved_color $value is no colour the app reads, " +
+                    "so its own or its calendar's applies"
+            },
+            parsed.problems,
+        )
+        assertTrue(parsed.read.none { it.json.containsKey("resolved_color") })
+    }
+
+    @Test
+    fun `an own colour the app cannot read leaves the entry out, also with the dashboard's colour`() {
+        val parsed = parse("[${resolved("\"#8855a8\"").replace("hotpink", "nocolour")}]")
+
+        assertEquals(emptyList<Entry>(), parsed.entries)
+        assertEquals(listOf("Entry 0 (\"Resolved\") left out: unknown colour \"nocolour\""), parsed.problems)
+    }
+
+    @Test
+    fun `an entry without the dashboard's colour, or with null, has none and no problem`() {
+        val without = resolved("null").replace(",\"resolved_color\":null", "")
+
+        val parsed = parse("[$without,${resolved("null")}]")
+
+        assertEquals(listOf(null, null), parsed.entries.map { it.dashboardColor })
+        assertEquals(emptyList<String>(), parsed.problems)
+    }
+
     @Test
     fun `the kept entries read again give the same entries without problems`() {
-        val first = parse("[$birthday,$timed,${birthday.replace("\"year\":2000", "\"year\":2030")}]")
+        val first =
+            parse(
+                "[$birthday,$timed,${birthday.replace("\"year\":2000", "\"year\":2030")}," +
+                    "${resolved("\"var(--zuhause-calendar-family)\"")},${resolved("\"#8855a8\"")}," +
+                    "${resolved("\"var(--other)\"")}]",
+            )
 
         val again = EntryParser.parse(JsonArray(first.read.map { it.json }), berlin)
 
+        assertEquals(JsonPrimitive("var(--zuhause-calendar-family)"), first.read[3].json["resolved_color"])
+        assertEquals(DashboardColor.ThemeVariable(CalendarVariables.FAMILY), again.entries[3].dashboardColor)
         assertEquals(first.entries, again.entries)
         assertEquals(emptyList<String>(), again.problems)
     }

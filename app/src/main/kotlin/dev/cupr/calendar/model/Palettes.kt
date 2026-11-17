@@ -77,12 +77,15 @@ data class Palettes(
 }
 
 /**
- * Which theme variable colours the entries of a calendar that have no own
- * colour (D16, D49): the dashboard's `calendar_colors` (its file is named in
+ * The calendars' theme variables, which a [DashboardColor] names, and the
+ * fallback for an entry Home Assistant sent without the dashboard's colour
+ * (D49): which variable colours the entries of a calendar that have no own
+ * colour, by the dashboard's `calendar_colors` (its file is named in
  * [dev.cupr.calendar.render.PhoneMonth]), with the family calendar by the
  * start of its id, so no person's id is written here. The dashboard takes a
- * calendar's colour in Nextcloud first, which the app never receives; a
- * calendar not named here draws in the secondary text colour.
+ * calendar's colour in Nextcloud first, which the app has only in the
+ * dashboard's colour; a calendar not named here draws in the secondary text
+ * colour.
  */
 object CalendarVariables {
     const val FAMILY = "zuhause-calendar-family"

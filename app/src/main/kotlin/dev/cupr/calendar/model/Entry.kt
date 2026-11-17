@@ -22,8 +22,14 @@ data class Entry(
     val calendar: String,
     /** Home Assistant's kind (`birthday`, `special`, `holiday`, ...); none for an entry of no kind. */
     val kind: String? = null,
-    /** The entry's resolved colour (ARGB); none when it has no own colour, then its calendar's applies. */
+    /** The entry's own colour or its person's (ARGB); none when it has neither. */
     @param:ColorInt val color: Int? = null,
+    /**
+     * The colour the dashboard shows the entry in (D49); none when Home
+     * Assistant sent none the app reads, then [color] and the calendar's
+     * colour apply ([Palette.colorOf]).
+     */
+    val dashboardColor: DashboardColor? = null,
     /** An MDI icon name (`mdi:swim`); none when the entry has no icon. */
     val icon: String? = null,
     /** A drawing's file name (`lantern.svg`); none when the entry has none. */

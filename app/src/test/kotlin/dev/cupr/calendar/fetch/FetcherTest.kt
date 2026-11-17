@@ -7,6 +7,8 @@ import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.FakeHomeAssistant
 import dev.cupr.calendar.ha.RefreshToken
 import dev.cupr.calendar.ha.SignInRequest
+import dev.cupr.calendar.model.CalendarVariables
+import dev.cupr.calendar.model.DashboardColor
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.AesGcmCipher
 import dev.cupr.calendar.store.FailedFetch
@@ -109,6 +111,26 @@ class FetcherTest {
         val form = home.requests.first().second
         assertEquals("refresh-1", form["refresh_token"])
         assertEquals("http://127.0.0.1:47123/", form["client_id"])
+    }
+
+    @Test
+    fun `an entry's dashboard colour goes into the snapshot as sent and is read from it again`() {
+        signIn()
+        val family = good.replace("}", ""","resolved_color":"var(--zuhause-calendar-family)"}""")
+        val fixed = good.replace("}", ""","resolved_color":"#8855a8"}""")
+        entries(family, fixed)
+
+        fetcher.fetch()
+
+        val snapshot = snapshots.read()!!
+        assertEquals(
+            listOf("var(--zuhause-calendar-family)", "#8855a8").map(::JsonPrimitive),
+            snapshot.entryJson.map { it["resolved_color"] },
+        )
+        assertEquals(
+            listOf(DashboardColor.ThemeVariable(CalendarVariables.FAMILY), DashboardColor.Fixed(0xFF8855A8.toInt())),
+            snapshot.parse(ZoneId.of("Europe/Berlin")).entries.map { it.dashboardColor },
+        )
     }
 
     @Test
