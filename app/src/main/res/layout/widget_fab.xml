@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- "+", as each widget's layout includes it: once at the bottom right of
-     its card and once at the bottom left, as a widget's views cannot move a
-     view to another corner; the widget's setup says which shows
-     (Look.placePlus). Each is its drawing light and dark, with room for the
-     shadow, and its 40 dp tap area in the middle. -->
+<!-- "+", as each widget's layout includes it: once in each bottom corner
+     of its card, of which the widget's setup says which shows (Plus, D58).
+     Each is its drawing light and dark, with room for the shadow, and its
+     40 dp tap area in the middle. -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android">
 
     <FrameLayout

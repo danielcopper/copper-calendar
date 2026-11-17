@@ -83,10 +83,9 @@ object WeekWidget {
         val range = WeekLayout.range(dates.first(), dates.last())
         val views = RemoteViews(context.packageName, R.layout.widget_week)
         val headerPx =
-            DrawnWidget.fixedParts(context, views, kept, "$title, $range", calendar) { chrome, palette, note ->
+            DrawnWidget.fixedParts(context, views, kept, "$title, $range", calendar, look.corner) { chrome, palette, note ->
                 chrome.weekHeader(title, range, null, headerWidthPx, scale, palette, note)
             }
-        look.placePlus(context, views, kept, scale, calendar)
         val full = WeekLayout.build(dates, calendar.entries, today)
         val bytesOf = { days: List<WeekDay> -> days.sumOf { BitmapLimit.bytes(rowPx, rows.heightPx(it, scale)) } }
         val capped = BitmapLimit.capped(full, limit - kept.bytes, bytesOf, ::leaveOutOne)

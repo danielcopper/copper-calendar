@@ -1,59 +1,24 @@
 package dev.cupr.calendar.widget
 
-import android.content.Context
-import android.view.View
-import android.widget.RemoteViews
-import dev.cupr.calendar.R
-import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.store.BackToToday
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.WidgetSettings
-import dev.cupr.calendar.tap.Tap
-import dev.cupr.calendar.tap.Taps
 import dev.cupr.calendar.week.WeekDays
 import java.time.Duration
 import java.time.Instant
 
 /**
  * What one drawing of a widget takes from its settings and its redraw: the
- * days a week widget shows (D20), the corner of "+", and whether the month's
- * or "Woche"'s list scrolls to today ([ReturnToToday]). The calendars it
- * leaves out are gone from the calendar it draws ([Content.Calendar.without]).
+ * days a week widget shows (D20), the corner of "+" ([Plus]), and whether
+ * the month's or "Woche"'s list scrolls to today ([ReturnToToday]). The
+ * calendars it leaves out are gone from the calendar it draws
+ * ([Content.Calendar.without]).
  */
 data class Look(
     val days: WeekDays = WidgetSettings.DEFAULT.days,
     val corner: PlusCorner = WidgetSettings.DEFAULT.plusCorner,
     val scroll: Boolean = true,
 ) {
-    /**
-     * Puts "+" of calendar in views at the bottom right or the bottom left of
-     * the card (D58), drawn light and dark at scale and kept, opening a new
-     * entry on today. Each corner has its own "+" in the layout
-     * (widget_fab.xml), as a widget's views cannot move a view to another
-     * corner; the other one is hidden, so a corner set back takes effect too.
-     */
-    internal fun placePlus(
-        context: Context,
-        views: RemoteViews,
-        kept: Kept,
-        scale: Scale,
-        calendar: Content.Calendar,
-    ) {
-        val right = corner == PlusCorner.BOTTOM_RIGHT
-        views.setViewVisibility(R.id.plus_right, if (right) View.VISIBLE else View.GONE)
-        views.setViewVisibility(R.id.plus_left, if (right) View.GONE else View.VISIBLE)
-        val chrome = DrawnWidget.chrome(context)
-        val palettes = calendar.palettes
-        val light = kept.keep(chrome.fab(scale, palettes.light))
-        val dark = kept.keep(chrome.fab(scale, palettes.dark))
-        views.setImageViewBitmap(if (right) R.id.fab_light else R.id.fab_left_light, light)
-        views.setImageViewBitmap(if (right) R.id.fab_dark else R.id.fab_left_dark, dark)
-        views.setOnClickPendingIntent(
-            if (right) R.id.fab else R.id.fab_left,
-            Taps.pendingIntent(context, Tap.New(calendar.today)),
-        )
-    }
-
     companion object {
         /** The look of a widget with settings, scrolling to today or not. */
         internal fun of(

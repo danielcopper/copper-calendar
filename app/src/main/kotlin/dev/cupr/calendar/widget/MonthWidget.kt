@@ -72,10 +72,9 @@ object MonthWidget {
         val views = RemoteViews(context.packageName, R.layout.widget_month)
         val title = ChromeRenderer.title(view.month)
         val headerPx =
-            DrawnWidget.fixedParts(context, views, kept, title, calendar) { chrome, palette, note ->
+            DrawnWidget.fixedParts(context, views, kept, title, calendar, look.corner) { chrome, palette, note ->
                 chrome.header(view.month, widthPx, scale, palette, note)
             }
-        look.placePlus(context, views, kept, scale, calendar)
         val heightsPx = view.weeks.map { rows.heightPx(it, scale) }
         val needed = kept.bytes + heightsPx.sumOf { BitmapLimit.bytes(widthPx, it) }
         BitmapLimit.warnOver(TAG, id, needed = needed, limit = limit, left = 0, after = needed)

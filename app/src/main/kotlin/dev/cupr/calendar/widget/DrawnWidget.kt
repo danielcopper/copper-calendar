@@ -23,6 +23,7 @@ import dev.cupr.calendar.render.HeaderNote
 import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
+import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
 import java.time.Instant
@@ -159,12 +160,12 @@ internal object DrawnWidget {
     }
 
     /**
-     * The header of calendar, drawn light and dark by header with the
-     * renderer of the fixed parts and the calendar's notice at its right,
-     * named by description and the notice, and opening the calendar page,
-     * or the sign-in screen while the notice asks to sign in again (D52);
-     * "+" is [Look.placePlus]'s. Returns the drawn header's height in px,
-     * which the list's height leaves out.
+     * The fixed parts of calendar: its header, drawn light and dark by
+     * header with the renderer of the fixed parts and the calendar's notice
+     * at its right, named by description and the notice, and opening the
+     * calendar page, or the sign-in screen while the notice asks to sign in
+     * again (D52); and "+" in corner ([Plus]). Returns the drawn header's
+     * height in px, which the list's height leaves out.
      */
     fun fixedParts(
         context: Context,
@@ -172,9 +173,11 @@ internal object DrawnWidget {
         kept: Kept,
         description: String,
         calendar: Content.Calendar,
+        corner: PlusCorner,
         header: (ChromeRenderer, Palette, HeaderNote?) -> Bitmap,
     ): Int {
         val chrome = chrome(context)
+        Plus.place(context, views, kept, chrome, corner, calendar)
         val notice = calendar.notice
         val (note, headerTap) =
             when (notice) {
