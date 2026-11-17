@@ -72,13 +72,17 @@ fun SetupScreen(
     var saving by remember { mutableStateOf(false) }
 
     LaunchedEffect(id) {
-        val (stored, snapshot) =
-            withContext(Services.io) { Settings.widgets(app).read(id) to Services.snapshots(app).read() }
-        val shown = settings ?: stored
-        settings = shown
-        val entries = snapshot?.parse(ZoneId.systemDefault())?.entries.orEmpty()
-        val sensor = SensorCalendars.read(snapshot?.calendars).calendars
-        calendars = setupCalendars(sensor, entries, stored.leftOut + shown.leftOut)
+        val restored = settings
+        val (stored, listed) =
+            withContext(Services.io) {
+                val kept = Settings.widgets(app).read(id)
+                val snapshot = Services.snapshots(app).read()
+                val entries = snapshot?.parse(ZoneId.systemDefault())?.entries.orEmpty()
+                val sensor = SensorCalendars.read(snapshot?.calendars).calendars
+                kept to setupCalendars(sensor, entries, kept.leftOut + restored?.leftOut.orEmpty())
+            }
+        settings = restored ?: stored
+        calendars = listed
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
