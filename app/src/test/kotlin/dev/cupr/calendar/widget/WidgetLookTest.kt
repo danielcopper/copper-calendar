@@ -133,6 +133,14 @@ class WidgetLookTest {
     }
 
     @Test
+    fun `a last scroll after now, the clock set back, makes an interval due`() {
+        for (setting in listOf(BackToToday.EVERY_15_MINUTES, BackToToday.EVERY_30_MINUTES, BackToToday.EVERY_60_MINUTES)) {
+            assertTrue("$setting", ReturnToToday.due(setting, Redraw.UPDATE, now + Duration.ofSeconds(1), now))
+            assertTrue("$setting", ReturnToToday.due(setting, Redraw.UPDATE, now + Duration.ofDays(1), now))
+        }
+    }
+
+    @Test
     fun `a widget draws without the calendars it leaves out, with its days and its corner of plus`() {
         val provider = Recording(WidgetKind.WEEK)
         settings.write(

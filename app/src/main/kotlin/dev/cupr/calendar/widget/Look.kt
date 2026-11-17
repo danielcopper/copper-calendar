@@ -56,7 +56,8 @@ internal object ReturnToToday {
      * Whether redraw scrolls at now: on each update, at every redraw; only at
      * midnight, at the midnight's; never, at none; every 15, 30 or 60
      * minutes, at the first redraw once that long has passed since the list
-     * last scrolled to today ([lastScroll]), or when it never has.
+     * last scrolled to today ([lastScroll]), or when it never has, or when
+     * that scroll is after now, the clock set back since.
      */
     fun due(
         setting: BackToToday,
@@ -82,5 +83,5 @@ internal object ReturnToToday {
         lastScroll: Instant?,
         now: Instant,
         interval: Duration,
-    ) = lastScroll == null || Duration.between(lastScroll, now) >= interval
+    ) = lastScroll == null || lastScroll.isAfter(now) || Duration.between(lastScroll, now) >= interval
 }
