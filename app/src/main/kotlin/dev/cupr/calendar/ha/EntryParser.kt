@@ -8,7 +8,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import java.time.DateTimeException
 import java.time.LocalDate
@@ -130,8 +129,8 @@ object EntryParser {
             year = null
             kept = JsonObject(kept - "year")
         }
-        // A JSON null counts as none, whether it decodes as null or as JsonNull.
-        val sent = wire.resolvedColor?.takeUnless { it is JsonNull }
+        // A JSON null decodes as none.
+        val sent = wire.resolvedColor
         val dashboardColor = sent?.let(::dashboardColor)
         if (sent != null && dashboardColor == null) {
             problems += "$name: resolved_color $sent is no colour the app reads, so its own or its calendar's applies"
