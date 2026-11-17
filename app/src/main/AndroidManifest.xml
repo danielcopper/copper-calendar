@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Whether a fetch that cannot reach Home Assistant had a network at all (D46). -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- A restart of the phone builds the widgets' lists anew (D59). -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- The apps that open Home Assistant's navigate links, so a tap can
          start the one that handles its target as its icon does (D30). The
@@ -68,6 +70,17 @@
                 android:resource="@xml/widget_week_columns_info" />
         </receiver>
 
+        <!-- The system dropped the widgets' lists (D59); only the system
+             sends these broadcasts. -->
+        <receiver
+            android:name=".widget.ListsRebuiltReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
         <!-- WorkManager starts on demand (CopperApp, D46), not with every process. -->
         <provider
             android:name="androidx.startup.InitializationProvider"
@@ -88,6 +101,19 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- A widget's setup, opened from the launcher's long-press menu: each
+             widget declares it with configuration_optional, so placing one
+             opens nothing, and reconfigurable (widget_*_info.xml). Exported,
+             as the launcher starts it; it shows only this app's widgets. -->
+        <activity
+            android:name=".setup.SetupActivity"
+            android:exported="true"
+            android:theme="@style/Theme.CopperCalendar">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>
         </activity>
 

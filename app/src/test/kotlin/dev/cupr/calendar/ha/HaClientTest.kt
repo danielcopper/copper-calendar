@@ -36,9 +36,10 @@ class HaClientTest {
             )
         }
 
-        val entries = (client.entries(access) as HaClient.Result.Ok).value
+        val sensor = (client.sensor(access) as HaClient.Result.Ok).value
 
-        assertEquals(listOf("A", "B"), entries.map { (it.jsonObject["title"] as JsonPrimitive).content })
+        assertEquals(listOf("A", "B"), sensor.entries.map { (it.jsonObject["title"] as JsonPrimitive).content })
+        assertEquals(null, sensor.calendars)
         val request = home.requests.single().first
         assertEquals("GET", request.method)
         assertEquals("/api/states/sensor.family_calendar", request.url.encodedPath)
@@ -46,31 +47,47 @@ class HaClientTest {
     }
 
     @Test
+    fun `the sensor's calendars come with the entries, as Home Assistant sends them`() {
+        home.states = {
+            FakeHomeAssistant.json(
+                """{"entity_id":"sensor.family_calendar",""" +
+                    """"attributes":{"entries":[],"calendars":[{"id":"calendar.a"}]}}""",
+            )
+        }
+
+        val sensor = (client.sensor(access) as HaClient.Result.Ok).value
+
+        assertEquals(listOf(SensorCalendar("calendar.a")), SensorCalendars.read(sensor.calendars).calendars)
+    }
+
+    @Test
     fun `a refused token, a missing sensor, another status, no JSON or no entries is a failure of its kind`() {
         val sensor = "sensor.family_calendar"
-        assertEquals(failed("HTTP 401 for $sensor", FailureKind.REFUSED), client.entries(AccessToken("another")))
+        assertEquals(failed("HTTP 401 for $sensor", FailureKind.REFUSED), client.sensor(AccessToken("another")))
         home.states = { FakeHomeAssistant.json("""{"message":"Forbidden"}""", 403) }
-        assertEquals(failed("HTTP 403 for $sensor", FailureKind.REFUSED), client.entries(access))
+        assertEquals(failed("HTTP 403 for $sensor", FailureKind.REFUSED), client.sensor(access))
         home.states = { FakeHomeAssistant.json("""{"message":"Entity not found."}""", 404) }
-        assertEquals(failed("HTTP 404 for $sensor", FailureKind.NOT_FOUND), client.entries(access))
+        assertEquals(failed("HTTP 404 for $sensor", FailureKind.NOT_FOUND), client.sensor(access))
         home.states = { FakeHomeAssistant.json("Internal Server Error", 500) }
-        assertEquals(failed("HTTP 500 for $sensor", FailureKind.UNEXPECTED), client.entries(access))
+        assertEquals(failed("HTTP 500 for $sensor", FailureKind.UNEXPECTED), client.sensor(access))
         // A gateway's statuses, Home Assistant offline behind Nabu Casa: no connection (owner, D46).
         for (gateway in listOf(502, 503, 504)) {
             home.states = { FakeHomeAssistant.json("Bad Gateway", gateway) }
-            assertEquals(failed("HTTP $gateway for $sensor", FailureKind.UNREACHABLE), client.entries(access))
+            assertEquals(failed("HTTP $gateway for $sensor", FailureKind.UNREACHABLE), client.sensor(access))
         }
         home.states = { FakeHomeAssistant.json("not json") }
-        assertEquals(failed("HTTP 200 for $sensor, but no JSON object", FailureKind.UNEXPECTED), client.entries(access))
+        assertEquals(failed("HTTP 200 for $sensor, but no JSON object", FailureKind.UNEXPECTED), client.sensor(access))
         home.states = { FakeHomeAssistant.json("""{"entity_id":"$sensor","attributes":{}}""") }
-        assertEquals(failed("$sensor has no list of entries", FailureKind.NOT_FOUND), client.entries(access))
+        assertEquals(failed("$sensor has no list of entries", FailureKind.NOT_FOUND), client.sensor(access))
+        home.states = { FakeHomeAssistant.json("""{"entity_id":"$sensor","attributes":[{"entries":[]}]}""") }
+        assertEquals(failed("$sensor has no list of entries", FailureKind.NOT_FOUND), client.sensor(access))
     }
 
     @Test
     fun `no answer for the entries is a failure named by the exception's class`() {
         home.close()
 
-        assertEquals(failed("ConnectException", FailureKind.UNREACHABLE), client.entries(access))
+        assertEquals(failed("ConnectException", FailureKind.UNREACHABLE), client.sensor(access))
     }
 
     @Test

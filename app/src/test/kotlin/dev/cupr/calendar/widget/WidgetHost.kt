@@ -2,6 +2,7 @@ package dev.cupr.calendar.widget
 
 import android.appwidget.AppWidgetHostView
 import android.content.Context
+import android.graphics.Rect
 import android.os.Parcel
 import android.util.TypedValue
 import android.util.Xml
@@ -159,6 +160,20 @@ internal object WidgetHost {
             list.scrollListBy(step)
             left -= step
         }
+    }
+
+    /** Where view lies in widget, an ancestor of it, in widget's pixels. */
+    fun boundsIn(
+        widget: View,
+        view: View,
+    ): Rect {
+        val bounds = Rect(0, 0, view.width, view.height)
+        var at: View = view
+        while (at !== widget) {
+            bounds.offset(at.left, at.top)
+            at = at.parent as View
+        }
+        return bounds
     }
 
     /** An attribute of a widget's provider info (res/xml): a dimension in pixels, or an integer. */

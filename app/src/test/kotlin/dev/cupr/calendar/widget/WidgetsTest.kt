@@ -245,7 +245,7 @@ class WidgetsTest {
                 Content.NoData(R.string.widget_signed_out)
             }
         }
-        val before = thread(name = "before") { Widgets.redraw(context) }
+        val before = thread(name = "before") { Widgets.redraw(context, Redraw.UPDATE) }
         var after: Thread? = null
         try {
             assertTrue(read.await(5, TimeUnit.SECONDS))
@@ -268,7 +268,7 @@ class WidgetsTest {
     fun `an update that read before a sign-out hands its views over before the sign-out's update`() {
         val id = widgets().first()
 
-        afterReadBeforeSignOut { Widgets.redraw(context) }
+        afterReadBeforeSignOut { Widgets.redraw(context, Redraw.UPDATE) }
 
         assertEquals("Nicht angemeldet – zum Anmelden tippen", plainText(id)?.text.toString())
     }

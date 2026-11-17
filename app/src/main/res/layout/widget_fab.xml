@@ -1,30 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- "+", as each widget's layout includes it at the bottom right of its
-     card: its drawing light and dark, with room for the shadow, and its
-     40 dp tap area. -->
+<!-- "+", as each widget's layout includes it: once in each bottom corner
+     of its card, of which the widget's setup says which shows (Plus, D58).
+     Each is its drawing light and dark, with room for the shadow, and its
+     40 dp tap area in the middle. -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <ImageView
-        android:id="@+id/fab_light"
+    <FrameLayout
+        android:id="@+id/plus_right"
         android:layout_width="66dp"
         android:layout_height="66dp"
-        android:layout_gravity="bottom|end"
-        android:importantForAccessibility="no"
-        android:visibility="@integer/light_visibility" />
+        android:layout_gravity="bottom|end">
 
-    <ImageView
-        android:id="@+id/fab_dark"
-        android:layout_width="66dp"
-        android:layout_height="66dp"
-        android:layout_gravity="bottom|end"
-        android:importantForAccessibility="no"
-        android:visibility="@integer/dark_visibility" />
+        <ImageView
+            android:id="@+id/fab_light"
+            android:layout_width="66dp"
+            android:layout_height="66dp"
+            android:importantForAccessibility="no"
+            android:visibility="@integer/light_visibility" />
+
+        <ImageView
+            android:id="@+id/fab_dark"
+            android:layout_width="66dp"
+            android:layout_height="66dp"
+            android:importantForAccessibility="no"
+            android:visibility="@integer/dark_visibility" />
+
+        <FrameLayout
+            android:id="@+id/fab"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:contentDescription="@string/new_entry" />
+    </FrameLayout>
 
     <FrameLayout
-        android:id="@+id/fab"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="13dp"
-        android:contentDescription="@string/new_entry" />
+        android:id="@+id/plus_left"
+        android:layout_width="66dp"
+        android:layout_height="66dp"
+        android:layout_gravity="bottom|start"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/fab_left_light"
+            android:layout_width="66dp"
+            android:layout_height="66dp"
+            android:importantForAccessibility="no"
+            android:visibility="@integer/light_visibility" />
+
+        <ImageView
+            android:id="@+id/fab_left_dark"
+            android:layout_width="66dp"
+            android:layout_height="66dp"
+            android:importantForAccessibility="no"
+            android:visibility="@integer/dark_visibility" />
+
+        <FrameLayout
+            android:id="@+id/fab_left"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:contentDescription="@string/new_entry" />
+    </FrameLayout>
 </merge>

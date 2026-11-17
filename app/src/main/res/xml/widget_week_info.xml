@@ -6,6 +6,7 @@
      (research.md, section 5). The picker's preview is the widget drawn from
      the sample week, written by `mise run preview` (D33). -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="dev.cupr.calendar.setup.SetupActivity"
     android:description="@string/widget_week_description"
     android:initialLayout="@layout/widget_week"
     android:minWidth="250dp"
@@ -17,4 +18,5 @@
     android:targetCellWidth="4"
     android:targetCellHeight="4"
     android:updatePeriodMillis="1800000"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable|configuration_optional" />

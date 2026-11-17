@@ -8,6 +8,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import java.io.File
 import java.io.FileNotFoundException
@@ -19,9 +20,12 @@ import java.time.ZoneId
  * Home Assistant's last good answer (D6, D45): [entryJson], the entries the
  * app could read, as Home Assistant sent them; the theme "Zuhause", one the
  * app could read (none when Home Assistant had no theme of that name, D17,
- * and the last snapshot's when it could not read the new one); the signed-in user's
- * name; and when it was fetched. Replaced whole by each successful fetch,
- * deleted by each new sign-in and by signing out.
+ * and the last snapshot's when it could not read the new one); the
+ * signed-in user's name; when it was fetched; and the sensor's attribute
+ * `calendars` as Home Assistant sent it, none while the sensor has none:
+ * the setup reads it where it lists them (`ha.SensorCalendars`), so a form
+ * the app cannot read (D57) leaves the snapshot readable. Replaced whole by
+ * each successful fetch, deleted by each new sign-in and by signing out.
  */
 @Serializable
 data class Snapshot(
@@ -29,6 +33,7 @@ data class Snapshot(
     val user: String,
     @SerialName("entries") val entryJson: List<JsonObject>,
     val theme: JsonObject? = null,
+    val calendars: JsonElement? = null,
 ) {
     val fetchedAt: Instant
         get() = Instant.ofEpochMilli(fetchedAtMillis)

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The sign-in screen's window, light or dark with the system, until Compose draws it. -->
+    <!-- The window of the sign-in screen and the widgets' setup, light or dark with the system, until Compose draws it. -->
     <style name="Theme.CopperCalendar" parent="android:Theme.DeviceDefault.DayNight">
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>

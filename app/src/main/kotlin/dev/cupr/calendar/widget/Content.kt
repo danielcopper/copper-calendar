@@ -38,7 +38,11 @@ sealed interface Content {
         val palettes: Palettes,
         val today: LocalDate,
         val notice: Notice? = null,
-    ) : Content
+    ) : Content {
+        /** This calendar without the entries of the calendars leftOut (D11). */
+        fun without(leftOut: Set<String>): Calendar =
+            if (leftOut.isEmpty()) this else copy(entries = entries.filter { it.calendar !in leftOut })
+    }
 
     companion object {
         private const val TAG = "Widgets"

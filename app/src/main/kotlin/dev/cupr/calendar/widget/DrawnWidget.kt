@@ -12,6 +12,8 @@ import android.widget.RemoteViews
 import androidx.annotation.StringRes
 import androidx.annotation.VisibleForTesting
 import dev.cupr.calendar.R
+import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.days.longName
 import dev.cupr.calendar.model.Palette
@@ -21,8 +23,11 @@ import dev.cupr.calendar.render.HeaderNote
 import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
+import dev.cupr.calendar.store.ListStore
+import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
+import java.time.Instant
 import java.time.LocalDate
 
 /** The bitmaps a widget's views hold, kept as they are drawn, to count their bytes. */
@@ -146,7 +151,7 @@ internal object DrawnWidget {
         }
 
     /** The renderer of the fixed parts, with the weekday heads. */
-    private fun chrome(context: Context): ChromeRenderer {
+    fun chrome(context: Context): ChromeRenderer {
         val assets = RenderAssets.of(context)
         return ChromeRenderer(
             assets.fonts,
@@ -156,12 +161,12 @@ internal object DrawnWidget {
     }
 
     /**
-     * The header and "+" of calendar: the header drawn light and dark by
+     * The fixed parts of calendar: its header, drawn light and dark by
      * header with the renderer of the fixed parts and the calendar's notice
      * at its right, named by description and the notice, and opening the
      * calendar page, or the sign-in screen while the notice asks to sign in
-     * again (D52); "+" opening a new entry on today. Returns the drawn
-     * header's height in px, which the list's height leaves out.
+     * again (D52); and "+" in corner ([Plus]). Returns the drawn header's
+     * height in px, which the list's height leaves out.
      */
     fun fixedParts(
         context: Context,
@@ -169,10 +174,11 @@ internal object DrawnWidget {
         kept: Kept,
         description: String,
         calendar: Content.Calendar,
-        scale: Scale,
+        corner: PlusCorner,
         header: (ChromeRenderer, Palette, HeaderNote?) -> Bitmap,
     ): Int {
         val chrome = chrome(context)
+        Plus.place(context, views, kept, chrome, corner, calendar)
         val notice = calendar.notice
         val (note, headerTap) =
             when (notice) {
@@ -186,9 +192,6 @@ internal object DrawnWidget {
         views.setImageViewBitmap(R.id.header_dark, kept.keep(header(chrome, palettes.dark, note)))
         views.setContentDescription(R.id.header, notice?.let { "$description, ${it.text}" } ?: description)
         views.setOnClickPendingIntent(R.id.header, headerTap)
-        views.setImageViewBitmap(R.id.fab_light, kept.keep(chrome.fab(scale, palettes.light)))
-        views.setImageViewBitmap(R.id.fab_dark, kept.keep(chrome.fab(scale, palettes.dark)))
-        views.setOnClickPendingIntent(R.id.fab, Taps.pendingIntent(context, Tap.New(calendar.today)))
         return light.height
     }
 
@@ -254,12 +257,13 @@ internal object DrawnWidget {
     }
 
     /**
-     * Hands drawn to the launcher through update. When the system refuses it
-     * for its bitmaps, which it does by throwing an IllegalArgumentException
-     * (see [BitmapLimit.limitBytes]), the log says so and the widget shows
-     * the plain tooFull text instead, which opens the calendar page. Only
-     * that exception, and only from update, is caught here; when the system
-     * refuses the plain text too, that exception propagates.
+     * Hands drawn to the launcher through update; true when the system takes
+     * it. When the system refuses it for its bitmaps, which it does by
+     * throwing an IllegalArgumentException (see [BitmapLimit.limitBytes]),
+     * the log says so and the widget shows the plain tooFull text instead,
+     * which opens the calendar page; false then. Only that exception, and
+     * only from update, is caught here; when the system refuses the plain
+     * text too, that exception propagates.
      */
     fun push(
         context: Context,
@@ -268,9 +272,10 @@ internal object DrawnWidget {
         @StringRes tooFull: Int,
         tag: String,
         update: (RemoteViews) -> Unit,
-    ) {
+    ): Boolean {
         try {
             update(drawn.views)
+            return true
         } catch (e: IllegalArgumentException) {
             Log.e(
                 tag,
@@ -279,6 +284,7 @@ internal object DrawnWidget {
                 e,
             )
             update(plainViews(context, tooFull))
+            return false
         }
     }
 
@@ -309,25 +315,42 @@ internal object DrawnWidget {
  * updated all the same. No other exception is caught, and a plain text the
  * system refuses here is not caught again: its exception propagates, and the
  * widgets after it in that update are not updated (D40).
+ *
+ * Each widget draws by its settings from its setup: without the calendars
+ * it leaves out (D11), with its days and its corner of "+" ([Look]); the
+ * month's and "Woche"'s lists scroll to today when their "Zurück zu heute"
+ * says the redraw should, or when they were just built anew
+ * ([ReturnToToday.step]), and where each list stands is kept
+ * ([ListStore]). The launcher's updates, every 30 minutes and for a
+ * new or resized widget, count as [Redraw.UPDATE].
  */
 abstract class DrawnWidgetProvider : AppWidgetProvider() {
+    /** Which of the app's widgets it provides. */
+    abstract val kind: WidgetKind
+
     /** The log's tag. */
     protected abstract val tag: String
 
-    /** Draws calendar on the widget id and hands it to the launcher. */
+    /**
+     * Draws calendar on the widget id as look says and hands it to the
+     * launcher; true when the system took the drawing, false when it refused
+     * it and the widget shows the plain too-full text instead
+     * ([DrawnWidget.push]).
+     */
     protected abstract fun update(
         context: Context,
         manager: AppWidgetManager,
         id: Int,
         calendar: Content.Calendar,
-    )
+        look: Look,
+    ): Boolean
 
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
-        Widgets.withContent(context) { updateAll(context, appWidgetManager, appWidgetIds, it) }
+        Widgets.withContent(context) { updateAll(context, appWidgetManager, appWidgetIds, it, Redraw.UPDATE) }
     }
 
     override fun onAppWidgetOptionsChanged(
@@ -336,17 +359,30 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         appWidgetId: Int,
         newOptions: Bundle,
     ) {
-        Widgets.withContent(context) { updateOne(context, appWidgetManager, appWidgetId, it) }
+        Widgets.withContent(context) { updateOne(context, appWidgetManager, appWidgetId, it, Redraw.UPDATE) }
     }
 
-    /** Updates this provider's widgets with content, which the app's own updates read once for all ([Widgets]). */
+    /** Forgets the settings and the last scroll of the widgets removed from the home screen. */
+    override fun onDeleted(
+        context: Context,
+        appWidgetIds: IntArray,
+    ) {
+        Settings.widgets(context).remove(appWidgetIds)
+        Settings.lists(context).forget(appWidgetIds)
+    }
+
+    /**
+     * Updates this provider's widgets with content, which the app's own
+     * updates read once for all ([Widgets]), for redraw.
+     */
     internal fun updateAll(
         context: Context,
         manager: AppWidgetManager,
         ids: IntArray,
         content: Content,
+        redraw: Redraw,
     ) {
-        ids.forEach { updateOne(context, manager, it, content) }
+        ids.forEach { updateOne(context, manager, it, content, redraw) }
     }
 
     /** This provider's widgets on the home screen. */
@@ -360,21 +396,53 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         manager: AppWidgetManager,
         id: Int,
         content: Content,
+        redraw: Redraw,
     ) {
         when (content) {
             is Content.NoData -> {
                 manager.updateAppWidget(id, DrawnWidget.plainViews(context, content.text, Taps.signIn(context)))
+                shownPlain(context, id)
             }
 
             is Content.Calendar -> {
                 try {
-                    update(context, manager, id, content)
+                    draw(context, manager, id, content, redraw)
                 } catch (e: IllegalArgumentException) {
                     failed(context, manager, id, e)
                 } catch (e: IllegalStateException) {
                     failed(context, manager, id, e)
                 }
             }
+        }
+    }
+
+    /**
+     * Draws calendar on the widget id by its settings. For the month and
+     * "Woche", once the system took the drawing, it keeps where their list
+     * stands and when it scrolled to today ([ReturnToToday.step]); when the
+     * system refused it and the widget shows the plain too-full text
+     * instead, the list is gone ([shownPlain]).
+     */
+    private fun draw(
+        context: Context,
+        manager: AppWidgetManager,
+        id: Int,
+        calendar: Content.Calendar,
+        redraw: Redraw,
+    ) {
+        val settings = Settings.widgets(context).read(id)
+        val shown = calendar.without(settings.leftOut)
+        if (!kind.backToToday) {
+            update(context, manager, id, shown, Look.of(settings, scroll = false))
+            return
+        }
+        val lists = Settings.lists(context)
+        val now = Instant.now()
+        val step = ReturnToToday.step(settings.backToToday, redraw, lists.state(id), lists.lastScroll(id), now)
+        if (update(context, manager, id, shown, Look.of(settings, step.scroll))) {
+            lists.keep(id, step.next, now.takeIf { step.counts })
+        } else {
+            shownPlain(context, id)
         }
     }
 
@@ -386,6 +454,19 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
     ) {
         Log.e(tag, "Widget $id: could not be drawn", error)
         manager.updateAppWidget(id, DrawnWidget.plainViews(context, R.string.widget_failed))
+        shownPlain(context, id)
+    }
+
+    /**
+     * Forgets the list of the widget id, which shows plain views instead, so
+     * the list is built anew at its next update and scrolls to today at the
+     * one after ([ReturnToToday.step]).
+     */
+    private fun shownPlain(
+        context: Context,
+        id: Int,
+    ) {
+        if (kind.backToToday) Settings.lists(context).forget(intArrayOf(id))
     }
 
     companion object {

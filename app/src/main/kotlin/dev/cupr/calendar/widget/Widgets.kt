@@ -1,6 +1,7 @@
 package dev.cupr.calendar.widget
 
 import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.util.Log
 import androidx.work.ExistingWorkPolicy
@@ -8,6 +9,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
+import dev.cupr.calendar.app.Settings
 import java.time.Clock
 import java.time.Duration
 import java.time.LocalDate
@@ -19,26 +21,78 @@ import java.util.concurrent.TimeUnit
  * all widgets and schedules the next midnight anew ([Midnight]). The
  * launcher's own updates (every 30 minutes, a new or resized widget) go
  * through each provider alone and leave WorkManager alone, so it does not
- * start with every process they start (D46).
+ * start with every process they start (D46). Besides: the redraw of one
+ * widget whose settings were just saved ([saved]), and forgetting the
+ * widgets' lists after the system dropped them ([listsRebuilt]).
  */
 object Widgets {
-    private val providers: List<DrawnWidgetProvider>
+    private const val TAG = "Widgets"
+
+    /** The app's widget providers, one of each [WidgetKind]. */
+    internal val providers: List<DrawnWidgetProvider>
         get() = listOf(MonthWidgetProvider(), WeekWidgetProvider(), WeekColumnsWidgetProvider())
+
+    /** The app's provider named component; none for another app's or another class. */
+    internal fun provider(
+        context: Context,
+        component: ComponentName,
+    ): DrawnWidgetProvider? = providers.firstOrNull { ComponentName(context, it.javaClass) == component }
 
     /** Redraws every widget and schedules the next midnight anew. */
     fun update(context: Context) {
-        redraw(context)
+        redraw(context, Redraw.UPDATE)
         Midnight.schedule(context, ExistingWorkPolicy.REPLACE)
     }
 
     private val lock = Any()
 
-    /** Redraws every widget from what the app keeps now. */
-    internal fun redraw(context: Context) {
+    /** Redraws every widget from what the app keeps now, for redraw. */
+    internal fun redraw(
+        context: Context,
+        redraw: Redraw,
+    ) {
         val manager = AppWidgetManager.getInstance(context)
         withContent(context) { content ->
-            providers.forEach { it.updateAll(context, manager, it.ids(context, manager), content) }
+            providers.forEach { it.updateAll(context, manager, it.ids(context, manager), content, redraw) }
         }
+    }
+
+    /**
+     * Redraws the widget id, a widget of kind, alone, its settings just
+     * saved, so it shows them at once, the month's and "Woche"'s list back at
+     * today ([Redraw.SAVED]); false, redrawing nothing, when id is no longer
+     * a widget of kind.
+     */
+    fun saved(
+        context: Context,
+        id: Int,
+        kind: WidgetKind,
+    ): Boolean {
+        val manager = AppWidgetManager.getInstance(context)
+        val provider = providers.single { it.kind == kind }
+        if (id !in provider.ids(context, manager)) return false
+        withContent(context) { provider.updateAll(context, manager, intArrayOf(id), it, Redraw.SAVED) }
+        return true
+    }
+
+    /**
+     * Forgets the lists of the month's and "Woche"'s widgets, which the
+     * system dropped for cause ([ListsRebuiltReceiver]), so they are to
+     * build (D59). It takes the redraws' lock ([withContent]), so a redraw
+     * running meanwhile cannot keep its list's state over the forgetting.
+     */
+    fun listsRebuilt(
+        context: Context,
+        cause: String,
+    ) {
+        val manager = AppWidgetManager.getInstance(context)
+        val ids =
+            synchronized(lock) {
+                providers.filter { it.kind.backToToday }.flatMap { it.ids(context, manager).asList() }.also {
+                    Settings.lists(context).forget(it.toIntArray())
+                }
+            }
+        Log.i(TAG, "$cause: the lists of widgets $ids are built anew")
     }
 
     /**
@@ -104,7 +158,7 @@ class MidnightWorker(
     @Suppress("TooGenericExceptionCaught")
     override fun doWork(): Result {
         try {
-            Widgets.redraw(applicationContext)
+            Widgets.redraw(applicationContext, Redraw.MIDNIGHT)
         } catch (e: RuntimeException) {
             Log.e(TAG, "Midnight: the widgets could not be redrawn; the next midnight is scheduled all the same", e)
         }

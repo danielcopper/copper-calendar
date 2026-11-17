@@ -12,6 +12,7 @@ import dev.cupr.calendar.R
 import dev.cupr.calendar.model.Palettes
 import dev.cupr.calendar.render.Probe.has
 import dev.cupr.calendar.sample.SampleData
+import dev.cupr.calendar.store.PlusCorner
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -39,7 +40,7 @@ class NoticeAndPalettesTest {
     /** A widget kind: its views of a calendar, and its rows' light and dark drawings. */
     private class Kind(
         val name: String,
-        val views: (Application, Content.Calendar) -> RemoteViews,
+        val views: (Application, Content.Calendar, PlusCorner) -> RemoteViews,
         val rowLight: Int,
         val rowDark: Int,
     )
@@ -48,19 +49,25 @@ class NoticeAndPalettesTest {
         listOf(
             Kind(
                 "Monat",
-                { c, calendar -> MonthWidget.views(c, WidgetHost.WIDTH_DP, calendar = calendar) },
+                { c, calendar, corner ->
+                    MonthWidget.views(c, WidgetHost.WIDTH_DP, calendar = calendar, corner = corner)
+                },
                 R.id.week_light,
                 R.id.week_dark,
             ),
             Kind(
                 "Woche",
-                { c, calendar -> WeekWidget.views(c, WidgetHost.WIDTH_DP, calendar = calendar) },
+                { c, calendar, corner ->
+                    WeekWidget.views(c, WidgetHost.WIDTH_DP, calendar = calendar, corner = corner)
+                },
                 R.id.day_light,
                 R.id.day_dark,
             ),
             Kind(
                 "Woche quer",
-                { c, calendar -> WeekColumnsWidget.views(c, WidgetHost.WIDTH_DP, calendar = calendar) },
+                { c, calendar, corner ->
+                    WeekColumnsWidget.views(c, WidgetHost.WIDTH_DP, calendar = calendar, corner = corner)
+                },
                 R.id.week_light,
                 R.id.week_dark,
             ),
@@ -69,9 +76,10 @@ class NoticeAndPalettesTest {
     private fun widget(
         kind: Kind,
         notice: Notice?,
+        corner: PlusCorner = PlusCorner.BOTTOM_RIGHT,
     ): View {
         val calendar = SampleData.calendar().copy(palettes = palettes, notice = notice)
-        return WidgetHost.laidOut(context, views = { c, _ -> kind.views(c as Application, calendar) })
+        return WidgetHost.laidOut(context, views = { c, _ -> kind.views(c as Application, calendar, corner) })
     }
 
     private fun View.bitmap(id: Int): Bitmap = (findViewById<ImageView>(id).drawable as BitmapDrawable).bitmap
@@ -111,6 +119,18 @@ class NoticeAndPalettesTest {
             // Past days are drawn muted, so only some of the rows shown need to have the text colour.
             assertTrue("${kind.name}: light rows", light.any { it.has(LIGHT_TEXT) } && light.none { it.has(DARK_TEXT) })
             assertTrue("${kind.name}: dark rows", dark.any { it.has(DARK_TEXT) } && dark.none { it.has(LIGHT_TEXT) })
+        }
+    }
+
+    @Test
+    fun `each widget draws its plus at the left with the light palette and the dark one`() {
+        for (kind in kinds) {
+            val widget = widget(kind, null, PlusCorner.BOTTOM_LEFT)
+
+            assertTrue("${kind.name}: light +", widget.bitmap(R.id.fab_left_light).has(LIGHT_ACCENT))
+            assertFalse("${kind.name}: light +", widget.bitmap(R.id.fab_left_light).has(DARK_ACCENT))
+            assertTrue("${kind.name}: dark +", widget.bitmap(R.id.fab_left_dark).has(DARK_ACCENT))
+            assertFalse("${kind.name}: dark +", widget.bitmap(R.id.fab_left_dark).has(LIGHT_ACCENT))
         }
     }
 

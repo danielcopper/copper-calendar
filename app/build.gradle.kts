@@ -138,4 +138,8 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.work.testing)
     testImplementation(libs.okhttp.mockwebserver)
+    // The setup and sign-in screens under Robolectric: ui-test-junit4 in the Compose BOM's version,
+    // espresso-core in its own (libs.versions.toml).
+    testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.espresso.core)
 }

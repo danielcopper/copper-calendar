@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.widget.RemoteViews
 import dev.cupr.calendar.sample.SampleData
+import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.week.WeekDays
 import org.junit.rules.ExternalResource
 
@@ -17,7 +18,9 @@ internal fun MonthWidget.views(
     widthDp: Int,
     id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
     calendar: Content.Calendar = SampleData.calendar(),
-): RemoteViews = draw(context, widthDp, id, BitmapLimit.limitBytes(context, TAG, id), calendar).views
+    corner: PlusCorner = PlusCorner.BOTTOM_RIGHT,
+): RemoteViews =
+    draw(context, widthDp, id, BitmapLimit.limitBytes(context, TAG, id), calendar, look = Look(corner = corner)).views
 
 internal fun WeekWidget.views(
     context: Context,
@@ -25,7 +28,9 @@ internal fun WeekWidget.views(
     days: WeekDays = WeekDays.MONDAY_TO_SUNDAY,
     id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
     calendar: Content.Calendar = SampleData.calendar(),
-): RemoteViews = draw(context, widthDp, days, id, BitmapLimit.limitBytes(context, TAG, id), calendar).views
+    corner: PlusCorner = PlusCorner.BOTTOM_RIGHT,
+): RemoteViews =
+    draw(context, widthDp, Look(days, corner), id, BitmapLimit.limitBytes(context, TAG, id), calendar).views
 
 internal fun WeekColumnsWidget.views(
     context: Context,
@@ -34,7 +39,9 @@ internal fun WeekColumnsWidget.views(
     days: WeekDays = WeekDays.MONDAY_TO_SUNDAY,
     id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
     calendar: Content.Calendar = SampleData.calendar(),
-): RemoteViews = draw(context, widthDp, heightDp, days, id, BitmapLimit.limitBytes(context, TAG, id), calendar).views
+    corner: PlusCorner = PlusCorner.BOTTOM_RIGHT,
+): RemoteViews =
+    draw(context, widthDp, heightDp, Look(days, corner), id, BitmapLimit.limitBytes(context, TAG, id), calendar).views
 
 /**
  * Makes the providers draw the sample month, as if signed in with a fresh

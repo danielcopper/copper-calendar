@@ -5,6 +5,7 @@ import android.content.Context
 
 /** The week widget "Woche" ([DrawnWidgetProvider]). */
 class WeekWidgetProvider : DrawnWidgetProvider() {
+    override val kind = WidgetKind.WEEK
     override val tag = WeekWidget.TAG
 
     override fun update(
@@ -12,5 +13,6 @@ class WeekWidgetProvider : DrawnWidgetProvider() {
         manager: AppWidgetManager,
         id: Int,
         calendar: Content.Calendar,
-    ) = WeekWidget.update(context, manager, id, calendar)
+        look: Look,
+    ) = WeekWidget.update(context, manager, id, calendar, look)
 }

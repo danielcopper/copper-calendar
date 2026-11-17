@@ -14,12 +14,15 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
 import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.FakeHomeAssistant
 import dev.cupr.calendar.ha.RefreshToken
 import dev.cupr.calendar.ha.SignInRequest
+import dev.cupr.calendar.signin.Status
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.AesGcmCipher
+import dev.cupr.calendar.store.FetchInterval
 import dev.cupr.calendar.store.TokenCipher
 import dev.cupr.calendar.widget.Content
 import dev.cupr.calendar.widget.DrawnWidgetProvider
@@ -191,6 +194,58 @@ class FetchWorkTest {
         assertNotNull(periodic.periodicityInfo)
         assertEquals(TimeUnit.MINUTES.toMillis(15), periodic.periodicityInfo!!.repeatIntervalMillis)
         assertEquals(null, now.periodicityInfo)
+    }
+
+    private val periodicMinutes: Long?
+        get() =
+            manager
+                .getWorkInfosForUniqueWork(FetchWork.PERIODIC)
+                .get()
+                .singleOrNull { !it.state.isFinished }
+                ?.periodicityInfo
+                ?.repeatIntervalMillis
+                ?.let(TimeUnit.MILLISECONDS::toMinutes)
+
+    @Test
+    fun `the periodic fetch runs at the interval set`() {
+        Settings.app(context).writeFetchInterval(FetchInterval.EVERY_60_MINUTES)
+
+        FetchWork.start(context)
+
+        assertEquals(60L, periodicMinutes)
+    }
+
+    @Test
+    fun `a new interval while signed in enqueues the periodic fetch anew at it, with a network`() {
+        signIn()
+        FetchWork.start(context)
+
+        FetchWork.setInterval(context, FetchInterval.EVERY_30_MINUTES)
+
+        assertEquals(30L, periodicMinutes)
+        val periodic = manager.getWorkInfosForUniqueWork(FetchWork.PERIODIC).get().single { !it.state.isFinished }
+        assertEquals(NetworkType.CONNECTED, periodic.constraints.requiredNetworkType)
+        assertEquals(FetchInterval.EVERY_30_MINUTES, Settings.app(context).fetchInterval())
+    }
+
+    @Test
+    fun `the app's screen shows the interval set`() {
+        assertEquals(FetchInterval.EVERY_15_MINUTES, Status.read(context).fetchInterval)
+
+        FetchWork.setInterval(context, FetchInterval.EVERY_60_MINUTES)
+
+        assertEquals(FetchInterval.EVERY_60_MINUTES, Status.read(context).fetchInterval)
+    }
+
+    @Test
+    fun `a new interval without a usable sign-in is kept, and fetches nothing`() {
+        FetchWork.setInterval(context, FetchInterval.EVERY_60_MINUTES)
+        signIn()
+        Services.account(context).reject()
+        FetchWork.setInterval(context, FetchInterval.EVERY_30_MINUTES)
+
+        assertEquals(emptyList<WorkInfo.State>(), scheduled)
+        assertEquals(FetchInterval.EVERY_30_MINUTES, Settings.app(context).fetchInterval())
     }
 
     @Test

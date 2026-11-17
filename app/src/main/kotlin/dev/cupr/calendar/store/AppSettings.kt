@@ -1,0 +1,43 @@
+package dev.cupr.calendar.store
+
+import android.content.SharedPreferences
+import androidx.core.content.edit
+
+/** How often the app fetches from Home Assistant, set once for the app (D60). */
+enum class FetchInterval(
+    val minutes: Long,
+    override val stored: String,
+) : StoredChoice {
+    /** WorkManager's least interval for periodic work, the default. */
+    EVERY_15_MINUTES(minutes = 15, stored = "15"),
+    EVERY_30_MINUTES(minutes = 30, stored = "30"),
+    EVERY_60_MINUTES(minutes = 60, stored = "60"),
+    ;
+
+    companion object {
+        /** The interval until another is set. */
+        val DEFAULT = EVERY_15_MINUTES
+    }
+}
+
+/** The settings set once for the app, not per widget; signing out keeps them. */
+class AppSettingsStore(
+    private val prefs: SharedPreferences,
+) {
+    /** The fetch interval; one stored under a name this app does not know reads as the default, logged. */
+    fun fetchInterval(): FetchInterval =
+        prefs.choice(
+            FETCH_INTERVAL,
+            FetchInterval.entries,
+            FetchInterval.DEFAULT,
+            TAG,
+            "The stored fetch interval",
+        )
+
+    fun writeFetchInterval(interval: FetchInterval) = prefs.edit { putString(FETCH_INTERVAL, interval.stored) }
+
+    private companion object {
+        const val TAG = "AppSettings"
+        const val FETCH_INTERVAL = "fetch_interval"
+    }
+}

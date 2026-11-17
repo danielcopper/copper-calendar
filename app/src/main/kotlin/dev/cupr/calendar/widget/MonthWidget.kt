@@ -26,18 +26,19 @@ object MonthWidget {
     /** The plain text it shows when the system refuses its views (D40). */
     internal val TOO_FULL = R.string.widget_month_too_full
 
-    /** Draws calendar's month on the widget id and hands it to the launcher. */
+    /** Draws calendar's month on the widget id as look says and hands it to the launcher ([DrawnWidget.push]). */
     fun update(
         context: Context,
         manager: AppWidgetManager,
         id: Int,
         calendar: Content.Calendar,
-    ) {
+        look: Look,
+    ): Boolean {
         val options = manager.getAppWidgetOptions(id)
         val width = DrawnWidget.widthDp(options, TAG, id)
         val height = WidgetHeight.of(options, TAG, id)
-        val drawn = draw(context, width, id, BitmapLimit.limitBytes(context, TAG, id), calendar, height)
-        DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
+        val drawn = draw(context, width, id, BitmapLimit.limitBytes(context, TAG, id), calendar, height, look)
+        return DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
     }
 
     /**
@@ -46,9 +47,10 @@ object MonthWidget {
      * month's cells show at most two entries each, so it leaves nothing out
      * for the limit; the log warns when its weeks pass it, and
      * [DrawnWidget.push] falls back.
-     * Its list scrolls so the current week stands on top in a widget of
-     * height, or to its end when the weeks from the current one on fit, and
-     * only into view without a height ([TodayOnTop.scroll], D27).
+     * Its list scrolls, when look says it does, so the current week stands
+     * on top in a widget of height, or to its end when the weeks from the
+     * current one on fit, and only into view without a height
+     * ([TodayOnTop.scroll], D27); "+" stands in look's corner.
      */
     internal fun draw(
         context: Context,
@@ -57,6 +59,7 @@ object MonthWidget {
         limit: Long,
         calendar: Content.Calendar,
         height: WidgetHeight? = null,
+        look: Look = Look(),
     ): Drawn {
         val today = calendar.today
         val view = MonthLayout.build(YearMonth.from(today), calendar.entries, today)
@@ -69,7 +72,7 @@ object MonthWidget {
         val views = RemoteViews(context.packageName, R.layout.widget_month)
         val title = ChromeRenderer.title(view.month)
         val headerPx =
-            DrawnWidget.fixedParts(context, views, kept, title, calendar, scale) { chrome, palette, note ->
+            DrawnWidget.fixedParts(context, views, kept, title, calendar, look.corner) { chrome, palette, note ->
                 chrome.header(view.month, widthPx, scale, palette, note)
             }
         val heightsPx = view.weeks.map { rows.heightPx(it, scale) }
@@ -91,7 +94,7 @@ object MonthWidget {
             }
         DrawnWidget.list(context, views, items)
         val measured = TodayOnTop.Measured(scale, heightsPx, today = view.todayWeek, headerPx = headerPx)
-        val scrolled = TodayOnTop.scroll(context, views, measured, height, TAG, id)
+        val scrolled = TodayOnTop.scroll(context, views, measured, height, TAG, id, look.scroll)
         DrawnWidget.logDrawn(TAG, id, kept, widthPx, limit, scrolled)
         return kept.drawn(views, limit)
     }

@@ -112,6 +112,25 @@ class FetcherTest {
     }
 
     @Test
+    fun `the sensor's calendars go into the snapshot as sent, their problems into the log, and none without them`() {
+        signIn()
+        val calendars = """[{"id":"calendar.a","name":"A"},{"name":"no id"}]"""
+        home.states = {
+            FakeHomeAssistant.json(
+                """{"entity_id":"sensor.family_calendar","attributes":{"entries":[$good],"calendars":$calendars}}""",
+            )
+        }
+
+        fetcher.fetch()
+
+        assertEquals(Json.parseToJsonElement(calendars), snapshots.read()!!.calendars)
+        assertTrue(logs, logs.contains("The sensor's calendar 1 has no string id; left out"))
+        entries(good)
+        fetcher.fetch()
+        assertNull(snapshots.read()!!.calendars)
+    }
+
+    @Test
     fun `a theme the app can read replaces the last snapshot's theme`() {
         signIn()
         entries(good)

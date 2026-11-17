@@ -12,7 +12,10 @@ import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.app.runThen
+import dev.cupr.calendar.store.Account
+import dev.cupr.calendar.store.FetchInterval
 import dev.cupr.calendar.widget.Widgets
 import java.util.concurrent.TimeUnit
 
@@ -38,9 +41,9 @@ class FetchWorker(
 }
 
 /**
- * When the app fetches (D3, D46): every 15 minutes, the least interval
- * WorkManager allows for periodic work, and at once after signing in and
- * whenever the app's screen opens; each only with a network connection.
+ * When the app fetches (D3, D46): at the interval set on the app's screen
+ * (D60), and at once after signing in and whenever the app's screen opens;
+ * each only with a network connection.
  */
 object FetchWork {
     /** The periodic fetch's unique name. */
@@ -49,20 +52,36 @@ object FetchWork {
     /** The fetch started at once; the sign-in screen watches it to show the new fetch time. */
     const val NOW = "fetch-now"
 
-    private const val INTERVAL_MINUTES = 15L
-
     private val network = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
     /** Fetches now, as expedited work where the system's quota allows, and keeps the periodic fetch scheduled. */
     fun start(context: Context) {
         val manager = WorkManager.getInstance(context)
         manager.enqueueUniqueWork(NOW, ExistingWorkPolicy.KEEP, nowRequest())
-        manager.enqueueUniquePeriodicWork(
-            PERIODIC,
-            ExistingPeriodicWorkPolicy.KEEP,
-            PeriodicWorkRequestBuilder<FetchWorker>(INTERVAL_MINUTES, TimeUnit.MINUTES).setConstraints(network).build(),
-        )
+        manager.enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.KEEP, periodicRequest(context))
     }
+
+    /**
+     * Keeps a new fetch interval and, while signed in, enqueues the periodic
+     * fetch anew at it: the scheduled one takes the new interval (D60).
+     */
+    fun setInterval(
+        context: Context,
+        interval: FetchInterval,
+    ) {
+        Settings.app(context).writeFetchInterval(interval)
+        if (Services.account(context).state == Account.State.SIGNED_IN) {
+            WorkManager
+                .getInstance(context)
+                .enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.UPDATE, periodicRequest(context))
+        }
+    }
+
+    /** The periodic fetch at the interval set on the app's screen, with a network. */
+    internal fun periodicRequest(context: Context) =
+        PeriodicWorkRequestBuilder<FetchWorker>(Settings.app(context).fetchInterval().minutes, TimeUnit.MINUTES)
+            .setConstraints(network)
+            .build()
 
     /** The fetch at once: expedited where the system's quota allows, else as soon as it may run, with a network. */
     internal fun nowRequest() =

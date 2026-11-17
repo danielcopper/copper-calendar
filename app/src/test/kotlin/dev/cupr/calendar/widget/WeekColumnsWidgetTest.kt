@@ -290,7 +290,7 @@ class WeekColumnsWidgetTest {
         assertEquals(list.width, fade.width)
         assertEquals(list.bottom + (list.parent as View).top, fade.bottom)
         val fab = widget.findViewById<View>(R.id.fab)
-        assertEquals(px(PhoneMonth.FAB_MARGIN), widget.width - fab.right)
+        assertEquals(px(PhoneMonth.FAB_MARGIN), widget.width - WidgetHost.boundsIn(widget, fab).right)
         assertNotNull(fab.contentDescription)
     }
 }

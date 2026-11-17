@@ -16,7 +16,6 @@ import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
 import dev.cupr.calendar.week.DayEntry
 import dev.cupr.calendar.week.WeekDay
-import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.week.WeekLayout
 import java.time.LocalDate
 import kotlin.math.roundToInt
@@ -34,40 +33,43 @@ object WeekWidget {
     /** The plain text it shows when the system refuses its views (D40). */
     internal val TOO_FULL = R.string.widget_week_too_full
 
-    /** Draws calendar's week on the widget id and hands it to the launcher. */
+    /** Draws calendar's week on the widget id as look says and hands it to the launcher ([DrawnWidget.push]). */
     fun update(
         context: Context,
         manager: AppWidgetManager,
         id: Int,
         calendar: Content.Calendar,
-    ) {
+        look: Look,
+    ): Boolean {
         val options = manager.getAppWidgetOptions(id)
         val width = DrawnWidget.widthDp(options, TAG, id)
         val height = WidgetHeight.of(options, TAG, id)
         val limit = BitmapLimit.limitBytes(context, TAG, id)
-        val drawn = draw(context, width, WeekDays.MONDAY_TO_SUNDAY, id, limit, calendar, height)
-        DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
+        val drawn = draw(context, width, look, id, limit, calendar, height)
+        return DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
     }
 
     /**
-     * The widget at widthDp showing days of calendar, from its today, and
-     * the bytes of its bitmaps, kept within limit: when its rows would pass
-     * it, the fullest days leave out their last entries for a "+N weitere"
-     * line until they fit ([leaveOutOne]). The widget's id only names it in
-     * the log. Its list scrolls so today stands on top in a widget of
-     * height, or to its end when the days from today on fit, and only into
-     * view without a height ([TodayOnTop.scroll], D27).
+     * The widget at widthDp showing look's days of calendar, from its
+     * today, and the bytes of its bitmaps, kept within limit: when its rows
+     * would pass it, the fullest days leave out their last entries for a
+     * "+N weitere" line until they fit ([leaveOutOne]). The widget's id only
+     * names it in the log. Its list scrolls, when look says it does, so
+     * today stands on top in a widget of height, or to its end when the days
+     * from today on fit, and only into view without a height
+     * ([TodayOnTop.scroll], D27); "+" stands in look's corner.
      */
     internal fun draw(
         context: Context,
         widthDp: Int,
-        days: WeekDays,
+        look: Look,
         id: Int,
         limit: Long,
         calendar: Content.Calendar,
         height: WidgetHeight? = null,
     ): Drawn {
         val today = calendar.today
+        val days = look.days
         val dates = days.dates(today)
         val scale = Scale(context.resources.displayMetrics.density)
         val headerWidthPx = scale.px(widthDp - 2 * PhoneMonth.CARD_INSET).roundToInt()
@@ -80,8 +82,9 @@ object WeekWidget {
         val title = context.getString(days.title)
         val range = WeekLayout.range(dates.first(), dates.last())
         val views = RemoteViews(context.packageName, R.layout.widget_week)
+        val description = "$title, $range"
         val headerPx =
-            DrawnWidget.fixedParts(context, views, kept, "$title, $range", calendar, scale) { chrome, palette, note ->
+            DrawnWidget.fixedParts(context, views, kept, description, calendar, look.corner) { chrome, palette, note ->
                 chrome.weekHeader(title, range, null, headerWidthPx, scale, palette, note)
             }
         val full = WeekLayout.build(dates, calendar.entries, today)
@@ -107,7 +110,7 @@ object WeekWidget {
         val heightsPx = week.map { rows.heightPx(it, scale) }
         val todayRow = week.indexOfFirst { it.today }
         val measured = TodayOnTop.Measured(scale, heightsPx, today = todayRow, headerPx = headerPx)
-        val scrolled = TodayOnTop.scroll(context, views, measured, height, TAG, id)
+        val scrolled = TodayOnTop.scroll(context, views, measured, height, TAG, id, look.scroll)
         DrawnWidget.logDrawn(TAG, id, kept, rowPx, limit, scrolled)
         return kept.drawn(views, limit)
     }

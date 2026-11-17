@@ -47,8 +47,16 @@ class HaClient(
         val theme: JsonObject?,
     )
 
-    /** The sensor's attribute `entries`, the list as Home Assistant sends it. */
-    fun entries(accessToken: AccessToken): Result<JsonArray> {
+    /** The sensor's attributes the app reads, as Home Assistant sends them. */
+    data class Sensor(
+        /** `entries`, the list of entries. */
+        val entries: JsonArray,
+        /** `calendars`, the sensor's calendars by id and name ([SensorCalendars]); none while the sensor has none. */
+        val calendars: JsonElement?,
+    )
+
+    /** The sensor's attributes the app reads ([Sensor]), as Home Assistant sends them. */
+    fun sensor(accessToken: AccessToken): Result<Sensor> {
         val request =
             Request
                 .Builder()
@@ -56,15 +64,16 @@ class HaClient(
                 .header("Authorization", "Bearer ${accessToken.value}")
                 .build()
         return try {
-            http.newCall(request).execute().use { response -> entriesOf(response) }
+            http.newCall(request).execute().use { response -> sensorOf(response) }
         } catch (e: IOException) {
             Result.Failed(e.javaClass.simpleName, FailureKind.of(e))
         }
     }
 
-    private fun entriesOf(response: Response): Result<JsonArray> {
+    private fun sensorOf(response: Response): Result<Sensor> {
         val state = if (response.isSuccessful) parseObject(response.body.string()) else null
-        val entries = (state?.get("attributes") as? JsonObject)?.get("entries") as? JsonArray
+        val attributes = state?.objectField("attributes")
+        val entries = attributes?.get("entries") as? JsonArray
         return when {
             !response.isSuccessful -> {
                 Result.Failed("HTTP ${response.code} for $SENSOR", kindOf(response.code))
@@ -82,7 +91,7 @@ class HaClient(
             }
 
             else -> {
-                Result.Ok(entries)
+                Result.Ok(Sensor(entries, attributes["calendars"]))
             }
         }
     }

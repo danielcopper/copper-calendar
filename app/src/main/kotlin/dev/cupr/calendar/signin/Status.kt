@@ -4,11 +4,13 @@ import android.content.Context
 import androidx.annotation.StringRes
 import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.days.CLOCK_TIME
 import dev.cupr.calendar.ha.HaClient
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.FailedFetch
 import dev.cupr.calendar.store.FetchCause
+import dev.cupr.calendar.store.FetchInterval
 import dev.cupr.calendar.store.UnreadableTheme
 import java.time.Instant
 import java.time.ZoneId
@@ -34,6 +36,8 @@ data class Status(
     val failed: FailedFetch?,
     /** The theme a fetch could not read, while the app keeps it (D48). */
     val unreadableTheme: UnreadableTheme?,
+    /** How often the app fetches, set on this screen. */
+    val fetchInterval: FetchInterval = FetchInterval.DEFAULT,
 ) {
     /** The line under the title: who is signed in and when the last fetch was, or why signing in again is needed. */
     fun line(
@@ -120,8 +124,9 @@ data class Status(
         private val DAY = DateTimeFormatter.ofPattern("d. MMMM", Locale.GERMAN)
 
         /**
-         * Reads the account, the snapshot, the last failure and the unreadable
-         * theme; off the main thread, the snapshot is a file.
+         * Reads the account, the snapshot, the last failure, the unreadable
+         * theme and the fetch interval; off the main thread, the snapshot is a
+         * file.
          */
         fun read(context: Context): Status {
             val account = Services.account(context)
@@ -137,6 +142,7 @@ data class Status(
                 lastFetch = snapshot?.let { LastFetch(it.user, it.fetchedAt) },
                 failed = Services.failures(context).read(),
                 unreadableTheme = Services.unreadableTheme(context).read(),
+                fetchInterval = Settings.app(context).fetchInterval(),
             )
         }
     }
