@@ -76,7 +76,7 @@
     <!-- A widget's setup (design.md, Setup app): its title with the widget picker's name for it, its calendars (D11), the week widgets' days (D20), when it returns to today (D27), the corner of "+", and saving. -->
     <string name="setup_title">Widget „%1$s“</string>
     <string name="setup_calendars">Kalender</string>
-    <string name="setup_no_calendars">Noch keine Kalender – sie erscheinen nach dem ersten Abruf</string>
+    <string name="setup_no_calendars">Keine Kalender bekannt</string>
     <string name="setup_days">Tage</string>
     <string name="setup_days_monday_to_sunday">Montag bis Sonntag</string>
     <string name="setup_days_from_today">Heute und die sechs Tage danach</string>
