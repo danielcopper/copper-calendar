@@ -10,23 +10,21 @@ import dev.cupr.calendar.days.isWeekend
 import dev.cupr.calendar.days.longName
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.model.Kinds
-import dev.cupr.calendar.store.StoredChoice
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.temporal.TemporalAdjusters
 
-/** The days a week widget shows, set per widget (D20), its header's title, and its name in the widget's settings. */
+/** The days a week widget shows, set per widget (D20), and its header's title. */
 enum class WeekDays(
     @param:StringRes val title: Int,
-    override val stored: String,
-) : StoredChoice {
+) {
     /** Monday to Sunday of the current week, the default. */
-    MONDAY_TO_SUNDAY(R.string.week_this_week, "monday_to_sunday"),
+    MONDAY_TO_SUNDAY(R.string.week_this_week),
 
     /** Today and the six days after it. */
-    FROM_TODAY(R.string.week_next_days, "from_today"),
+    FROM_TODAY(R.string.week_next_days),
     ;
 
     /** The seven dates, in order. */

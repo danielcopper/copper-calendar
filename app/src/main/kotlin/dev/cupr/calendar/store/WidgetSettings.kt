@@ -17,6 +17,14 @@ enum class BackToToday(
     EVERY_60_MINUTES("every_60", minutes = 60),
 }
 
+/** The name a week widget's days are kept under in its settings, fixed apart from the enum's names. */
+internal val WeekDays.stored: String
+    get() =
+        when (this) {
+            WeekDays.MONDAY_TO_SUNDAY -> "monday_to_sunday"
+            WeekDays.FROM_TODAY -> "from_today"
+        }
+
 /** The corner "+" stands in; the top corners hold the header. */
 enum class PlusCorner(
     override val stored: String,
@@ -54,7 +62,7 @@ class WidgetSettingsStore(
         val default = WidgetSettings.DEFAULT
         return WidgetSettings(
             leftOut = prefs.getStringSet(key(id, LEFT_OUT), null)?.toSet() ?: default.leftOut,
-            days = choice(id, DAYS, WeekDays.entries, default.days),
+            days = prefs.choice(key(id, DAYS), WeekDays.entries, default.days, TAG, what(id, DAYS)) { it.stored },
             backToToday = choice(id, BACK_TO_TODAY, BackToToday.entries, default.backToToday),
             plusCorner = choice(id, PLUS_CORNER, PlusCorner.entries, default.plusCorner),
         )
@@ -83,7 +91,7 @@ class WidgetSettingsStore(
         field: String,
         entries: List<T>,
         default: T,
-    ): T = prefs.choice(key(id, field), entries, default, TAG, "Widget $id: its stored $field")
+    ): T = prefs.choice(key(id, field), entries, default, TAG, what(id, field))
 
     private companion object {
         const val TAG = "WidgetSettings"
@@ -97,5 +105,11 @@ class WidgetSettingsStore(
             id: Int,
             field: String,
         ) = "$id.$field"
+
+        /** What the log names a stored field by. */
+        fun what(
+            id: Int,
+            field: String,
+        ) = "Widget $id: its stored $field"
     }
 }

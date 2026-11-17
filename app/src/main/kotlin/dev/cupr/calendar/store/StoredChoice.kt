@@ -19,9 +19,19 @@ internal fun <T : StoredChoice> SharedPreferences.choice(
     default: T,
     tag: String,
     what: String,
+): T = choice(key, entries, default, tag, what) { it.stored }
+
+/** [choice] for entries kept under the names stored gives them. */
+internal fun <T> SharedPreferences.choice(
+    key: String,
+    entries: List<T>,
+    default: T,
+    tag: String,
+    what: String,
+    stored: (T) -> String,
 ): T {
     val name = getString(key, null) ?: return default
-    return entries.firstOrNull { it.stored == name } ?: default.also {
-        Log.w(tag, "$what \"$name\" is unknown; it reads as ${it.stored}")
+    return entries.firstOrNull { stored(it) == name } ?: default.also {
+        Log.w(tag, "$what \"$name\" is unknown; it reads as ${stored(it)}")
     }
 }
