@@ -138,4 +138,6 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.work.testing)
     testImplementation(libs.okhttp.mockwebserver)
+    // The setup and sign-in screens under Robolectric; the version from the Compose BOM above.
+    testImplementation(libs.compose.ui.test.junit4)
 }
