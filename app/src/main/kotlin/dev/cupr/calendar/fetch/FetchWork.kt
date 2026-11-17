@@ -41,10 +41,9 @@ class FetchWorker(
 }
 
 /**
- * When the app fetches (D3, D46): every 15, 30 or 60 minutes as set on the
- * app's screen, 15 the least interval WorkManager allows for periodic work
- * and the default, and at once after signing in and whenever the app's
- * screen opens; each only with a network connection.
+ * When the app fetches (D3, D46): at the interval set on the app's screen
+ * (D60), and at once after signing in and whenever the app's screen opens;
+ * each only with a network connection.
  */
 object FetchWork {
     /** The periodic fetch's unique name. */

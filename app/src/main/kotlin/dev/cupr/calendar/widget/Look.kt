@@ -47,11 +47,10 @@ enum class Redraw {
 
 /**
  * Whether a redraw brings today's row to the top of the month's or
- * "Woche"'s list, by the widget's "Zurück zu heute" (D27). A redraw that
- * does not leaves the list where the user scrolled it: the launcher applies
- * the new views to the list it shows, which keeps its position (measured on
- * the phone, 2026-11-17). Saving the settings always scrolls, so the widget
- * shows at once what it was set to (D59).
+ * "Woche"'s list, by the widget's "Zurück zu heute" (D27); a redraw that
+ * does not leaves the list where the user scrolled it (D59). Saving the
+ * settings scrolls whatever they say, as a visible sign that they were
+ * saved (D59).
  */
 internal object ReturnToToday {
     /**

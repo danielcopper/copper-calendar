@@ -21,7 +21,9 @@ import java.util.concurrent.TimeUnit
  * all widgets and schedules the next midnight anew ([Midnight]). The
  * launcher's own updates (every 30 minutes, a new or resized widget) go
  * through each provider alone and leave WorkManager alone, so it does not
- * start with every process they start (D46).
+ * start with every process they start (D46). Besides: the redraw of one
+ * widget whose settings were just saved ([saved]), and forgetting the
+ * widgets' lists after an update of the app ([appUpdated]).
  */
 object Widgets {
     private const val TAG = "Widgets"

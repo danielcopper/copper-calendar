@@ -3,7 +3,7 @@ package dev.cupr.calendar.store
 import android.content.SharedPreferences
 import androidx.core.content.edit
 
-/** How often the app fetches from Home Assistant, set once for the app (D3, D46). */
+/** How often the app fetches from Home Assistant, set once for the app (D60). */
 enum class FetchInterval(
     val minutes: Long,
     override val stored: String,

@@ -359,7 +359,7 @@ class WidgetLookTest {
     }
 
     @Test
-    fun `set never, the month's list keeps its position on an update but keeps its padding`() {
+    fun `set never, the month's list keeps its position on an update`() {
         val id = shadow.createWidget(MonthWidgetProvider::class.java, R.layout.widget_month)
         settings.write(id, WidgetSettings(backToToday = BackToToday.NEVER))
         scrolls.keep(id, ListState.SETTLED, null)

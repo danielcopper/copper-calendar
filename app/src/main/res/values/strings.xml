@@ -67,13 +67,13 @@
     <string name="theme_unreadable_day">Theme „%1$s“ nicht lesbar – Farben vom Abruf am %3$s um %2$s</string>
     <string name="theme_unreadable_built_in">Theme „%1$s“ nicht lesbar – eingebaute Farben</string>
     <string name="sign_out">Abmelden</string>
-    <!-- The sign-in screen's fetch interval, set once for the app (D3, D46); its options are the intervals below. -->
+    <!-- The sign-in screen's fetch interval, set once for the app (D60); its options are the intervals below. -->
     <string name="fetch_interval">Abruf</string>
     <!-- Intervals, for the fetch and for a widget's "Zurück zu heute". -->
     <string name="every_15_minutes">Alle 15 Minuten</string>
     <string name="every_30_minutes">Alle 30 Minuten</string>
     <string name="every_60_minutes">Alle 60 Minuten</string>
-    <!-- A widget's setup (design.md, Setup app): its title with the widget picker's name for it, its calendars (D11), the week widgets' days (D20), when it returns to today (D27), the corner of "+", and saving. -->
+    <!-- A widget's setup (design.md, Setup screen): its title with the widget picker's name for it, its calendars (D11), the week widgets' days (D20), when it returns to today (D27), the corner of "+", and saving. -->
     <string name="setup_title">Widget „%1$s“</string>
     <string name="setup_calendars">Kalender</string>
     <string name="setup_no_calendars">Keine Kalender bekannt</string>
