@@ -42,6 +42,7 @@ import dev.cupr.calendar.ha.SensorCalendar
 import dev.cupr.calendar.store.BackToToday
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.WidgetSettings
+import dev.cupr.calendar.store.stored
 import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.widget.WidgetKind
 import dev.cupr.calendar.widget.Widgets
@@ -183,20 +184,26 @@ private fun cornerLabel(corner: PlusCorner): Int =
         PlusCorner.BOTTOM_LEFT -> R.string.setup_plus_bottom_left
     }
 
-/** Keeps the settings shown, changed or not, across a configuration change. */
+/**
+ * Keeps the settings shown, changed or not, across a configuration change,
+ * by the names the store keeps them under; a name it does not know restores
+ * none, and the screen reads the stored settings again.
+ */
 internal val SettingsSaver =
     listSaver<WidgetSettings?, String>(
         save = { settings ->
-            settings?.let { listOf(it.days.name, it.backToToday.name, it.plusCorner.name) + it.leftOut }.orEmpty()
+            settings
+                ?.let { listOf(it.days.stored, it.backToToday.stored, it.plusCorner.stored) + it.leftOut }
+                .orEmpty()
         },
         restore = { saved ->
-            saved.takeIf { it.size >= SAVED_CHOICES }?.let {
-                WidgetSettings(
-                    leftOut = it.drop(SAVED_CHOICES).toSet(),
-                    days = WeekDays.valueOf(it[0]),
-                    backToToday = BackToToday.valueOf(it[1]),
-                    plusCorner = PlusCorner.valueOf(it[2]),
-                )
+            val days = WeekDays.entries.firstOrNull { it.stored == saved.getOrNull(0) }
+            val back = BackToToday.entries.firstOrNull { it.stored == saved.getOrNull(1) }
+            val corner = PlusCorner.entries.firstOrNull { it.stored == saved.getOrNull(2) }
+            if (days == null || back == null || corner == null) {
+                null
+            } else {
+                WidgetSettings(saved.drop(SAVED_CHOICES).toSet(), days, back, corner)
             }
         },
     )

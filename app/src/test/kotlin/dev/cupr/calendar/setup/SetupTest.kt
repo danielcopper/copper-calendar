@@ -7,13 +7,17 @@ import android.appwidget.AppWidgetProvider
 import android.appwidget.AppWidgetProviderInfo
 import android.content.ComponentName
 import android.content.Intent
+import androidx.compose.runtime.saveable.SaverScope
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.ha.SensorCalendar
 import dev.cupr.calendar.model.Entry
+import dev.cupr.calendar.store.BackToToday
+import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.store.WidgetSettingsStore
+import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.widget.MonthWidgetProvider
 import dev.cupr.calendar.widget.WeekColumnsWidgetProvider
 import dev.cupr.calendar.widget.WeekWidgetProvider
@@ -135,6 +139,30 @@ class SetupTest {
         assertNull(scrolls.read(3))
         assertEquals(left, store.read(4))
         assertEquals(at, scrolls.read(4))
+    }
+
+    @Test
+    fun `the settings shown are kept across a configuration change by their stored names`() {
+        val scope = SaverScope { true }
+        val save = { settings: WidgetSettings? -> with(SettingsSaver) { scope.save(settings) } }
+        val all =
+            WeekDays.entries.flatMap { days ->
+                BackToToday.entries.flatMap { back ->
+                    PlusCorner.entries.flatMap { corner ->
+                        listOf(emptySet(), setOf("calendar.a", "special")).map { WidgetSettings(it, days, back, corner) }
+                    }
+                }
+            }
+
+        for (settings in all) {
+            assertEquals(settings, SettingsSaver.restore(checkNotNull(save(settings))))
+        }
+        assertEquals(
+            listOf("from_today", "every_30", "bottom_left", "special"),
+            save(WidgetSettings(setOf("special"), WeekDays.FROM_TODAY, BackToToday.EVERY_30_MINUTES, PlusCorner.BOTTOM_LEFT)),
+        )
+        assertNull(save(null))
+        assertNull(SettingsSaver.restore(listOf("FROM_TODAY", "every_30", "bottom_left")))
     }
 
     /** Places a widget of provider under id, as the launcher binds it. */
