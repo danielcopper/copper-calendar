@@ -46,7 +46,7 @@ object WeekColumnsWidget {
         id: Int,
         calendar: Content.Calendar,
         look: Look,
-    ) {
+    ): Boolean {
         val options = manager.getAppWidgetOptions(id)
         val width = DrawnWidget.widthDp(options, TAG, id)
         val height =
@@ -59,7 +59,7 @@ object WeekColumnsWidget {
             )
         val limit = BitmapLimit.limitBytes(context, TAG, id)
         val drawn = draw(context, width, height, look, id, limit, calendar)
-        DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
+        return DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
     }
 
     /**

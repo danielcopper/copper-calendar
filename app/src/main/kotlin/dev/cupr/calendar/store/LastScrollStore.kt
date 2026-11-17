@@ -19,8 +19,8 @@ class LastScrollStore(
         at: Instant,
     ) = prefs.edit { putLong(key(id), at.toEpochMilli()) }
 
-    /** Forgets the widgets ids, removed from the home screen. */
-    fun remove(ids: IntArray) = prefs.edit { ids.forEach { remove(key(it)) } }
+    /** Forgets the last scroll of the widgets ids: removed from the home screen, or showing plain views. */
+    fun forget(ids: IntArray) = prefs.edit { ids.forEach { remove(key(it)) } }
 
     private companion object {
         fun key(id: Int) = "$id.scrolled_at"

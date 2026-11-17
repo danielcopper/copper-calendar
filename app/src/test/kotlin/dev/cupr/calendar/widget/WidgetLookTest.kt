@@ -2,6 +2,7 @@ package dev.cupr.calendar.widget
 
 import android.app.Application
 import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
@@ -58,9 +59,13 @@ class WidgetLookTest {
     private val scrolls get() = Settings.lastScrolls(context)
     private val now = Instant.parse("2026-11-17T10:00:00Z")
 
-    /** A provider of kind that draws nothing and keeps what it was asked to draw. */
+    /**
+     * A provider of kind that draws nothing and keeps what it was asked to
+     * draw; the launcher takes each drawing unless taken says otherwise.
+     */
     private class Recording(
         override val kind: WidgetKind,
+        val taken: Boolean = true,
     ) : DrawnWidgetProvider() {
         override val tag = "Recording"
         val drawn = mutableListOf<Pair<Content.Calendar, Look>>()
@@ -71,8 +76,9 @@ class WidgetLookTest {
             id: Int,
             calendar: Content.Calendar,
             look: Look,
-        ) {
+        ): Boolean {
             drawn += calendar to look
+            return taken
         }
     }
 
@@ -191,6 +197,51 @@ class WidgetLookTest {
         assertEquals(listOf(true, false, true), provider.drawn.map { it.second.scroll })
         assertTrue(Duration.between(first, Instant.now()) < Duration.ofMinutes(1))
         assertTrue(checkNotNull(scrolls.read(4)).isAfter(earlier))
+    }
+
+    @Test
+    fun `a scroll the launcher did not take, the too-full text shown instead, is not kept, and forgets the last`() {
+        val provider = Recording(WidgetKind.MONTH, taken = false)
+        settings.write(4, WidgetSettings(backToToday = BackToToday.EVERY_30_MINUTES))
+        scrolls.write(4, now)
+
+        provider.onUpdate(context, manager, intArrayOf(4))
+
+        assertTrue(provider.drawn.single().second.scroll)
+        assertNull(scrolls.read(4))
+    }
+
+    @Test
+    fun `plain views instead of the list forget its last scroll, so an interval scrolls at the list's next redraw`() {
+        // Placed by a provider that draws nothing, so the plain views have a widget to go to.
+        val id = shadow.createWidget(AppWidgetProvider::class.java, R.layout.widget_plain)
+        val provider = Recording(WidgetKind.MONTH)
+        settings.write(id, WidgetSettings(backToToday = BackToToday.EVERY_30_MINUTES))
+        scrolls.write(id, Instant.now())
+        DrawnWidgetProvider.content = { Content.NoData(R.string.widget_signed_out) }
+
+        provider.onUpdate(context, manager, intArrayOf(id))
+        assertNull(scrolls.read(id))
+        scrolls.write(id, Instant.now())
+        val failing =
+            object : DrawnWidgetProvider() {
+                override val kind = WidgetKind.MONTH
+                override val tag = "Failing"
+
+                override fun update(
+                    context: Context,
+                    manager: AppWidgetManager,
+                    id: Int,
+                    calendar: Content.Calendar,
+                    look: Look,
+                ): Boolean = error("a check in the drawing")
+            }
+        DrawnWidgetProvider.content = { SampleData.calendar() }
+        failing.onUpdate(context, manager, intArrayOf(id))
+        assertNull(scrolls.read(id))
+        provider.onUpdate(context, manager, intArrayOf(id))
+
+        assertTrue(provider.drawn.single().second.scroll)
     }
 
     @Test

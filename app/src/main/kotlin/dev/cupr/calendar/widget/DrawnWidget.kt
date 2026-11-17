@@ -256,12 +256,13 @@ internal object DrawnWidget {
     }
 
     /**
-     * Hands drawn to the launcher through update. When the system refuses it
-     * for its bitmaps, which it does by throwing an IllegalArgumentException
-     * (see [BitmapLimit.limitBytes]), the log says so and the widget shows
-     * the plain tooFull text instead, which opens the calendar page. Only
-     * that exception, and only from update, is caught here; when the system
-     * refuses the plain text too, that exception propagates.
+     * Hands drawn to the launcher through update; true when the system takes
+     * it. When the system refuses it for its bitmaps, which it does by
+     * throwing an IllegalArgumentException (see [BitmapLimit.limitBytes]),
+     * the log says so and the widget shows the plain tooFull text instead,
+     * which opens the calendar page; false then. Only that exception, and
+     * only from update, is caught here; when the system refuses the plain
+     * text too, that exception propagates.
      */
     fun push(
         context: Context,
@@ -270,9 +271,10 @@ internal object DrawnWidget {
         @StringRes tooFull: Int,
         tag: String,
         update: (RemoteViews) -> Unit,
-    ) {
+    ): Boolean {
         try {
             update(drawn.views)
+            return true
         } catch (e: IllegalArgumentException) {
             Log.e(
                 tag,
@@ -281,6 +283,7 @@ internal object DrawnWidget {
                 e,
             )
             update(plainViews(context, tooFull))
+            return false
         }
     }
 
@@ -326,14 +329,18 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
     /** The log's tag. */
     protected abstract val tag: String
 
-    /** Draws calendar on the widget id as look says and hands it to the launcher. */
+    /**
+     * Draws calendar on the widget id as look says and hands it to the
+     * launcher; true when the launcher took the drawing, false when it shows
+     * the plain too-full text instead ([DrawnWidget.push]).
+     */
     protected abstract fun update(
         context: Context,
         manager: AppWidgetManager,
         id: Int,
         calendar: Content.Calendar,
         look: Look,
-    )
+    ): Boolean
 
     override fun onUpdate(
         context: Context,
@@ -358,7 +365,7 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         appWidgetIds: IntArray,
     ) {
         Settings.widgets(context).remove(appWidgetIds)
-        Settings.lastScrolls(context).remove(appWidgetIds)
+        Settings.lastScrolls(context).forget(appWidgetIds)
     }
 
     /**
@@ -391,6 +398,7 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         when (content) {
             is Content.NoData -> {
                 manager.updateAppWidget(id, DrawnWidget.plainViews(context, content.text, Taps.signIn(context)))
+                shownPlain(context, id)
             }
 
             is Content.Calendar -> {
@@ -407,7 +415,9 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
 
     /**
      * Draws calendar on the widget id by its settings, and keeps the time
-     * when its list scrolled to today.
+     * when its list scrolled to today, once the launcher took the drawing;
+     * when it shows the plain too-full text instead, the list is gone
+     * ([shownPlain]).
      */
     private fun draw(
         context: Context,
@@ -420,8 +430,11 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         val scrolls = Settings.lastScrolls(context)
         val now = Instant.now()
         val scroll = kind.backToToday && ReturnToToday.due(settings.backToToday, redraw, scrolls.read(id), now)
-        update(context, manager, id, calendar.without(settings.leftOut), Look.of(settings, scroll))
-        if (scroll) scrolls.write(id, now)
+        val pushed = update(context, manager, id, calendar.without(settings.leftOut), Look.of(settings, scroll))
+        when {
+            !pushed -> shownPlain(context, id)
+            scroll -> scrolls.write(id, now)
+        }
     }
 
     private fun failed(
@@ -432,6 +445,18 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
     ) {
         Log.e(tag, "Widget $id: could not be drawn", error)
         manager.updateAppWidget(id, DrawnWidget.plainViews(context, R.string.widget_failed))
+        shownPlain(context, id)
+    }
+
+    /**
+     * Forgets the last scroll of the widget id, which shows plain views
+     * instead of its list, so its list scrolls to today again (D59).
+     */
+    private fun shownPlain(
+        context: Context,
+        id: Int,
+    ) {
+        if (kind.backToToday) Settings.lastScrolls(context).forget(intArrayOf(id))
     }
 
     companion object {

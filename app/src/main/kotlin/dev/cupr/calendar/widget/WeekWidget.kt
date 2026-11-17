@@ -33,20 +33,20 @@ object WeekWidget {
     /** The plain text it shows when the system refuses its views (D40). */
     internal val TOO_FULL = R.string.widget_week_too_full
 
-    /** Draws calendar's week on the widget id as look says and hands it to the launcher. */
+    /** Draws calendar's week on the widget id as look says and hands it to the launcher ([DrawnWidget.push]). */
     fun update(
         context: Context,
         manager: AppWidgetManager,
         id: Int,
         calendar: Content.Calendar,
         look: Look,
-    ) {
+    ): Boolean {
         val options = manager.getAppWidgetOptions(id)
         val width = DrawnWidget.widthDp(options, TAG, id)
         val height = WidgetHeight.of(options, TAG, id)
         val limit = BitmapLimit.limitBytes(context, TAG, id)
         val drawn = draw(context, width, look, id, limit, calendar, height)
-        DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
+        return DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
     }
 
     /**

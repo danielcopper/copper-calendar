@@ -24,7 +24,7 @@ class LastScrollStoreTest {
 
         assertEquals(at, scrolls.read(7))
         assertNull(scrolls.read(9))
-        scrolls.remove(intArrayOf(7))
+        scrolls.forget(intArrayOf(7))
         assertNull(scrolls.read(7))
         assertEquals(at, scrolls.read(8))
     }

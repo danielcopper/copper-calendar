@@ -23,6 +23,7 @@ import dev.cupr.calendar.week.WeekDay
 import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.week.WeekLayout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -289,10 +290,12 @@ class DrawnWidgetTest {
     fun `when the system refuses the views, the widget shows that it is too full and opens the calendar page`() {
         val pushed = mutableListOf<RemoteViews>()
         val drawn = Drawn(RemoteViews(application.packageName, R.layout.widget_week), 42, 41)
-        DrawnWidget.push(application, 5, drawn, R.string.widget_week_too_full, "Test") { views ->
-            pushed += views
-            if (pushed.size == 1) throw IllegalArgumentException("RemoteViews for widget update exceeds")
-        }
+        val taken =
+            DrawnWidget.push(application, 5, drawn, R.string.widget_week_too_full, "Test") { views ->
+                pushed += views
+                if (pushed.size == 1) throw IllegalArgumentException("RemoteViews for widget update exceeds")
+            }
+        assertFalse(taken)
         assertEquals(2, pushed.size)
         val shown = pushed[1].apply(application, FrameLayout(application))
         val text = shown.findViewById<TextView>(R.id.plain_text)
@@ -322,7 +325,9 @@ class DrawnWidgetTest {
     fun `views the system takes are handed over once, without the fallback`() {
         val pushed = mutableListOf<RemoteViews>()
         val views = RemoteViews(application.packageName, R.layout.widget_week)
-        DrawnWidget.push(application, 5, Drawn(views, 1, 2), R.string.widget_week_too_full, "Test") { pushed += it }
+        assertTrue(
+            DrawnWidget.push(application, 5, Drawn(views, 1, 2), R.string.widget_week_too_full, "Test") { pushed += it },
+        )
         assertEquals(listOf(views), pushed)
     }
 
@@ -346,12 +351,12 @@ class DrawnWidgetTest {
                     id: Int,
                     calendar: Content.Calendar,
                     look: Look,
-                ) {
+                ): Boolean {
                     updated += id
                     // What a model's require and a drawing's check throw.
                     require(id != argument) { "a require in the drawing" }
                     check(id != state) { "a check in the drawing" }
-                    WeekWidget.update(context, manager, id, calendar, look)
+                    return WeekWidget.update(context, manager, id, calendar, look)
                 }
             }
         provider.onUpdate(application, manager, ids.toIntArray())
@@ -387,7 +392,7 @@ class DrawnWidgetTest {
                     id: Int,
                     calendar: Content.Calendar,
                     look: Look,
-                ): Unit = throw UnsupportedOperationException("not caught")
+                ): Boolean = throw UnsupportedOperationException("not caught")
             }
         val id = shadowOf(manager).createWidget(AppWidgetProvider::class.java, R.layout.widget_plain)
         assertThrows(
