@@ -23,8 +23,7 @@ internal fun save(
 ): Boolean {
     val store = Settings.widgets(context)
     // Written before the check: a widget removed after it loses them with its removal (onDeleted), one removed
-    // before it here. A widget removed during the redraw can keep its list's state and last scroll, which stay
-    // behind unread.
+    // before it here.
     store.write(id, settings)
     if (Widgets.saved(context, id, kind)) return true
     store.remove(intArrayOf(id))

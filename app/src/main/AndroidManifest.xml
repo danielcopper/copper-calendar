@@ -70,8 +70,8 @@
                 android:resource="@xml/widget_week_columns_info" />
         </receiver>
 
-        <!-- The app updated or the phone restarted, the widgets' lists are
-             built anew (D59); only the system sends these broadcasts. -->
+        <!-- The system dropped the widgets' lists (D59); only the system
+             sends these broadcasts. -->
         <receiver
             android:name=".widget.ListsRebuiltReceiver"
             android:exported="false">

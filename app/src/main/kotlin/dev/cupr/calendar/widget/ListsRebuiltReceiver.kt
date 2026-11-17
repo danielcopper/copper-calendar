@@ -5,8 +5,8 @@ import android.content.Context
 import android.content.Intent
 
 /**
- * Tells the widgets that the system built their lists anew: after an update
- * of the app and after a restart of the phone ([Widgets.listsRebuilt]).
+ * Tells the widgets that the system dropped their lists, so the next update
+ * builds them anew ([Widgets.listsRebuilt], D59).
  */
 class ListsRebuiltReceiver : BroadcastReceiver() {
     override fun onReceive(

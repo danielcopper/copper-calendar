@@ -77,7 +77,7 @@ object Widgets {
 
     /**
      * Forgets the lists of the month's and "Woche"'s widgets, which the
-     * system built anew for cause ([ListsRebuiltReceiver]), so they are to
+     * system dropped for cause ([ListsRebuiltReceiver]), so they are to
      * build (D59). It takes the redraws' lock ([withContent]), so a redraw
      * running meanwhile cannot keep its list's state over the forgetting.
      */

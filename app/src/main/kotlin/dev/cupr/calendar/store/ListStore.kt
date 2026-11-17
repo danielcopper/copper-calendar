@@ -6,15 +6,12 @@ import java.time.Instant
 
 /**
  * What the next update of the month's or "Woche"'s list does, by where the
- * list stands since the system last built it anew (D59).
+ * list stands since the app last learned it was built anew (D59).
  */
 enum class ListState(
     override val stored: String,
 ) : StoredChoice {
-    /**
-     * The next update builds the list anew: the widget shows plain views,
-     * the app was updated, the phone restarted, or the widget is new.
-     */
+    /** The next update builds the list anew (D59). */
     TO_BUILD("to_build"),
 
     /** The last update built the list anew; the next one scrolls it to today, whatever is set. */
@@ -60,9 +57,9 @@ class ListStore(
     }
 
     /**
-     * Forgets the lists of the widgets ids: removed from the home screen,
-     * showing plain views, the app updated, or the phone restarted; a list
-     * kept again is to build.
+     * Forgets the lists of the widgets ids, when they are removed or built
+     * anew (D59); until a state is kept again, a list reads to build
+     * ([ListState.TO_BUILD]).
      */
     fun forget(ids: IntArray) =
         prefs.edit {
