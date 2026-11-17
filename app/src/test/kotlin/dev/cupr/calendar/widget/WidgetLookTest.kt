@@ -66,7 +66,7 @@ class WidgetLookTest {
 
     /**
      * A provider of kind that draws nothing and keeps what it was asked to
-     * draw; the launcher takes each drawing unless taken says otherwise.
+     * draw; the system takes each drawing unless taken says otherwise.
      */
     private class Recording(
         override val kind: WidgetKind,

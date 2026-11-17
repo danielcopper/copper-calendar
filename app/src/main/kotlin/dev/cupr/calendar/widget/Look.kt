@@ -49,8 +49,7 @@ enum class Redraw {
  * Whether a redraw brings today's row to the top of the month's or
  * "Woche"'s list, by the widget's "Zurück zu heute" (D27); a redraw that
  * does not leaves the list where the user scrolled it (D59). Saving the
- * settings scrolls whatever they say, as a visible sign that they were
- * saved (D59).
+ * settings scrolls whatever they say (D59).
  */
 internal object ReturnToToday {
     /**

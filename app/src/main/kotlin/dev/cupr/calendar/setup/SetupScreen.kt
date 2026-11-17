@@ -77,6 +77,7 @@ fun SetupScreen(
                 val kept = Settings.widgets(app).read(id)
                 val snapshot = Services.snapshots(app).read()
                 val entries = snapshot?.parse(ZoneId.systemDefault())?.entries.orEmpty()
+                // Its problems were logged by the fetch that stored it.
                 val sensor = SensorCalendars.read(snapshot?.calendars).calendars
                 kept to setupCalendars(sensor, entries, kept.leftOut + restored?.leftOut.orEmpty())
             }

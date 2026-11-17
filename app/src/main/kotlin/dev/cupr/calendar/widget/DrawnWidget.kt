@@ -333,8 +333,9 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
 
     /**
      * Draws calendar on the widget id as look says and hands it to the
-     * launcher; true when the launcher took the drawing, false when it shows
-     * the plain too-full text instead ([DrawnWidget.push]).
+     * launcher; true when the system took the drawing, false when it refused
+     * it and the widget shows the plain too-full text instead
+     * ([DrawnWidget.push]).
      */
     protected abstract fun update(
         context: Context,
@@ -417,10 +418,10 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
 
     /**
      * Draws calendar on the widget id by its settings. For the month and
-     * "Woche", once the launcher took the drawing, it keeps where their list
+     * "Woche", once the system took the drawing, it keeps where their list
      * stands and when it scrolled to today ([ReturnToToday.step]); when the
-     * launcher shows the plain too-full text instead, the list is gone
-     * ([shownPlain]).
+     * system refused it and the widget shows the plain too-full text
+     * instead, the list is gone ([shownPlain]).
      */
     private fun draw(
         context: Context,
