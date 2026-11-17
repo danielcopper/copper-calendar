@@ -149,7 +149,7 @@ internal object DrawnWidget {
         }
 
     /** The renderer of the fixed parts, with the weekday heads. */
-    private fun chrome(context: Context): ChromeRenderer {
+    fun chrome(context: Context): ChromeRenderer {
         val assets = RenderAssets.of(context)
         return ChromeRenderer(
             assets.fonts,
@@ -159,12 +159,12 @@ internal object DrawnWidget {
     }
 
     /**
-     * The header and "+" of calendar: the header drawn light and dark by
-     * header with the renderer of the fixed parts and the calendar's notice
-     * at its right, named by description and the notice, and opening the
-     * calendar page, or the sign-in screen while the notice asks to sign in
-     * again (D52); "+" opening a new entry on today. Returns the drawn
-     * header's height in px, which the list's height leaves out.
+     * The header of calendar, drawn light and dark by header with the
+     * renderer of the fixed parts and the calendar's notice at its right,
+     * named by description and the notice, and opening the calendar page,
+     * or the sign-in screen while the notice asks to sign in again (D52);
+     * "+" is [Look.placePlus]'s. Returns the drawn header's height in px,
+     * which the list's height leaves out.
      */
     fun fixedParts(
         context: Context,
@@ -172,7 +172,6 @@ internal object DrawnWidget {
         kept: Kept,
         description: String,
         calendar: Content.Calendar,
-        scale: Scale,
         header: (ChromeRenderer, Palette, HeaderNote?) -> Bitmap,
     ): Int {
         val chrome = chrome(context)
@@ -189,9 +188,6 @@ internal object DrawnWidget {
         views.setImageViewBitmap(R.id.header_dark, kept.keep(header(chrome, palettes.dark, note)))
         views.setContentDescription(R.id.header, notice?.let { "$description, ${it.text}" } ?: description)
         views.setOnClickPendingIntent(R.id.header, headerTap)
-        views.setImageViewBitmap(R.id.fab_light, kept.keep(chrome.fab(scale, palettes.light)))
-        views.setImageViewBitmap(R.id.fab_dark, kept.keep(chrome.fab(scale, palettes.dark)))
-        views.setOnClickPendingIntent(R.id.fab, Taps.pendingIntent(context, Tap.New(calendar.today)))
         return light.height
     }
 

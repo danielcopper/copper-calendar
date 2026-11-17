@@ -3,9 +3,11 @@ package dev.cupr.calendar.widget
 import android.app.Application
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.ImageView
 import android.widget.ListView
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
@@ -21,6 +23,8 @@ import dev.cupr.calendar.sample.SampleData
 import dev.cupr.calendar.store.BackToToday
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.WidgetSettings
+import dev.cupr.calendar.tap.Tap
+import dev.cupr.calendar.tap.Taps
 import dev.cupr.calendar.week.WeekDays
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -303,12 +307,22 @@ class WidgetLookTest {
             })
         val right = WidgetHost.laidOut(context)
 
-        val atLeft = WidgetHost.boundsIn(left, left.findViewById<View>(R.id.fab))
+        val atLeft = WidgetHost.boundsIn(left, left.findViewById<View>(R.id.fab_left))
         assertEquals(margin, atLeft.left)
         assertEquals(margin, left.height - atLeft.bottom)
-        assertEquals(0, WidgetHost.boundsIn(left, left.findViewById<View>(R.id.fab_light)).left)
+        assertEquals(0, WidgetHost.boundsIn(left, left.findViewById<View>(R.id.fab_left_light)).left)
+        assertTrue(left.findViewById<ImageView>(R.id.fab_left_light).drawable is BitmapDrawable)
+        assertEquals(View.GONE, left.findViewById<View>(R.id.plus_right).visibility)
+        assertEquals(Tap.New(SampleData.calendar().today), tapOf(left.findViewById(R.id.fab_left)))
         val atRight = WidgetHost.boundsIn(right, right.findViewById<View>(R.id.fab))
         assertEquals(margin, right.width - atRight.right)
+        assertEquals(View.GONE, right.findViewById<View>(R.id.plus_left).visibility)
+    }
+
+    /** What a tap on view sends to the tap activity. */
+    private fun tapOf(view: View): Tap? {
+        view.performClick()
+        return Taps.read(checkNotNull(shadowOf(context).nextStartedActivity))
     }
 
     @Test
@@ -328,11 +342,13 @@ class WidgetLookTest {
             })
         assertEquals(
             Scale(context.resources.displayMetrics.density).px(PhoneMonth.FAB_MARGIN).roundToInt(),
-            WidgetHost.boundsIn(widget, widget.findViewById<View>(R.id.fab)).left,
+            WidgetHost.boundsIn(widget, widget.findViewById<View>(R.id.fab_left)).left,
         )
 
         WidgetHost.reapplied(context, widget) { c, width -> WeekColumnsWidget.views(c, width) }
 
+        assertEquals(View.GONE, widget.findViewById<View>(R.id.plus_left).visibility)
+        assertEquals(View.VISIBLE, widget.findViewById<View>(R.id.plus_right).visibility)
         val fab = WidgetHost.boundsIn(widget, widget.findViewById<View>(R.id.fab))
         assertEquals(
             Scale(context.resources.displayMetrics.density).px(PhoneMonth.FAB_MARGIN).roundToInt(),
