@@ -271,7 +271,7 @@ class WidgetLookTest {
         shadow.setAlwaysRecreateViewsDuringUpdate(true)
         ShadowLog.clear()
 
-        Widgets.saved(context, ids[0], WidgetKind.WEEK)
+        assertTrue(Widgets.saved(context, ids[0], WidgetKind.WEEK))
 
         val drawn = ShadowLog.getLogsForTag(WeekWidget.TAG).filter { it.type == Log.INFO }.map { it.msg }
         assertEquals(1, drawn.size)
@@ -282,11 +282,15 @@ class WidgetLookTest {
     }
 
     @Test
-    fun `saving for an id none of the widgets has redraws nothing and logs it`() {
-        Widgets.saved(context, 99, WidgetKind.WEEK)
+    fun `saving for an id that is no widget of its kind redraws nothing`() {
+        val month = shadow.createWidget(MonthWidgetProvider::class.java, R.layout.widget_month)
+        ShadowLog.clear()
 
-        val logs = ShadowLog.getLogsForTag("Widgets").joinToString { it.msg }
-        assertTrue(logs, logs.contains("Widget 99: saved, but none of the app's widgets of its kind, so nothing is redrawn"))
+        assertFalse(Widgets.saved(context, 99, WidgetKind.WEEK))
+        assertFalse(Widgets.saved(context, month, WidgetKind.WEEK))
+
+        assertTrue(ShadowLog.getLogsForTag(MonthWidget.TAG).isEmpty())
+        assertTrue(ShadowLog.getLogsForTag(WeekWidget.TAG).isEmpty())
     }
 
     @Test

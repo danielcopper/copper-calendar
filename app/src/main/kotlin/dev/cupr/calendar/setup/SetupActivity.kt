@@ -18,11 +18,12 @@ import dev.cupr.calendar.widget.WidgetKind
  * keeps the stored settings; saving stores the new ones and finishes.
  */
 class SetupActivity : ComponentActivity() {
+    private var id = AppWidgetManager.INVALID_APPWIDGET_ID
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
-        val result = Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
-        setResult(RESULT_CANCELED, result)
+        id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+        setResult(RESULT_CANCELED, result())
         val provider = AppWidgetManager.getInstance(this).getAppWidgetInfo(id)?.provider
         val kind = provider?.let { WidgetKind.of(this, it) }
         if (kind == null) {
@@ -31,15 +32,17 @@ class SetupActivity : ComponentActivity() {
             return
         }
         enableEdgeToEdge()
-        setContent {
-            PhoneTheme {
-                SetupScreen(id, kind) {
-                    setResult(RESULT_OK, result)
-                    finish()
-                }
-            }
-        }
+        setContent { PhoneTheme { SetupScreen(id, kind, ::done) } }
     }
+
+    /** Finishes after "Speichern", with RESULT_OK for the widget when its settings were saved. */
+    internal fun done(saved: Boolean) {
+        if (saved) setResult(RESULT_OK, result())
+        finish()
+    }
+
+    /** The result for the launcher, which names the widget set up. */
+    private fun result() = Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
 
     private companion object {
         const val TAG = "Setup"

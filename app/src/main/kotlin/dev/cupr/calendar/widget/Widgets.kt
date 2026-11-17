@@ -55,22 +55,21 @@ object Widgets {
     }
 
     /**
-     * Redraws the widget id alone, its settings just saved, so it shows them
-     * at once and its list returns to today ([Redraw.SAVED]); an id none of
-     * the providers has is logged and left alone.
+     * Redraws the widget id, a widget of kind, alone, its settings just
+     * saved, so it shows them at once, the month's and "Woche"'s list back at
+     * today ([Redraw.SAVED]); false, redrawing nothing, when id is no longer
+     * a widget of kind.
      */
     fun saved(
         context: Context,
         id: Int,
         kind: WidgetKind,
-    ) {
+    ): Boolean {
         val manager = AppWidgetManager.getInstance(context)
         val provider = providers.single { it.kind == kind }
-        if (id !in provider.ids(context, manager)) {
-            Log.w(TAG, "Widget $id: saved, but none of the app's widgets of its kind, so nothing is redrawn")
-            return
-        }
+        if (id !in provider.ids(context, manager)) return false
         withContent(context) { provider.updateAll(context, manager, intArrayOf(id), it, Redraw.SAVED) }
+        return true
     }
 
     /**

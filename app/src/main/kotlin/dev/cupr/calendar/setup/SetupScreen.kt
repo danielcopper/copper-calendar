@@ -46,7 +46,6 @@ import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.store.stored
 import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.widget.WidgetKind
-import dev.cupr.calendar.widget.Widgets
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.ZoneId
@@ -55,15 +54,15 @@ import java.time.ZoneId
  * The setup of the widget id, a widget of kind: the calendars it shows
  * (D11), the week widgets' days (D20), when the month and "Woche" return to
  * today (D27), and the corner of "+". Its stored settings and the calendars
- * are read off the main thread; "Speichern" stores the settings shown,
- * redraws the widget with them, its list back at today ([Widgets.saved]),
- * then calls [onSaved].
+ * are read off the main thread; "Speichern" stores the settings shown and
+ * redraws the widget with them ([save]), then calls onDone with whether it
+ * did.
  */
 @Composable
 fun SetupScreen(
     id: Int,
     kind: WidgetKind,
-    onSaved: () -> Unit,
+    onDone: (saved: Boolean) -> Unit,
 ) {
     val app = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
@@ -117,13 +116,7 @@ fun SetupScreen(
                 enabled = !saving,
                 onClick = {
                     saving = true
-                    scope.launch {
-                        withContext(Services.io) {
-                            Settings.widgets(app).write(id, current)
-                            Widgets.saved(app, id, kind)
-                        }
-                        onSaved()
-                    }
+                    scope.launch { onDone(withContext(Services.io) { save(app, id, kind, current) }) }
                 },
             ) { Text(stringResource(R.string.setup_save)) }
         }
