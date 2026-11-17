@@ -10,15 +10,11 @@ import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.SignInRequest
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.AesGcmCipher
-import dev.cupr.calendar.store.AppSettingsStore
 import dev.cupr.calendar.store.FailedFetchStore
-import dev.cupr.calendar.store.FetchInterval
 import dev.cupr.calendar.store.KeystoreKey
-import dev.cupr.calendar.store.LastScrollStore
 import dev.cupr.calendar.store.SnapshotStore
 import dev.cupr.calendar.store.TokenCipher
 import dev.cupr.calendar.store.UnreadableThemeStore
-import dev.cupr.calendar.store.WidgetSettingsStore
 import dev.cupr.calendar.widget.Widgets
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -34,8 +30,6 @@ import java.util.concurrent.TimeUnit
  */
 object Services {
     private const val ACCOUNT = "account"
-    private const val WIDGETS = "widgets"
-    private const val SETTINGS = "settings"
     private const val SNAPSHOT = "snapshot.json"
     private const val CALL_TIMEOUT_SECONDS = 30L
 
@@ -58,15 +52,6 @@ object Services {
     fun failures(context: Context) = FailedFetchStore(prefs(context))
 
     fun unreadableTheme(context: Context) = UnreadableThemeStore(prefs(context))
-
-    /** Each widget's settings from its setup, apart from the sign-in's preferences. */
-    fun widgetSettings(context: Context) = WidgetSettingsStore(widgets(context))
-
-    /** When each widget's list last scrolled to today, beside its settings. */
-    fun lastScrolls(context: Context) = LastScrollStore(widgets(context))
-
-    /** The settings set once for the app, which signing out keeps. */
-    fun appSettings(context: Context) = AppSettingsStore(context.getSharedPreferences(SETTINGS, Context.MODE_PRIVATE))
 
     fun fetcher(context: Context) =
         Fetcher(
@@ -113,21 +98,10 @@ object Services {
         Widgets.update(context)
     }
 
-    /** Keeps the fetch interval and, while signed in, enqueues the periodic fetch anew at it (D46). */
-    fun setFetchInterval(
-        context: Context,
-        interval: FetchInterval,
-    ) {
-        appSettings(context).writeFetchInterval(interval)
-        if (account(context).state == Account.State.SIGNED_IN) FetchWork.reschedule(context)
-    }
-
     /** The app's screen opened: while signed in, it fetches at once and keeps the periodic fetch (D46). */
     fun opened(context: Context) {
         if (account(context).state == Account.State.SIGNED_IN) FetchWork.start(context)
     }
 
     private fun prefs(context: Context) = context.getSharedPreferences(ACCOUNT, Context.MODE_PRIVATE)
-
-    private fun widgets(context: Context) = context.getSharedPreferences(WIDGETS, Context.MODE_PRIVATE)
 }

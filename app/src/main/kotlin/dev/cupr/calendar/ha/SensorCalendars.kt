@@ -28,9 +28,14 @@ object SensorCalendars {
         val problems: List<String>,
     )
 
-    fun read(attribute: JsonElement?): Read {
-        if (attribute == null) return Read(null, emptyList())
-        if (attribute !is JsonArray) return Read(null, listOf("The sensor's calendars are no list"))
+    fun read(attribute: JsonElement?): Read =
+        when (attribute) {
+            null -> Read(null, emptyList())
+            is JsonArray -> items(attribute)
+            else -> Read(null, listOf("The sensor's calendars are no list"))
+        }
+
+    private fun items(attribute: JsonArray): Read {
         val problems = mutableListOf<String>()
         val calendars = mutableListOf<SensorCalendar>()
         attribute.forEachIndexed { index, item ->

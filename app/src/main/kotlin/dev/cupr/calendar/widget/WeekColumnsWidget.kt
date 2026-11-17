@@ -95,7 +95,7 @@ object WeekColumnsWidget {
             DrawnWidget.fixedParts(context, views, kept, "$title, $range", calendar, scale) { chrome, palette, note ->
                 chrome.weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette, note)
             }
-        DrawnWidget.corner(views, look.corner)
+        look.placePlus(views)
         val full = MonthLayout.week(dates, calendar.entries, today)
         // Room for the fade's blank room counted in, as a row that has to be capped is taller than its list.
         val fadeDp = FADE_DP.toFloat()

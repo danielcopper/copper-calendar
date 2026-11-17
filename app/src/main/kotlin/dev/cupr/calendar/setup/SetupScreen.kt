@@ -37,6 +37,7 @@ import dev.cupr.calendar.app.Choice
 import dev.cupr.calendar.app.Heading
 import dev.cupr.calendar.app.ROW_HEIGHT
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.ha.SensorCalendar
 import dev.cupr.calendar.store.BackToToday
 import dev.cupr.calendar.store.PlusCorner
@@ -70,7 +71,7 @@ fun SetupScreen(
 
     LaunchedEffect(id) {
         val (stored, snapshot) =
-            withContext(Services.io) { Services.widgetSettings(app).read(id) to Services.snapshots(app).read() }
+            withContext(Services.io) { Settings.widgets(app).read(id) to Services.snapshots(app).read() }
         val shown = settings ?: stored
         settings = shown
         val entries = snapshot?.parse(ZoneId.systemDefault())?.entries.orEmpty()
@@ -111,7 +112,7 @@ fun SetupScreen(
                     saving = true
                     scope.launch {
                         withContext(Services.io) {
-                            Services.widgetSettings(app).write(id, current)
+                            Settings.widgets(app).write(id, current)
                             Widgets.saved(app, id)
                         }
                         onSaved()

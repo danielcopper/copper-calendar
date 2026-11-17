@@ -2,7 +2,7 @@
 <!-- "+", as each widget's layout includes it at the bottom of its card: its
      drawing light and dark, with room for the shadow, and its 40 dp tap
      area in the middle. The row it stands in puts it at the right, or at
-     the left when the widget's setup says so (DrawnWidget.corner); the row
+     the left when the widget's setup says so (Look.placePlus); the row
      takes no taps, so the list below it still scrolls. -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android">
 

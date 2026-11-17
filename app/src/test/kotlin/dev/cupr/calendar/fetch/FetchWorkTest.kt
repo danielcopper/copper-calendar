@@ -14,6 +14,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
 import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.FakeHomeAssistant
 import dev.cupr.calendar.ha.RefreshToken
@@ -207,7 +208,7 @@ class FetchWorkTest {
 
     @Test
     fun `the periodic fetch runs at the interval set`() {
-        Services.appSettings(context).writeFetchInterval(FetchInterval.EVERY_60_MINUTES)
+        Settings.app(context).writeFetchInterval(FetchInterval.EVERY_60_MINUTES)
 
         FetchWork.start(context)
 
@@ -219,30 +220,30 @@ class FetchWorkTest {
         signIn()
         FetchWork.start(context)
 
-        Services.setFetchInterval(context, FetchInterval.EVERY_30_MINUTES)
+        FetchWork.setInterval(context, FetchInterval.EVERY_30_MINUTES)
 
         assertEquals(30L, periodicMinutes)
-        assertEquals(FetchInterval.EVERY_30_MINUTES, Services.appSettings(context).fetchInterval())
+        assertEquals(FetchInterval.EVERY_30_MINUTES, Settings.app(context).fetchInterval())
     }
 
     @Test
     fun `the app's screen shows the interval set`() {
         assertEquals(FetchInterval.EVERY_15_MINUTES, Status.read(context).fetchInterval)
 
-        Services.setFetchInterval(context, FetchInterval.EVERY_60_MINUTES)
+        FetchWork.setInterval(context, FetchInterval.EVERY_60_MINUTES)
 
         assertEquals(FetchInterval.EVERY_60_MINUTES, Status.read(context).fetchInterval)
     }
 
     @Test
     fun `a new interval without a usable sign-in is kept, and fetches nothing`() {
-        Services.setFetchInterval(context, FetchInterval.EVERY_60_MINUTES)
+        FetchWork.setInterval(context, FetchInterval.EVERY_60_MINUTES)
         signIn()
         Services.account(context).reject()
-        Services.setFetchInterval(context, FetchInterval.EVERY_30_MINUTES)
+        FetchWork.setInterval(context, FetchInterval.EVERY_30_MINUTES)
 
         assertEquals(emptyList<WorkInfo.State>(), scheduled)
-        assertEquals(FetchInterval.EVERY_30_MINUTES, Services.appSettings(context).fetchInterval())
+        assertEquals(FetchInterval.EVERY_30_MINUTES, Settings.app(context).fetchInterval())
     }
 
     @Test

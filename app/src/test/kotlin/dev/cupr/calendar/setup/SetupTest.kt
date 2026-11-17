@@ -9,6 +9,7 @@ import android.content.ComponentName
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.ha.SensorCalendar
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.store.WidgetSettings
@@ -119,8 +120,8 @@ class SetupTest {
 
     @Test
     fun `a widget removed from the home screen loses its settings and last scroll, the others keep theirs`() {
-        val store: WidgetSettingsStore = Services.widgetSettings(context)
-        val scrolls = Services.lastScrolls(context)
+        val store: WidgetSettingsStore = Settings.widgets(context)
+        val scrolls = Settings.lastScrolls(context)
         val left = WidgetSettings(leftOut = setOf("special"))
         val at = Instant.ofEpochMilli(1_000)
         for (id in listOf(3, 4)) {

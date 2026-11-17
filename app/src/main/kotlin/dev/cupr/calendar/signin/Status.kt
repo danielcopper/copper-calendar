@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.annotation.StringRes
 import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.days.CLOCK_TIME
 import dev.cupr.calendar.ha.HaClient
 import dev.cupr.calendar.store.Account
@@ -141,7 +142,7 @@ data class Status(
                 lastFetch = snapshot?.let { LastFetch(it.user, it.fetchedAt) },
                 failed = Services.failures(context).read(),
                 unreadableTheme = Services.unreadableTheme(context).read(),
-                fetchInterval = Services.appSettings(context).fetchInterval(),
+                fetchInterval = Settings.app(context).fetchInterval(),
             )
         }
     }

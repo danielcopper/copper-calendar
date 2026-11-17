@@ -9,9 +9,9 @@ enum class FetchInterval(
     override val stored: String,
 ) : StoredChoice {
     /** WorkManager's least interval for periodic work, the default. */
-    EVERY_15_MINUTES(15, "15"),
-    EVERY_30_MINUTES(30, "30"),
-    EVERY_60_MINUTES(60, "60"),
+    EVERY_15_MINUTES(minutes = 15, stored = "15"),
+    EVERY_30_MINUTES(minutes = 30, stored = "30"),
+    EVERY_60_MINUTES(minutes = 60, stored = "60"),
 }
 
 /** The settings set once for the app, not per widget; signing out keeps them. */

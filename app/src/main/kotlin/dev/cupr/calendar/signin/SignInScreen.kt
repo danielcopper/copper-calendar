@@ -87,7 +87,7 @@ fun SignInScreen(starts: Int) {
             onSignOut = { SignInFlow.signOut(app) },
             onFetchInterval = { interval ->
                 status = status?.copy(fetchInterval = interval)
-                scope.launch(Services.io) { Services.setFetchInterval(app, interval) }
+                scope.launch(Services.io) { FetchWork.setInterval(app, interval) }
             },
         )
         return

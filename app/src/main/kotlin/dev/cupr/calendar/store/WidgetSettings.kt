@@ -12,9 +12,9 @@ enum class BackToToday(
     EACH_UPDATE("each_update"),
     MIDNIGHT("midnight"),
     NEVER("never"),
-    EVERY_15_MINUTES("every_15", 15),
-    EVERY_30_MINUTES("every_30", 30),
-    EVERY_60_MINUTES("every_60", 60),
+    EVERY_15_MINUTES("every_15", minutes = 15),
+    EVERY_30_MINUTES("every_30", minutes = 30),
+    EVERY_60_MINUTES("every_60", minutes = 60),
 }
 
 /** The corner "+" stands in; the top corners hold the header. */

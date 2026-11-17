@@ -8,12 +8,12 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Log
-import android.view.Gravity
 import android.widget.RemoteViews
 import androidx.annotation.StringRes
 import androidx.annotation.VisibleForTesting
 import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.days.longName
 import dev.cupr.calendar.model.Palette
@@ -23,7 +23,6 @@ import dev.cupr.calendar.render.HeaderNote
 import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
-import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
 import java.time.Instant
@@ -196,23 +195,6 @@ internal object DrawnWidget {
         return light.height
     }
 
-    /**
-     * Puts "+" at the bottom right or the bottom left of the card (D58): the
-     * gravity of the row it stands in (widget_fab.xml), set on each update,
-     * so a corner changed back takes effect too.
-     */
-    fun corner(
-        views: RemoteViews,
-        corner: PlusCorner,
-    ) {
-        val side =
-            when (corner) {
-                PlusCorner.BOTTOM_RIGHT -> Gravity.END
-                PlusCorner.BOTTOM_LEFT -> Gravity.START
-            }
-        views.setInt(R.id.fab_corner, "setGravity", Gravity.BOTTOM or side)
-    }
-
     /** The list's rows, each by its stable id, and the template their taps fill in. */
     fun list(
         context: Context,
@@ -376,8 +358,8 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         context: Context,
         appWidgetIds: IntArray,
     ) {
-        Services.widgetSettings(context).remove(appWidgetIds)
-        Services.lastScrolls(context).remove(appWidgetIds)
+        Settings.widgets(context).remove(appWidgetIds)
+        Settings.lastScrolls(context).remove(appWidgetIds)
     }
 
     /**
@@ -435,8 +417,8 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         calendar: Content.Calendar,
         redraw: Redraw,
     ) {
-        val settings = Services.widgetSettings(context).read(id)
-        val scrolls = Services.lastScrolls(context)
+        val settings = Settings.widgets(context).read(id)
+        val scrolls = Settings.lastScrolls(context)
         val now = Instant.now()
         val scroll = kind.backToToday && ReturnToToday.due(settings.backToToday, redraw, scrolls.read(id), now)
         update(context, manager, id, calendar.without(settings.leftOut), Look.of(settings, scroll))

@@ -1,5 +1,8 @@
 package dev.cupr.calendar.widget
 
+import android.view.Gravity
+import android.widget.RemoteViews
+import dev.cupr.calendar.R
 import dev.cupr.calendar.store.BackToToday
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.WidgetSettings
@@ -18,6 +21,20 @@ data class Look(
     val corner: PlusCorner = PlusCorner.BOTTOM_RIGHT,
     val scroll: Boolean = true,
 ) {
+    /**
+     * Puts "+" in views at the bottom right or the bottom left of the card
+     * (D58): the gravity of the row it stands in (widget_fab.xml), set on
+     * each update, so a corner set back takes effect too.
+     */
+    internal fun placePlus(views: RemoteViews) {
+        val side =
+            when (corner) {
+                PlusCorner.BOTTOM_RIGHT -> Gravity.END
+                PlusCorner.BOTTOM_LEFT -> Gravity.START
+            }
+        views.setInt(R.id.fab_corner, "setGravity", Gravity.BOTTOM or side)
+    }
+
     companion object {
         /** The look of a widget with settings, scrolling to today or not. */
         internal fun of(

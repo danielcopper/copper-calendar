@@ -50,7 +50,8 @@ class HaClientTest {
     fun `the sensor's calendars come with the entries, as Home Assistant sends them`() {
         home.states = {
             FakeHomeAssistant.json(
-                """{"entity_id":"sensor.family_calendar","attributes":{"entries":[],"calendars":[{"id":"calendar.a"}]}}""",
+                """{"entity_id":"sensor.family_calendar",""" +
+                    """"attributes":{"entries":[],"calendars":[{"id":"calendar.a"}]}}""",
             )
         }
 

@@ -14,6 +14,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
 import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.sample.SampleData
@@ -48,8 +49,8 @@ class WidgetLookTest {
     private val context = ApplicationProvider.getApplicationContext<Application>()
     private val manager = AppWidgetManager.getInstance(context)
     private val shadow = shadowOf(manager)
-    private val settings get() = Services.widgetSettings(context)
-    private val scrolls get() = Services.lastScrolls(context)
+    private val settings get() = Settings.widgets(context)
+    private val scrolls get() = Settings.lastScrolls(context)
     private val now = Instant.parse("2026-11-17T10:00:00Z")
 
     /** A provider of kind that draws nothing and keeps what it was asked to draw. */

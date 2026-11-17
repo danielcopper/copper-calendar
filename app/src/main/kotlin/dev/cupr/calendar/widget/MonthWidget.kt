@@ -75,7 +75,7 @@ object MonthWidget {
             DrawnWidget.fixedParts(context, views, kept, title, calendar, scale) { chrome, palette, note ->
                 chrome.header(view.month, widthPx, scale, palette, note)
             }
-        DrawnWidget.corner(views, look.corner)
+        look.placePlus(views)
         val heightsPx = view.weeks.map { rows.heightPx(it, scale) }
         val needed = kept.bytes + heightsPx.sumOf { BitmapLimit.bytes(widthPx, it) }
         BitmapLimit.warnOver(TAG, id, needed = needed, limit = limit, left = 0, after = needed)

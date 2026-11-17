@@ -12,7 +12,10 @@ import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.app.runThen
+import dev.cupr.calendar.store.Account
+import dev.cupr.calendar.store.FetchInterval
 import dev.cupr.calendar.widget.Widgets
 import java.util.concurrent.TimeUnit
 
@@ -60,18 +63,24 @@ object FetchWork {
     }
 
     /**
-     * Enqueues the periodic fetch anew at the interval now set, once it was
-     * changed: the scheduled one takes the new interval.
+     * Keeps a new fetch interval and, while signed in, enqueues the periodic
+     * fetch anew at it: the scheduled one takes the new interval (D60).
      */
-    fun reschedule(context: Context) {
-        WorkManager
-            .getInstance(context)
-            .enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.UPDATE, periodicRequest(context))
+    fun setInterval(
+        context: Context,
+        interval: FetchInterval,
+    ) {
+        Settings.app(context).writeFetchInterval(interval)
+        if (Services.account(context).state == Account.State.SIGNED_IN) {
+            WorkManager
+                .getInstance(context)
+                .enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.UPDATE, periodicRequest(context))
+        }
     }
 
     /** The periodic fetch at the interval set on the app's screen, with a network. */
     internal fun periodicRequest(context: Context) =
-        PeriodicWorkRequestBuilder<FetchWorker>(Services.appSettings(context).fetchInterval().minutes, TimeUnit.MINUTES)
+        PeriodicWorkRequestBuilder<FetchWorker>(Settings.app(context).fetchInterval().minutes, TimeUnit.MINUTES)
             .setConstraints(network)
             .build()
 
