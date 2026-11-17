@@ -200,8 +200,9 @@ class SetupTest {
         assertTrue(save(context, id, WidgetKind.WEEK, settings))
 
         assertEquals(settings, Settings.widgets(context).read(id))
-        val drawn = ShadowLog.getLogsForTag(WeekWidget.TAG).map { it.msg }
-        assertTrue(drawn.toString(), drawn.any { it.startsWith("Widget $id: drew ") })
+        // From today, today is the first row; from Monday, the sample's Wednesday is the third.
+        val drawn = ShadowLog.getLogsForTag(WeekWidget.TAG).map { it.msg }.single { it.startsWith("Widget $id: drew ") }
+        assertTrue(drawn, drawn.contains("; today is row 0, "))
     }
 
     @Test
