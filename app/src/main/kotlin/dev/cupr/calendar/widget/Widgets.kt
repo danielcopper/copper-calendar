@@ -84,7 +84,7 @@ object Widgets {
     fun appUpdated(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
         val ids = providers.filter { it.kind.backToToday }.flatMap { it.ids(context, manager).asList() }
-        Settings.lastScrolls(context).forget(ids.toIntArray())
+        Settings.lists(context).forget(ids.toIntArray())
         Log.i(TAG, "The app was updated: the lists of widgets $ids are built anew")
     }
 

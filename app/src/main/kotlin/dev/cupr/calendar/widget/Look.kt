@@ -1,8 +1,8 @@
 package dev.cupr.calendar.widget
 
 import dev.cupr.calendar.store.BackToToday
-import dev.cupr.calendar.store.LastScrollStore
 import dev.cupr.calendar.store.ListState
+import dev.cupr.calendar.store.ListStore
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.week.WeekDays
@@ -82,7 +82,7 @@ internal object ReturnToToday {
 
     /**
      * One update of a list ([step]): whether it scrolls to today, whether
-     * that scroll counts as the list's last one ([LastScrollStore.read]), and
+     * that scroll counts as the list's last one ([ListStore.lastScroll]), and
      * where the list stands after it.
      */
     data class Step(
@@ -106,8 +106,8 @@ internal object ReturnToToday {
         now: Instant,
     ): Step =
         when (state) {
-            ListState.BUILT_ANEW -> Step(due(setting, redraw, lastScroll, now), counts = false, ListState.FIRST_SCROLL)
-            ListState.FIRST_SCROLL -> Step(scroll = true, counts = true, ListState.SETTLED)
+            ListState.TO_BUILD -> Step(due(setting, redraw, lastScroll, now), counts = false, ListState.TO_SCROLL)
+            ListState.TO_SCROLL -> Step(scroll = true, counts = true, ListState.SETTLED)
             ListState.SETTLED -> due(setting, redraw, lastScroll, now).let { Step(it, counts = it, ListState.SETTLED) }
         }
 

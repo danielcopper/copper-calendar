@@ -58,7 +58,7 @@ class WidgetLookTest {
     private val manager = AppWidgetManager.getInstance(context)
     private val shadow = shadowOf(manager)
     private val settings get() = Settings.widgets(context)
-    private val scrolls get() = Settings.lastScrolls(context)
+    private val lists get() = Settings.lists(context)
     private val now = Instant.parse("2026-11-17T10:00:00Z")
 
     /**
@@ -156,13 +156,13 @@ class WidgetLookTest {
                 val due = ReturnToToday.due(setting, redraw, null, now)
                 assertEquals(
                     "$setting $redraw",
-                    ReturnToToday.Step(due, counts = false, ListState.FIRST_SCROLL),
-                    ReturnToToday.step(setting, redraw, ListState.BUILT_ANEW, null, now),
+                    ReturnToToday.Step(due, counts = false, ListState.TO_SCROLL),
+                    ReturnToToday.step(setting, redraw, ListState.TO_BUILD, null, now),
                 )
                 assertEquals(
                     "$setting $redraw",
                     ReturnToToday.Step(scroll = true, counts = true, ListState.SETTLED),
-                    ReturnToToday.step(setting, redraw, ListState.FIRST_SCROLL, now, now),
+                    ReturnToToday.step(setting, redraw, ListState.TO_SCROLL, now, now),
                 )
                 val settled = ReturnToToday.due(setting, redraw, now, now)
                 assertEquals(
@@ -180,20 +180,20 @@ class WidgetLookTest {
             val id = shadow.createWidget(AppWidgetProvider::class.java, R.layout.widget_plain)
             val provider = Recording(WidgetKind.MONTH)
             settings.write(id, WidgetSettings(backToToday = setting))
-            scrolls.keep(id, ListState.SETTLED, now)
+            lists.keep(id, ListState.SETTLED, now)
             DrawnWidgetProvider.content = { Content.NoData(R.string.widget_signed_out) }
             provider.onUpdate(context, manager, intArrayOf(id))
             DrawnWidgetProvider.content = { SampleData.calendar() }
 
             provider.onUpdate(context, manager, intArrayOf(id))
-            assertNull("$setting", scrolls.read(id))
+            assertNull("$setting", lists.lastScroll(id))
             provider.onUpdate(context, manager, intArrayOf(id))
-            val scrolled = checkNotNull(scrolls.read(id))
+            val scrolled = checkNotNull(lists.lastScroll(id))
             provider.onUpdate(context, manager, intArrayOf(id))
 
             assertEquals("$setting", listOf(false, true, false), provider.drawn.map { it.second.scroll })
-            assertEquals("$setting", scrolled, scrolls.read(id))
-            assertEquals("$setting", ListState.SETTLED, scrolls.state(id))
+            assertEquals("$setting", scrolled, lists.lastScroll(id))
+            assertEquals("$setting", ListState.SETTLED, lists.state(id))
         }
     }
 
@@ -204,14 +204,14 @@ class WidgetLookTest {
         val columns = shadow.createWidget(WeekColumnsWidgetProvider::class.java, R.layout.widget_week_columns)
         for (id in listOf(month, week)) {
             settings.write(id, WidgetSettings(backToToday = BackToToday.NEVER))
-            scrolls.keep(id, ListState.SETTLED, now)
+            lists.keep(id, ListState.SETTLED, now)
         }
         shadow.setAlwaysRecreateViewsDuringUpdate(true)
         val list = { id: Int -> shadowOf(shadow.getViewFor(id).findViewById<ListView>(R.id.list)) }
 
         AppUpdatedReceiver().onReceive(context, Intent(Intent.ACTION_MY_PACKAGE_REPLACED))
-        assertEquals(listOf(ListState.BUILT_ANEW, ListState.BUILT_ANEW), listOf(month, week).map { scrolls.state(it) })
-        assertEquals(listOf(null, null), listOf(month, week).map { scrolls.read(it) })
+        assertEquals(listOf(ListState.TO_BUILD, ListState.TO_BUILD), listOf(month, week).map { lists.state(it) })
+        assertEquals(listOf(null, null), listOf(month, week).map { lists.lastScroll(it) })
         Widgets.update(context)
         assertEquals(listOf(0, 0), listOf(month, week).map { list(it).smoothScrolledPosition })
         Widgets.update(context)
@@ -219,16 +219,16 @@ class WidgetLookTest {
         Widgets.update(context)
 
         assertEquals(listOf(0, 0), listOf(month, week).map { list(it).smoothScrolledPosition })
-        assertEquals(ListState.BUILT_ANEW, scrolls.state(columns))
+        assertEquals(ListState.TO_BUILD, lists.state(columns))
     }
 
     @Test
     fun `the app's update receiver takes only the broadcast that the app was updated`() {
         val month = shadow.createWidget(MonthWidgetProvider::class.java, R.layout.widget_month)
-        scrolls.keep(month, ListState.SETTLED, now)
+        lists.keep(month, ListState.SETTLED, now)
 
         AppUpdatedReceiver().onReceive(context, Intent(Intent.ACTION_PACKAGE_REPLACED))
-        assertEquals(ListState.SETTLED, scrolls.state(month))
+        assertEquals(ListState.SETTLED, lists.state(month))
 
         val receivers =
             context.packageManager.queryBroadcastReceivers(
@@ -277,32 +277,32 @@ class WidgetLookTest {
     fun `the time of each scroll to today is kept, and an interval scrolls again once it has passed`() {
         val provider = Recording(WidgetKind.MONTH)
         settings.write(4, WidgetSettings(backToToday = BackToToday.EVERY_30_MINUTES))
-        scrolls.keep(4, ListState.SETTLED, null)
+        lists.keep(4, ListState.SETTLED, null)
 
         provider.onUpdate(context, manager, intArrayOf(4))
-        val first = checkNotNull(scrolls.read(4))
+        val first = checkNotNull(lists.lastScroll(4))
         provider.onUpdate(context, manager, intArrayOf(4))
-        assertEquals(first, scrolls.read(4))
+        assertEquals(first, lists.lastScroll(4))
         val earlier = Instant.now() - Duration.ofMinutes(31)
-        scrolls.keep(4, ListState.SETTLED, earlier)
+        lists.keep(4, ListState.SETTLED, earlier)
         provider.onUpdate(context, manager, intArrayOf(4))
 
         assertEquals(listOf(true, false, true), provider.drawn.map { it.second.scroll })
         assertTrue(Duration.between(first, Instant.now()) < Duration.ofMinutes(1))
-        assertTrue(checkNotNull(scrolls.read(4)).isAfter(earlier))
+        assertTrue(checkNotNull(lists.lastScroll(4)).isAfter(earlier))
     }
 
     @Test
     fun `a scroll the launcher did not take, the too-full text shown instead, is not kept, and forgets the last`() {
         val provider = Recording(WidgetKind.MONTH, taken = false)
         settings.write(4, WidgetSettings(backToToday = BackToToday.EVERY_30_MINUTES))
-        scrolls.keep(4, ListState.SETTLED, now)
+        lists.keep(4, ListState.SETTLED, now)
 
         provider.onUpdate(context, manager, intArrayOf(4))
 
         val (_, look) = provider.drawn.single()
         assertTrue(look.scroll)
-        assertNull(scrolls.read(4))
+        assertNull(lists.lastScroll(4))
     }
 
     @Test
@@ -311,12 +311,12 @@ class WidgetLookTest {
         val id = shadow.createWidget(AppWidgetProvider::class.java, R.layout.widget_plain)
         val provider = Recording(WidgetKind.MONTH)
         settings.write(id, WidgetSettings(backToToday = BackToToday.EVERY_30_MINUTES))
-        scrolls.keep(id, ListState.SETTLED, Instant.now())
+        lists.keep(id, ListState.SETTLED, Instant.now())
         DrawnWidgetProvider.content = { Content.NoData(R.string.widget_signed_out) }
 
         provider.onUpdate(context, manager, intArrayOf(id))
-        assertNull(scrolls.read(id))
-        scrolls.keep(id, ListState.SETTLED, Instant.now())
+        assertNull(lists.lastScroll(id))
+        lists.keep(id, ListState.SETTLED, Instant.now())
         val failing =
             object : DrawnWidgetProvider() {
                 override val kind = WidgetKind.MONTH
@@ -332,7 +332,7 @@ class WidgetLookTest {
             }
         DrawnWidgetProvider.content = { SampleData.calendar() }
         failing.onUpdate(context, manager, intArrayOf(id))
-        assertNull(scrolls.read(id))
+        assertNull(lists.lastScroll(id))
         provider.onUpdate(context, manager, intArrayOf(id))
 
         val (_, look) = provider.drawn.single()
@@ -357,15 +357,15 @@ class WidgetLookTest {
                 .single()
                 .second.scroll,
         )
-        assertNull(scrolls.read(4))
-        assertNull(scrolls.read(5))
+        assertNull(lists.lastScroll(4))
+        assertNull(lists.lastScroll(5))
     }
 
     @Test
     fun `set never, the month's list keeps its position on an update`() {
         val id = shadow.createWidget(MonthWidgetProvider::class.java, R.layout.widget_month)
         settings.write(id, WidgetSettings(backToToday = BackToToday.NEVER))
-        scrolls.keep(id, ListState.SETTLED, null)
+        lists.keep(id, ListState.SETTLED, null)
         shadow.setAlwaysRecreateViewsDuringUpdate(true)
         ShadowLog.clear()
 
@@ -381,7 +381,7 @@ class WidgetLookTest {
     fun `set never, a widget of a reported height keeps its position too, padded for today on top`() {
         val id = shadow.createWidget(WeekWidgetProvider::class.java, R.layout.widget_week)
         settings.write(id, WidgetSettings(backToToday = BackToToday.NEVER))
-        scrolls.keep(id, ListState.SETTLED, null)
+        lists.keep(id, ListState.SETTLED, null)
         shadow.setAlwaysRecreateViewsDuringUpdate(true)
         val options =
             Bundle().apply {
@@ -410,7 +410,7 @@ class WidgetLookTest {
     fun `set only at midnight, the month's list scrolls at midnight, not on an update`() {
         val id = shadow.createWidget(MonthWidgetProvider::class.java, R.layout.widget_month)
         settings.write(id, WidgetSettings(backToToday = BackToToday.MIDNIGHT))
-        scrolls.keep(id, ListState.SETTLED, null)
+        lists.keep(id, ListState.SETTLED, null)
         shadow.setAlwaysRecreateViewsDuringUpdate(true)
 
         Widgets.update(context)
@@ -436,7 +436,7 @@ class WidgetLookTest {
         assertTrue(drawn.single(), drawn.single().startsWith("Widget ${ids[0]}: "))
         assertTrue(drawn.single(), drawn.single().endsWith("; today is row 2, scrolls it into view: no height"))
         assertEquals(2, shadowOf(shadow.getViewFor(ids[0]).findViewById<ListView>(R.id.list)).smoothScrolledPosition)
-        assertTrue(scrolls.read(ids[0]) != null)
+        assertTrue(lists.lastScroll(ids[0]) != null)
     }
 
     @Test

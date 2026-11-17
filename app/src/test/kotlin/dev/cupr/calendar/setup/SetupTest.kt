@@ -148,22 +148,22 @@ class SetupTest {
     @Test
     fun `a widget removed from the home screen loses its settings and last scroll, the others keep theirs`() {
         val store: WidgetSettingsStore = Settings.widgets(context)
-        val scrolls = Settings.lastScrolls(context)
+        val lists = Settings.lists(context)
         val left = WidgetSettings(leftOut = setOf("special"))
         val at = Instant.ofEpochMilli(1_000)
         for (id in listOf(3, 4)) {
             store.write(id, left)
-            scrolls.keep(id, ListState.SETTLED, at)
+            lists.keep(id, ListState.SETTLED, at)
         }
 
         WeekWidgetProvider().onDeleted(context, intArrayOf(3))
 
         assertEquals(WidgetSettings.DEFAULT, store.read(3))
-        assertNull(scrolls.read(3))
-        assertEquals(ListState.BUILT_ANEW, scrolls.state(3))
+        assertNull(lists.lastScroll(3))
+        assertEquals(ListState.TO_BUILD, lists.state(3))
         assertEquals(left, store.read(4))
-        assertEquals(at, scrolls.read(4))
-        assertEquals(ListState.SETTLED, scrolls.state(4))
+        assertEquals(at, lists.lastScroll(4))
+        assertEquals(ListState.SETTLED, lists.state(4))
     }
 
     @Test

@@ -5,22 +5,20 @@ import androidx.core.content.edit
 import java.time.Instant
 
 /**
- * Where the month's or "Woche"'s list stands since the launcher last built
- * it anew (D59). A list built anew shows its first row, and a scroll in the
- * update that builds it does nothing (D27), so the update after that scrolls
- * to today, whatever the widget's "Zurück zu heute" says.
+ * What the next update of the month's or "Woche"'s list does, by where the
+ * list stands since the system last built it anew (D59).
  */
 enum class ListState(
     override val stored: String,
 ) : StoredChoice {
     /**
-     * The next update of the list builds it anew: the widget shows plain
-     * views, the app was updated, or the widget is new.
+     * The next update builds the list anew: the widget shows plain views,
+     * the app was updated, or the widget is new.
      */
-    BUILT_ANEW("built_anew"),
+    TO_BUILD("to_build"),
 
-    /** The last update built the list anew; the next one scrolls to today. */
-    FIRST_SCROLL("first_scroll"),
+    /** The last update built the list anew; the next one scrolls it to today, whatever is set. */
+    TO_SCROLL("to_scroll"),
 
     /** The list scrolled to today since it was built; "Zurück zu heute" decides. */
     SETTLED("settled"),
@@ -32,21 +30,21 @@ enum class ListState(
  * where it stands since it was built ([ListState]) (D59); forgotten when the
  * list is built anew and when the widget is removed.
  */
-class LastScrollStore(
+class ListStore(
     private val prefs: SharedPreferences,
 ) {
     /** When the widget's list last scrolled to today; none before its first scroll since it was built. */
-    fun read(id: Int): Instant? = prefs.getLong(key(id, AT), -1).takeIf { it >= 0 }?.let(Instant::ofEpochMilli)
+    fun lastScroll(id: Int): Instant? = prefs.getLong(key(id, AT), -1).takeIf { it >= 0 }?.let(Instant::ofEpochMilli)
 
     /**
-     * Where the widget's list stands: built anew when nothing is kept; a
-     * state stored under a name this app does not know reads so too, logged.
+     * Where the widget's list stands: to build when nothing is kept; a state
+     * stored under a name this app does not know reads so too, logged.
      */
     fun state(id: Int): ListState =
         prefs.choice(
             key(id, STATE),
             ListState.entries,
-            ListState.BUILT_ANEW,
+            ListState.TO_BUILD,
             TAG,
             "Widget $id: its list's stored state",
         )
@@ -63,8 +61,8 @@ class LastScrollStore(
 
     /**
      * Forgets the lists of the widgets ids: removed from the home screen,
-     * showing plain views, or the app updated; a list kept again is built
-     * anew.
+     * showing plain views, or the app updated; a list kept again is to
+     * build.
      */
     fun forget(ids: IntArray) =
         prefs.edit {
@@ -75,7 +73,7 @@ class LastScrollStore(
         }
 
     private companion object {
-        const val TAG = "LastScroll"
+        const val TAG = "ListStore"
         const val AT = "scrolled_at"
         const val STATE = "list"
 

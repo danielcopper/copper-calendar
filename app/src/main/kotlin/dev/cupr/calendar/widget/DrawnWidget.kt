@@ -23,7 +23,7 @@ import dev.cupr.calendar.render.HeaderNote
 import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
-import dev.cupr.calendar.store.LastScrollStore
+import dev.cupr.calendar.store.ListStore
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
@@ -321,7 +321,7 @@ internal object DrawnWidget {
  * month's and "Woche"'s lists scroll to today when their "Zurück zu heute"
  * says the redraw should, or when they were just built anew
  * ([ReturnToToday.step]), and where each list stands is kept
- * ([LastScrollStore]). The launcher's updates, every 30 minutes and for a
+ * ([ListStore]). The launcher's updates, every 30 minutes and for a
  * new or resized widget, count as [Redraw.UPDATE].
  */
 abstract class DrawnWidgetProvider : AppWidgetProvider() {
@@ -367,7 +367,7 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         appWidgetIds: IntArray,
     ) {
         Settings.widgets(context).remove(appWidgetIds)
-        Settings.lastScrolls(context).forget(appWidgetIds)
+        Settings.lists(context).forget(appWidgetIds)
     }
 
     /**
@@ -435,11 +435,11 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
             update(context, manager, id, shown, Look.of(settings, scroll = false))
             return
         }
-        val scrolls = Settings.lastScrolls(context)
+        val lists = Settings.lists(context)
         val now = Instant.now()
-        val step = ReturnToToday.step(settings.backToToday, redraw, scrolls.state(id), scrolls.read(id), now)
+        val step = ReturnToToday.step(settings.backToToday, redraw, lists.state(id), lists.lastScroll(id), now)
         if (update(context, manager, id, shown, Look.of(settings, step.scroll))) {
-            scrolls.keep(id, step.next, now.takeIf { step.counts })
+            lists.keep(id, step.next, now.takeIf { step.counts })
         } else {
             shownPlain(context, id)
         }
@@ -465,7 +465,7 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         context: Context,
         id: Int,
     ) {
-        if (kind.backToToday) Settings.lastScrolls(context).forget(intArrayOf(id))
+        if (kind.backToToday) Settings.lists(context).forget(intArrayOf(id))
     }
 
     companion object {
