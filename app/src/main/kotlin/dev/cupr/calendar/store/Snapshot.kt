@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.core.util.AtomicFile
 import dev.cupr.calendar.ha.EntryParser
 import dev.cupr.calendar.ha.ParsedEntries
+import dev.cupr.calendar.ha.SensorCalendar
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -20,7 +21,8 @@ import java.time.ZoneId
  * app could read, as Home Assistant sent them; the theme "Zuhause", one the
  * app could read (none when Home Assistant had no theme of that name, D17,
  * and the last snapshot's when it could not read the new one); the signed-in user's
- * name; and when it was fetched. Replaced whole by each successful fetch,
+ * name; when it was fetched; and the sensor's calendars, none while the
+ * sensor does not list them ([SensorCalendars]). Replaced whole by each successful fetch,
  * deleted by each new sign-in and by signing out.
  */
 @Serializable
@@ -29,6 +31,7 @@ data class Snapshot(
     val user: String,
     @SerialName("entries") val entryJson: List<JsonObject>,
     val theme: JsonObject? = null,
+    val calendars: List<SensorCalendar>? = null,
 ) {
     val fetchedAt: Instant
         get() = Instant.ofEpochMilli(fetchedAtMillis)

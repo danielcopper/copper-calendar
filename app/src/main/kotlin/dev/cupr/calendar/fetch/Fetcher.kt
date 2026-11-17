@@ -8,6 +8,7 @@ import dev.cupr.calendar.ha.FailureKind
 import dev.cupr.calendar.ha.HaAddress
 import dev.cupr.calendar.ha.HaClient
 import dev.cupr.calendar.ha.RefreshToken
+import dev.cupr.calendar.ha.SensorCalendars
 import dev.cupr.calendar.ha.SignInRequest
 import dev.cupr.calendar.ha.ThemePalettes
 import dev.cupr.calendar.ha.TokenClient
@@ -20,7 +21,6 @@ import dev.cupr.calendar.store.Snapshot
 import dev.cupr.calendar.store.SnapshotStore
 import dev.cupr.calendar.store.UnreadableTheme
 import dev.cupr.calendar.store.UnreadableThemeStore
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import okhttp3.OkHttpClient
 import java.io.IOException
@@ -31,15 +31,16 @@ import java.time.Clock
  * fetch, and signing out (D45, D46, D47).
  *
  * A fetch asks for a new access token with the stored refresh token, reads
- * the sensor's entries (D16), the user's name and the theme "Zuhause"
- * (D17), and replaces the snapshot whole (D6). When Home Assistant refuses
+ * the sensor's entries (D16) and its calendars, the user's name and the
+ * theme "Zuhause" (D17), and replaces the snapshot whole (D6). When Home Assistant refuses
  * the refresh token, the account is marked [Account.State.REJECTED]; when
  * the stored sign-in cannot be read on this phone, [Account.State.UNREADABLE];
  * the snapshot stays in both cases. Any other failure changes nothing but
  * the last failure kept for the sign-in screen, and the next fetch tries
  * again. That the theme could not be read, and from which fetch the colours
  * drawn are, is kept for the sign-in screen (D48). Entries that cannot be
- * read are left out and logged, one line each; the rest are used.
+ * read are left out and logged, one line each; the rest are used; so are
+ * the sensor's calendars ([SensorCalendars]).
  *
  * The log names what failed, never a token, the code or the address.
  */
@@ -257,14 +258,18 @@ class Fetcher(
         }
 
     private fun store(
-        entries: JsonArray,
+        sensor: HaClient.Sensor,
         userAndTheme: HaClient.UserAndTheme,
     ): Outcome {
+        val entries = sensor.entries
         val parsed = EntryParser.parse(entries, clock.zone)
         parsed.problems.forEach { Log.w(TAG, it) }
+        val calendars = SensorCalendars.read(sensor.calendars)
+        calendars.problems.forEach { Log.w(TAG, it) }
         val theme = themeToKeep(userAndTheme.theme, { snapshots.read() }, { themes.read() })
+        val json = parsed.read.map { it.json }
         return try {
-            snapshots.write(Snapshot(clock.millis(), userAndTheme.user, parsed.read.map { it.json }, theme.json))
+            snapshots.write(Snapshot(clock.millis(), userAndTheme.user, json, theme.json, calendars.calendars))
             if (theme.unreadable == null) themes.clear() else themes.write(theme.unreadable)
             Outcome.Fetched(parsed.read.size, entries.size - parsed.read.size)
         } catch (e: IOException) {

@@ -5,6 +5,7 @@ import android.content.Context
 
 /** The week widget "Woche quer" ([DrawnWidgetProvider]). */
 class WeekColumnsWidgetProvider : DrawnWidgetProvider() {
+    override val kind = WidgetKind.WEEK_COLUMNS
     override val tag = WeekColumnsWidget.TAG
 
     override fun update(
@@ -12,5 +13,6 @@ class WeekColumnsWidgetProvider : DrawnWidgetProvider() {
         manager: AppWidgetManager,
         id: Int,
         calendar: Content.Calendar,
-    ) = WeekColumnsWidget.update(context, manager, id, calendar)
+        look: Look,
+    ) = WeekColumnsWidget.update(context, manager, id, calendar, look)
 }

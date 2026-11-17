@@ -25,7 +25,7 @@ internal fun WeekWidget.views(
     days: WeekDays = WeekDays.MONDAY_TO_SUNDAY,
     id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
     calendar: Content.Calendar = SampleData.calendar(),
-): RemoteViews = draw(context, widthDp, days, id, BitmapLimit.limitBytes(context, TAG, id), calendar).views
+): RemoteViews = draw(context, widthDp, Look(days), id, BitmapLimit.limitBytes(context, TAG, id), calendar).views
 
 internal fun WeekColumnsWidget.views(
     context: Context,
@@ -34,7 +34,8 @@ internal fun WeekColumnsWidget.views(
     days: WeekDays = WeekDays.MONDAY_TO_SUNDAY,
     id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
     calendar: Content.Calendar = SampleData.calendar(),
-): RemoteViews = draw(context, widthDp, heightDp, days, id, BitmapLimit.limitBytes(context, TAG, id), calendar).views
+): RemoteViews =
+    draw(context, widthDp, heightDp, Look(days), id, BitmapLimit.limitBytes(context, TAG, id), calendar).views
 
 /**
  * Makes the providers draw the sample month, as if signed in with a fresh

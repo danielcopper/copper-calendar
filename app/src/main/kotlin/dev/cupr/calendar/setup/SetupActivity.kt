@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import dev.cupr.calendar.app.PhoneTheme
+import dev.cupr.calendar.widget.WidgetKind
 
 /**
  * A widget's setup, which the launcher opens from the widget's long-press

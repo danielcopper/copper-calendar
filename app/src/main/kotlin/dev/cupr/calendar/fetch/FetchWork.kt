@@ -38,9 +38,10 @@ class FetchWorker(
 }
 
 /**
- * When the app fetches (D3, D46): every 15 minutes, the least interval
- * WorkManager allows for periodic work, and at once after signing in and
- * whenever the app's screen opens; each only with a network connection.
+ * When the app fetches (D3, D46): every 15, 30 or 60 minutes as set on the
+ * app's screen, 15 the least interval WorkManager allows for periodic work
+ * and the default, and at once after signing in and whenever the app's
+ * screen opens; each only with a network connection.
  */
 object FetchWork {
     /** The periodic fetch's unique name. */
@@ -49,20 +50,30 @@ object FetchWork {
     /** The fetch started at once; the sign-in screen watches it to show the new fetch time. */
     const val NOW = "fetch-now"
 
-    private const val INTERVAL_MINUTES = 15L
-
     private val network = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
     /** Fetches now, as expedited work where the system's quota allows, and keeps the periodic fetch scheduled. */
     fun start(context: Context) {
         val manager = WorkManager.getInstance(context)
         manager.enqueueUniqueWork(NOW, ExistingWorkPolicy.KEEP, nowRequest())
-        manager.enqueueUniquePeriodicWork(
-            PERIODIC,
-            ExistingPeriodicWorkPolicy.KEEP,
-            PeriodicWorkRequestBuilder<FetchWorker>(INTERVAL_MINUTES, TimeUnit.MINUTES).setConstraints(network).build(),
-        )
+        manager.enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.KEEP, periodicRequest(context))
     }
+
+    /**
+     * Enqueues the periodic fetch anew at the interval now set, once it was
+     * changed: the scheduled one takes the new interval.
+     */
+    fun reschedule(context: Context) {
+        WorkManager
+            .getInstance(context)
+            .enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.UPDATE, periodicRequest(context))
+    }
+
+    /** The periodic fetch at the interval set on the app's screen, with a network. */
+    internal fun periodicRequest(context: Context) =
+        PeriodicWorkRequestBuilder<FetchWorker>(Services.appSettings(context).fetchInterval().minutes, TimeUnit.MINUTES)
+            .setConstraints(network)
+            .build()
 
     /** The fetch at once: expedited where the system's quota allows, else as soon as it may run, with a network. */
     internal fun nowRequest() =

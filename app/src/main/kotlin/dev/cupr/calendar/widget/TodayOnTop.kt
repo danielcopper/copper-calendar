@@ -122,7 +122,9 @@ internal object TodayOnTop {
      * only into view, without padding (D27). When no row is today, the
      * list does not scroll and the log warns. Each case sets the list's
      * padding, as an earlier update may have set one: setViewPadding sets all
-     * four sides, and the list has no padding but this one. Returns where it
+     * four sides, and the list has no padding but this one. Unless toToday,
+     * it sets the padding all the same but does not scroll, so the list
+     * stays where the user scrolled it ([ReturnToToday]). Returns where it
      * scrolls and from what, for the drawing's log line
      * ([DrawnWidget.logDrawn]).
      */
@@ -133,6 +135,7 @@ internal object TodayOnTop {
         height: WidgetHeight?,
         tag: String,
         id: Int,
+        toToday: Boolean,
     ): String {
         val heightsPx = measured.heightsPx
         val today = measured.today
@@ -145,10 +148,14 @@ internal object TodayOnTop {
 
             height == null -> {
                 views.setViewPadding(R.id.list, 0, 0, 0, 0)
-                views.setScrollPosition(R.id.list, today)
                 // Not "no appWidgetMaxHeight": the tests' sample views (SampleViews) pass no height either;
                 // WidgetHeight.of warns of a launcher's.
-                "; today is row $today, scrolls it into view: no height"
+                if (toToday) {
+                    views.setScrollPosition(R.id.list, today)
+                    "; today is row $today, scrolls it into view: no height"
+                } else {
+                    "; today is row $today, $KEEPS: no height"
+                }
             }
 
             else -> {
@@ -156,11 +163,18 @@ internal object TodayOnTop {
                 val extraPx = ViewConfiguration.get(context).scaledFadingEdgeLength
                 val target = targetFrom(heightsPx, today, listPx, extraPx)
                 views.setViewPadding(R.id.list, 0, 0, 0, target.paddingPx)
-                views.setScrollPosition(R.id.list, target.index)
-                reach(target, today, listPx, extraPx) + "; ${height.forLog}"
+                if (toToday) {
+                    views.setScrollPosition(R.id.list, target.index)
+                    reach(target, today, listPx, extraPx) + "; ${height.forLog}"
+                } else {
+                    "; today is row $today, $KEEPS, bottom padding ${target.paddingPx} px; ${height.forLog}"
+                }
             }
         }
     }
+
+    /** What the log says of a list that does not scroll to today. */
+    private const val KEEPS = "keeps its position: not scrolled to today"
 
     /** How far the scroll to target reaches in a list listPx high, and the padding it gets, for [scroll]'s log. */
     private fun reach(

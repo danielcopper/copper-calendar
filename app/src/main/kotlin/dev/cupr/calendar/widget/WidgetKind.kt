@@ -1,18 +1,15 @@
-package dev.cupr.calendar.setup
+package dev.cupr.calendar.widget
 
 import android.content.ComponentName
 import android.content.Context
 import androidx.annotation.StringRes
 import dev.cupr.calendar.R
-import dev.cupr.calendar.widget.MonthWidgetProvider
-import dev.cupr.calendar.widget.WeekColumnsWidgetProvider
-import dev.cupr.calendar.widget.WeekWidgetProvider
 
 /**
- * The app's three widgets as the setup tells them apart: the name the
- * widget picker gives each, and which of the settings each has, beside the
- * calendars and the corner of "+", which all have: the week widgets their
- * days (D20), the month and "Woche" when they return to today (D27).
+ * The app's three widgets: the name the widget picker gives each, and which
+ * of the settings each has, beside the calendars and the corner of "+",
+ * which all have: the week widgets their days (D20), the month and "Woche"
+ * when they return to today (D27).
  */
 enum class WidgetKind(
     @param:StringRes val label: Int,

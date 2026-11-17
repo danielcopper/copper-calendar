@@ -86,8 +86,8 @@ class DrawnWidgetTest {
     @Test
     fun `the sample's widgets stay within the phone's limit and leave nothing out`() {
         val limit = BitmapLimit.limitBytes(application, "Test", 1)
-        assertTrue(WeekWidget.draw(application, 276, WeekDays.MONDAY_TO_SUNDAY, 1, limit, sample).bytes <= limit)
-        val columns = WeekColumnsWidget.draw(application, 276, 220, WeekDays.MONDAY_TO_SUNDAY, 2, limit, sample)
+        assertTrue(WeekWidget.draw(application, 276, Look(), 1, limit, sample).bytes <= limit)
+        val columns = WeekColumnsWidget.draw(application, 276, 220, Look(), 2, limit, sample)
         assertTrue(columns.bytes <= limit)
         assertTrue(MonthWidget.draw(application, 276, 3, limit, sample).bytes <= limit)
         for (tag in listOf("WeekWidget", "WeekColumnsWidget", "MonthWidget")) {
@@ -97,9 +97,9 @@ class DrawnWidgetTest {
 
     @Test
     fun `a week over the limit leaves out the fullest day's last entries for a line counting them`() {
-        val unlimited = WeekWidget.draw(application, 276, WeekDays.MONDAY_TO_SUNDAY, 7, Long.MAX_VALUE, full)
+        val unlimited = WeekWidget.draw(application, 276, Look(), 7, Long.MAX_VALUE, full)
         val limit = unlimited.bytes * 2 / 3
-        val drawn = WeekWidget.draw(application, 276, WeekDays.MONDAY_TO_SUNDAY, 7, limit, full)
+        val drawn = WeekWidget.draw(application, 276, Look(), 7, limit, full)
         assertTrue("${drawn.bytes} of $limit", drawn.bytes <= limit)
         val list =
             WidgetHost.applied(application, views = { _, _ -> drawn.views }).findViewById<ListView>(R.id.list)
@@ -125,9 +125,9 @@ class DrawnWidgetTest {
     @Test
     fun `woche quer over the limit leaves out the tallest day's last entries for its +N`() {
         val unlimited =
-            WeekColumnsWidget.draw(application, 276, 220, WeekDays.MONDAY_TO_SUNDAY, 8, Long.MAX_VALUE, full)
+            WeekColumnsWidget.draw(application, 276, 220, Look(), 8, Long.MAX_VALUE, full)
         val limit = unlimited.bytes / 2
-        val drawn = WeekColumnsWidget.draw(application, 276, 220, WeekDays.MONDAY_TO_SUNDAY, 8, limit, full)
+        val drawn = WeekColumnsWidget.draw(application, 276, 220, Look(), 8, limit, full)
         assertTrue("${drawn.bytes} of $limit", drawn.bytes <= limit)
         val warning = ShadowLog.getLogsForTag("WeekColumnsWidget").single { it.type == Log.WARN }.msg
         val expected =
@@ -207,8 +207,8 @@ class DrawnWidgetTest {
 
     @Test
     fun `a week still over the limit when nothing is left to leave out says how far`() {
-        val unlimited = WeekWidget.draw(application, 276, WeekDays.MONDAY_TO_SUNDAY, 7, Long.MAX_VALUE, full)
-        val drawn = WeekWidget.draw(application, 276, WeekDays.MONDAY_TO_SUNDAY, 7, 1000, full)
+        val unlimited = WeekWidget.draw(application, 276, Look(), 7, Long.MAX_VALUE, full)
+        val drawn = WeekWidget.draw(application, 276, Look(), 7, 1000, full)
         val all =
             WeekLayout
                 .build(
@@ -264,7 +264,7 @@ class DrawnWidgetTest {
 
     @Test
     fun `marks with no room beside their number are logged once per drawing`() {
-        WeekColumnsWidget.draw(application, 150, 220, WeekDays.MONDAY_TO_SUNDAY, 9, Long.MAX_VALUE, sample)
+        WeekColumnsWidget.draw(application, 150, 220, Look(), 9, Long.MAX_VALUE, sample)
         val marks = ShadowLog.getLogsForTag("WeekColumnsWidget").map { it.msg }.filter { "no room" in it }
         assertEquals(listOf("Widget 9: 2026-11-11 has no room beside its number for 1 of its marks"), marks)
     }
@@ -337,6 +337,7 @@ class DrawnWidgetTest {
         val updated = mutableListOf<Int>()
         val provider =
             object : DrawnWidgetProvider() {
+                override val kind = WidgetKind.WEEK
                 override val tag = "Test"
 
                 override fun update(
@@ -344,12 +345,13 @@ class DrawnWidgetTest {
                     manager: AppWidgetManager,
                     id: Int,
                     calendar: Content.Calendar,
+                    look: Look,
                 ) {
                     updated += id
                     // What a model's require and a drawing's check throw.
                     require(id != argument) { "a require in the drawing" }
                     check(id != state) { "a check in the drawing" }
-                    WeekWidget.update(context, manager, id, calendar)
+                    WeekWidget.update(context, manager, id, calendar, look)
                 }
             }
         provider.onUpdate(application, manager, ids.toIntArray())
@@ -376,6 +378,7 @@ class DrawnWidgetTest {
     fun `any other exception is not caught by the provider`() {
         val provider =
             object : DrawnWidgetProvider() {
+                override val kind = WidgetKind.WEEK
                 override val tag = "Test"
 
                 override fun update(
@@ -383,6 +386,7 @@ class DrawnWidgetTest {
                     manager: AppWidgetManager,
                     id: Int,
                     calendar: Content.Calendar,
+                    look: Look,
                 ): Unit = throw UnsupportedOperationException("not caught")
             }
         val id = shadowOf(manager).createWidget(AppWidgetProvider::class.java, R.layout.widget_plain)

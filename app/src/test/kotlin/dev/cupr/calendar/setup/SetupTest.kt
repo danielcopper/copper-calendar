@@ -9,12 +9,14 @@ import android.content.ComponentName
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.ha.SensorCalendar
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.store.WidgetSettingsStore
 import dev.cupr.calendar.widget.MonthWidgetProvider
 import dev.cupr.calendar.widget.WeekColumnsWidgetProvider
 import dev.cupr.calendar.widget.WeekWidgetProvider
+import dev.cupr.calendar.widget.WidgetKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -25,6 +27,7 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowLog
+import java.time.Instant
 import java.time.LocalDateTime
 
 /** A widget's setup: which widget it sets up, the calendars it lists, and its settings going with the widget. */
@@ -63,14 +66,30 @@ class SetupTest {
     }
 
     @Test
-    fun `the calendars are those seen and those left out, each once, sorted`() {
+    fun `without the sensor's calendars, the setup lists those seen and those left out by id, each once, sorted`() {
         val entries = listOf(entry("special"), entry("calendar.b"), entry("special"), entry("calendar.a"))
 
         assertEquals(
-            listOf("calendar.a", "calendar.b", "calendar.gone", "special"),
-            setupCalendars(entries, setOf("calendar.gone", "calendar.b")),
+            listOf("calendar.a", "calendar.b", "calendar.gone", "special").map { SensorCalendar(it) },
+            setupCalendars(null, entries, setOf("calendar.gone", "calendar.b")),
         )
-        assertEquals(emptyList<String>(), setupCalendars(emptyList(), emptySet()))
+        assertEquals(emptyList<SensorCalendar>(), setupCalendars(null, emptyList(), emptySet()))
+    }
+
+    @Test
+    fun `with the sensor's calendars, the setup lists them by name in their order, then any other by id`() {
+        val sensor = listOf(SensorCalendar("special", "Besondere Tage"), SensorCalendar("calendar.b", "B"))
+        val entries = listOf(entry("calendar.z"), entry("calendar.b"), entry("calendar.c"))
+
+        assertEquals(
+            sensor +
+                listOf(
+                    SensorCalendar("calendar.c"),
+                    SensorCalendar("calendar.gone"),
+                    SensorCalendar("calendar.z"),
+                ),
+            setupCalendars(sensor, entries, setOf("calendar.gone", "special")),
+        )
     }
 
     @Test
@@ -99,16 +118,22 @@ class SetupTest {
     }
 
     @Test
-    fun `a widget removed from the home screen loses its settings, the others keep theirs`() {
+    fun `a widget removed from the home screen loses its settings and last scroll, the others keep theirs`() {
         val store: WidgetSettingsStore = Services.widgetSettings(context)
+        val scrolls = Services.lastScrolls(context)
         val left = WidgetSettings(leftOut = setOf("special"))
-        store.write(3, left)
-        store.write(4, left)
+        val at = Instant.ofEpochMilli(1_000)
+        for (id in listOf(3, 4)) {
+            store.write(id, left)
+            scrolls.write(id, at)
+        }
 
         WeekWidgetProvider().onDeleted(context, intArrayOf(3))
 
         assertEquals(WidgetSettings.DEFAULT, store.read(3))
+        assertNull(scrolls.read(3))
         assertEquals(left, store.read(4))
+        assertEquals(at, scrolls.read(4))
     }
 
     /** Places a widget of provider under id, as the launcher binds it. */

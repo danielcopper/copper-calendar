@@ -282,10 +282,11 @@ class MonthWidgetTest {
         val fabImage = widget.findViewById<ImageView>(R.id.fab_light)
         val fabBitmap = (fabImage.drawable as BitmapDrawable).bitmap
         assertEquals(fabImage.width, fabBitmap.width)
-        assertEquals(widget.width, fabImage.right)
+        assertEquals(widget.width, WidgetHost.boundsIn(widget, fabImage).right)
         val fab = widget.findViewById<View>(R.id.fab)
         assertEquals(px(PhoneMonth.FAB_SIZE), fab.width)
-        assertEquals(px(PhoneMonth.FAB_MARGIN), widget.width - fab.right)
-        assertEquals(px(PhoneMonth.FAB_MARGIN), widget.height - fab.bottom)
+        val fabBounds = WidgetHost.boundsIn(widget, fab)
+        assertEquals(px(PhoneMonth.FAB_MARGIN), widget.width - fabBounds.right)
+        assertEquals(px(PhoneMonth.FAB_MARGIN), widget.height - fabBounds.bottom)
     }
 }

@@ -259,7 +259,7 @@ class WeekWidgetTest {
     ): Pair<ListView, Int> {
         val height = WidgetHeight(heightDp, null)
         return WidgetHost.scrolledToTarget(application, heightDp, { context, _ ->
-            WeekWidget.draw(context, widthDp, days, 1, Long.MAX_VALUE, SampleData.calendar(), height).views
+            WeekWidget.draw(context, widthDp, Look(days), 1, Long.MAX_VALUE, SampleData.calendar(), height).views
         }, widthDp)
     }
 
@@ -321,7 +321,7 @@ class WeekWidgetTest {
         val height = WidgetHeight(WidgetHost.HEIGHT_DP, null)
         WidgetHost.reapplied(application, list.rootView) { context, width ->
             WeekWidget
-                .draw(context, width, WeekDays.MONDAY_TO_SUNDAY, 1, Long.MAX_VALUE, SampleData.calendar(), height)
+                .draw(context, width, Look(), 1, Long.MAX_VALUE, SampleData.calendar(), height)
                 .views
         }
         assertEquals(6, WidgetHost.scrollToTarget(list))
@@ -446,7 +446,7 @@ class WeekWidgetTest {
         assertEquals(list.width, bitmap.width)
         assertEquals(day.width, bitmap.width)
         assertEquals(day.height, bitmap.height)
-        val fab = widget.findViewById<View>(R.id.fab)
+        val fab = WidgetHost.boundsIn(widget, widget.findViewById(R.id.fab))
         assertEquals(px(PhoneMonth.FAB_MARGIN), widget.width - fab.right)
         assertEquals(px(PhoneMonth.FAB_MARGIN), widget.height - fab.bottom)
     }

@@ -20,6 +20,7 @@ import dev.cupr.calendar.ha.RefreshToken
 import dev.cupr.calendar.ha.SignInRequest
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.AesGcmCipher
+import dev.cupr.calendar.store.FetchInterval
 import dev.cupr.calendar.store.TokenCipher
 import dev.cupr.calendar.widget.Content
 import dev.cupr.calendar.widget.DrawnWidgetProvider
@@ -191,6 +192,47 @@ class FetchWorkTest {
         assertNotNull(periodic.periodicityInfo)
         assertEquals(TimeUnit.MINUTES.toMillis(15), periodic.periodicityInfo!!.repeatIntervalMillis)
         assertEquals(null, now.periodicityInfo)
+    }
+
+    private val periodicMinutes: Long?
+        get() =
+            manager
+                .getWorkInfosForUniqueWork(FetchWork.PERIODIC)
+                .get()
+                .singleOrNull { !it.state.isFinished }
+                ?.periodicityInfo
+                ?.repeatIntervalMillis
+                ?.let(TimeUnit.MILLISECONDS::toMinutes)
+
+    @Test
+    fun `the periodic fetch runs at the interval set`() {
+        Services.appSettings(context).writeFetchInterval(FetchInterval.EVERY_60_MINUTES)
+
+        FetchWork.start(context)
+
+        assertEquals(60L, periodicMinutes)
+    }
+
+    @Test
+    fun `a new interval while signed in enqueues the periodic fetch anew at it`() {
+        signIn()
+        FetchWork.start(context)
+
+        Services.setFetchInterval(context, FetchInterval.EVERY_30_MINUTES)
+
+        assertEquals(30L, periodicMinutes)
+        assertEquals(FetchInterval.EVERY_30_MINUTES, Services.appSettings(context).fetchInterval())
+    }
+
+    @Test
+    fun `a new interval without a usable sign-in is kept, and fetches nothing`() {
+        Services.setFetchInterval(context, FetchInterval.EVERY_60_MINUTES)
+        signIn()
+        Services.account(context).reject()
+        Services.setFetchInterval(context, FetchInterval.EVERY_30_MINUTES)
+
+        assertEquals(emptyList<WorkInfo.State>(), scheduled)
+        assertEquals(FetchInterval.EVERY_30_MINUTES, Services.appSettings(context).fetchInterval())
     }
 
     @Test

@@ -1,30 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- "+", as each widget's layout includes it at the bottom right of its
-     card: its drawing light and dark, with room for the shadow, and its
-     40 dp tap area. -->
+<!-- "+", as each widget's layout includes it at the bottom of its card: its
+     drawing light and dark, with room for the shadow, and its 40 dp tap
+     area in the middle. The row it stands in puts it at the right, or at
+     the left when the widget's setup says so (DrawnWidget.corner); the row
+     takes no taps, so the list below it still scrolls. -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <ImageView
-        android:id="@+id/fab_light"
-        android:layout_width="66dp"
-        android:layout_height="66dp"
-        android:layout_gravity="bottom|end"
-        android:importantForAccessibility="no"
-        android:visibility="@integer/light_visibility" />
+    <LinearLayout
+        android:id="@+id/fab_corner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:gravity="bottom|end"
+        android:orientation="horizontal">
 
-    <ImageView
-        android:id="@+id/fab_dark"
-        android:layout_width="66dp"
-        android:layout_height="66dp"
-        android:layout_gravity="bottom|end"
-        android:importantForAccessibility="no"
-        android:visibility="@integer/dark_visibility" />
+        <FrameLayout
+            android:layout_width="66dp"
+            android:layout_height="66dp">
 
-    <FrameLayout
-        android:id="@+id/fab"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="13dp"
-        android:contentDescription="@string/new_entry" />
+            <ImageView
+                android:id="@+id/fab_light"
+                android:layout_width="66dp"
+                android:layout_height="66dp"
+                android:importantForAccessibility="no"
+                android:visibility="@integer/light_visibility" />
+
+            <ImageView
+                android:id="@+id/fab_dark"
+                android:layout_width="66dp"
+                android:layout_height="66dp"
+                android:importantForAccessibility="no"
+                android:visibility="@integer/dark_visibility" />
+
+            <FrameLayout
+                android:id="@+id/fab"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:contentDescription="@string/new_entry" />
+        </FrameLayout>
+    </LinearLayout>
 </merge>

@@ -1,32 +1,20 @@
 package dev.cupr.calendar.store
 
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.core.content.edit
+import dev.cupr.calendar.week.WeekDays
 
-/** A choice kept in the preferences under [stored], a name fixed apart from the enum's names. */
-interface StoredChoice {
-    val stored: String
-}
-
-/** Which days a week widget shows (D20). */
-enum class WeekDays(
-    override val stored: String,
-) : StoredChoice {
-    MONDAY_TO_SUNDAY("monday_to_sunday"),
-    FROM_TODAY("from_today"),
-}
-
-/** When the month and "Woche" return to today, "Zurück zu heute" (D27). */
+/** When the month and "Woche" return to today, "Zurück zu heute" (D27); [minutes] for the intervals. */
 enum class BackToToday(
     override val stored: String,
+    val minutes: Long? = null,
 ) : StoredChoice {
     EACH_UPDATE("each_update"),
     MIDNIGHT("midnight"),
     NEVER("never"),
-    EVERY_15_MINUTES("every_15"),
-    EVERY_30_MINUTES("every_30"),
-    EVERY_60_MINUTES("every_60"),
+    EVERY_15_MINUTES("every_15", 15),
+    EVERY_30_MINUTES("every_30", 30),
+    EVERY_60_MINUTES("every_60", 60),
 }
 
 /** The corner "+" stands in; the top corners hold the header. */
@@ -56,7 +44,7 @@ data class WidgetSettings(
 
 /**
  * Keeps each widget's [WidgetSettings] by its id until the widget is
- * removed; a widget with none stored has the defaults.
+ * removed; a widget with none stored has the defaults (D57).
  */
 class WidgetSettingsStore(
     private val prefs: SharedPreferences,
@@ -95,12 +83,7 @@ class WidgetSettingsStore(
         field: String,
         entries: List<T>,
         default: T,
-    ): T {
-        val name = prefs.getString(key(id, field), null) ?: return default
-        return entries.firstOrNull { it.stored == name } ?: default.also {
-            Log.w(TAG, "Widget $id: its stored $field \"$name\" is unknown; it reads as ${it.stored}")
-        }
-    }
+    ): T = prefs.choice(key(id, field), entries, default, TAG, "Widget $id: its stored $field")
 
     private companion object {
         const val TAG = "WidgetSettings"

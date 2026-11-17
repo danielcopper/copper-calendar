@@ -8,6 +8,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.widget.RemoteViews
 import androidx.annotation.StringRes
 import androidx.annotation.VisibleForTesting
@@ -22,8 +23,10 @@ import dev.cupr.calendar.render.HeaderNote
 import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
+import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
+import java.time.Instant
 import java.time.LocalDate
 
 /** The bitmaps a widget's views hold, kept as they are drawn, to count their bytes. */
@@ -193,6 +196,23 @@ internal object DrawnWidget {
         return light.height
     }
 
+    /**
+     * Puts "+" at the bottom right or the bottom left of the card (D58): the
+     * gravity of the row it stands in (widget_fab.xml), set on each update,
+     * so a corner changed back takes effect too.
+     */
+    fun corner(
+        views: RemoteViews,
+        corner: PlusCorner,
+    ) {
+        val side =
+            when (corner) {
+                PlusCorner.BOTTOM_RIGHT -> Gravity.END
+                PlusCorner.BOTTOM_LEFT -> Gravity.START
+            }
+        views.setInt(R.id.fab_corner, "setGravity", Gravity.BOTTOM or side)
+    }
+
     /** The list's rows, each by its stable id, and the template their taps fill in. */
     fun list(
         context: Context,
@@ -310,17 +330,28 @@ internal object DrawnWidget {
  * updated all the same. No other exception is caught, and a plain text the
  * system refuses here is not caught again: its exception propagates, and the
  * widgets after it in that update are not updated (D40).
+ *
+ * Each widget draws by its settings from its setup: without the calendars
+ * it leaves out (D11), with its days and its corner of "+" ([Look]); the
+ * month's and "Woche"'s lists scroll to today when their "Zurück zu heute"
+ * says the redraw should ([ReturnToToday]), and the time of that scroll is
+ * kept for the intervals. The launcher's updates, every 30 minutes and for
+ * a new or resized widget, count as [Redraw.UPDATE].
  */
 abstract class DrawnWidgetProvider : AppWidgetProvider() {
+    /** Which of the app's widgets it provides. */
+    abstract val kind: WidgetKind
+
     /** The log's tag. */
     protected abstract val tag: String
 
-    /** Draws calendar on the widget id and hands it to the launcher. */
+    /** Draws calendar on the widget id as look says and hands it to the launcher. */
     protected abstract fun update(
         context: Context,
         manager: AppWidgetManager,
         id: Int,
         calendar: Content.Calendar,
+        look: Look,
     )
 
     override fun onUpdate(
@@ -328,7 +359,7 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
-        Widgets.withContent(context) { updateAll(context, appWidgetManager, appWidgetIds, it) }
+        Widgets.withContent(context) { updateAll(context, appWidgetManager, appWidgetIds, it, Redraw.UPDATE) }
     }
 
     override fun onAppWidgetOptionsChanged(
@@ -337,25 +368,30 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         appWidgetId: Int,
         newOptions: Bundle,
     ) {
-        Widgets.withContent(context) { updateOne(context, appWidgetManager, appWidgetId, it) }
+        Widgets.withContent(context) { updateOne(context, appWidgetManager, appWidgetId, it, Redraw.UPDATE) }
     }
 
-    /** Forgets the settings of the widgets removed from the home screen. */
+    /** Forgets the settings and the last scroll of the widgets removed from the home screen. */
     override fun onDeleted(
         context: Context,
         appWidgetIds: IntArray,
     ) {
         Services.widgetSettings(context).remove(appWidgetIds)
+        Services.lastScrolls(context).remove(appWidgetIds)
     }
 
-    /** Updates this provider's widgets with content, which the app's own updates read once for all ([Widgets]). */
+    /**
+     * Updates this provider's widgets with content, which the app's own
+     * updates read once for all ([Widgets]), for redraw.
+     */
     internal fun updateAll(
         context: Context,
         manager: AppWidgetManager,
         ids: IntArray,
         content: Content,
+        redraw: Redraw,
     ) {
-        ids.forEach { updateOne(context, manager, it, content) }
+        ids.forEach { updateOne(context, manager, it, content, redraw) }
     }
 
     /** This provider's widgets on the home screen. */
@@ -369,6 +405,7 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         manager: AppWidgetManager,
         id: Int,
         content: Content,
+        redraw: Redraw,
     ) {
         when (content) {
             is Content.NoData -> {
@@ -377,7 +414,7 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
 
             is Content.Calendar -> {
                 try {
-                    update(context, manager, id, content)
+                    draw(context, manager, id, content, redraw)
                 } catch (e: IllegalArgumentException) {
                     failed(context, manager, id, e)
                 } catch (e: IllegalStateException) {
@@ -385,6 +422,25 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
                 }
             }
         }
+    }
+
+    /**
+     * Draws calendar on the widget id by its settings, and keeps the time
+     * when its list scrolled to today.
+     */
+    private fun draw(
+        context: Context,
+        manager: AppWidgetManager,
+        id: Int,
+        calendar: Content.Calendar,
+        redraw: Redraw,
+    ) {
+        val settings = Services.widgetSettings(context).read(id)
+        val scrolls = Services.lastScrolls(context)
+        val now = Instant.now()
+        val scroll = kind.backToToday && ReturnToToday.due(settings.backToToday, redraw, scrolls.read(id), now)
+        update(context, manager, id, calendar.without(settings.leftOut), Look.of(settings, scroll))
+        if (scroll) scrolls.write(id, now)
     }
 
     private fun failed(

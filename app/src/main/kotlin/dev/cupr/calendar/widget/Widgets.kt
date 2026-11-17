@@ -22,23 +22,46 @@ import java.util.concurrent.TimeUnit
  * start with every process they start (D46).
  */
 object Widgets {
+    private const val TAG = "Widgets"
+
     private val providers: List<DrawnWidgetProvider>
         get() = listOf(MonthWidgetProvider(), WeekWidgetProvider(), WeekColumnsWidgetProvider())
 
     /** Redraws every widget and schedules the next midnight anew. */
     fun update(context: Context) {
-        redraw(context)
+        redraw(context, Redraw.UPDATE)
         Midnight.schedule(context, ExistingWorkPolicy.REPLACE)
     }
 
     private val lock = Any()
 
-    /** Redraws every widget from what the app keeps now. */
-    internal fun redraw(context: Context) {
+    /** Redraws every widget from what the app keeps now, for redraw. */
+    internal fun redraw(
+        context: Context,
+        redraw: Redraw,
+    ) {
         val manager = AppWidgetManager.getInstance(context)
         withContent(context) { content ->
-            providers.forEach { it.updateAll(context, manager, it.ids(context, manager), content) }
+            providers.forEach { it.updateAll(context, manager, it.ids(context, manager), content, redraw) }
         }
+    }
+
+    /**
+     * Redraws the widget id alone, its settings just saved, so it shows them
+     * at once and its list returns to today ([Redraw.SAVED]); an id none of
+     * the providers has is logged and left alone.
+     */
+    fun saved(
+        context: Context,
+        id: Int,
+    ) {
+        val manager = AppWidgetManager.getInstance(context)
+        val provider = providers.firstOrNull { id in it.ids(context, manager) }
+        if (provider == null) {
+            Log.w(TAG, "Widget $id: saved, but none of the app's widgets, so nothing is redrawn")
+            return
+        }
+        withContent(context) { provider.updateAll(context, manager, intArrayOf(id), it, Redraw.SAVED) }
     }
 
     /**
@@ -104,7 +127,7 @@ class MidnightWorker(
     @Suppress("TooGenericExceptionCaught")
     override fun doWork(): Result {
         try {
-            Widgets.redraw(applicationContext)
+            Widgets.redraw(applicationContext, Redraw.MIDNIGHT)
         } catch (e: RuntimeException) {
             Log.e(TAG, "Midnight: the widgets could not be redrawn; the next midnight is scheduled all the same", e)
         }

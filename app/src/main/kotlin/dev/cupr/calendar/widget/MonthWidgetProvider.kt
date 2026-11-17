@@ -5,6 +5,7 @@ import android.content.Context
 
 /** The month widget ([DrawnWidgetProvider]). */
 class MonthWidgetProvider : DrawnWidgetProvider() {
+    override val kind = WidgetKind.MONTH
     override val tag = MonthWidget.TAG
 
     override fun update(
@@ -12,5 +13,6 @@ class MonthWidgetProvider : DrawnWidgetProvider() {
         manager: AppWidgetManager,
         id: Int,
         calendar: Content.Calendar,
-    ) = MonthWidget.update(context, manager, id, calendar)
+        look: Look,
+    ) = MonthWidget.update(context, manager, id, calendar, look)
 }

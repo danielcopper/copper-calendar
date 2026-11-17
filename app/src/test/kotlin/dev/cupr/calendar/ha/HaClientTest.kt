@@ -36,13 +36,27 @@ class HaClientTest {
             )
         }
 
-        val entries = (client.entries(access) as HaClient.Result.Ok).value
+        val sensor = (client.entries(access) as HaClient.Result.Ok).value
 
-        assertEquals(listOf("A", "B"), entries.map { (it.jsonObject["title"] as JsonPrimitive).content })
+        assertEquals(listOf("A", "B"), sensor.entries.map { (it.jsonObject["title"] as JsonPrimitive).content })
+        assertEquals(null, sensor.calendars)
         val request = home.requests.single().first
         assertEquals("GET", request.method)
         assertEquals("/api/states/sensor.family_calendar", request.url.encodedPath)
         assertEquals("Bearer access-1", request.headers["Authorization"])
+    }
+
+    @Test
+    fun `the sensor's calendars come with the entries, as Home Assistant sends them`() {
+        home.states = {
+            FakeHomeAssistant.json(
+                """{"entity_id":"sensor.family_calendar","attributes":{"entries":[],"calendars":[{"id":"calendar.a"}]}}""",
+            )
+        }
+
+        val sensor = (client.entries(access) as HaClient.Result.Ok).value
+
+        assertEquals(SensorCalendars.read(sensor.calendars).calendars, listOf(SensorCalendar("calendar.a")))
     }
 
     @Test

@@ -11,7 +11,6 @@ import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.render.WeekRowRenderer
-import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.week.WeekLayout
 import kotlin.math.roundToInt
 
@@ -46,6 +45,7 @@ object WeekColumnsWidget {
         manager: AppWidgetManager,
         id: Int,
         calendar: Content.Calendar,
+        look: Look,
     ) {
         val options = manager.getAppWidgetOptions(id)
         val width = DrawnWidget.widthDp(options, TAG, id)
@@ -58,27 +58,29 @@ object WeekColumnsWidget {
                 id,
             )
         val limit = BitmapLimit.limitBytes(context, TAG, id)
-        val drawn = draw(context, width, height, WeekDays.MONDAY_TO_SUNDAY, id, limit, calendar)
+        val drawn = draw(context, width, height, look, id, limit, calendar)
         DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
     }
 
     /**
-     * The widget at widthDp × heightDp showing days of calendar, from its
-     * today, and the bytes of its bitmaps, kept within limit: when its row
-     * would pass it, the tallest days leave out their last entries for the
-     * month's "+N" until it fits ([leaveOutOne]). The widget's id only names
-     * it in the log.
+     * The widget at widthDp × heightDp showing look's days of calendar, from
+     * its today, and the bytes of its bitmaps, kept within limit: when its
+     * row would pass it, the tallest days leave out their last entries for
+     * the month's "+N" until it fits ([leaveOutOne]). The widget's id only
+     * names it in the log. "+" stands in look's corner; its one row does not
+     * scroll to today (D27).
      */
     internal fun draw(
         context: Context,
         widthDp: Int,
         heightDp: Int,
-        days: WeekDays,
+        look: Look,
         id: Int,
         limit: Long,
         calendar: Content.Calendar,
     ): Drawn {
         val today = calendar.today
+        val days = look.days
         val dates = days.dates(today)
         val scale = Scale(context.resources.displayMetrics.density)
         // The drawn row and header span the widget less the card's inset at both sides.
@@ -93,6 +95,7 @@ object WeekColumnsWidget {
             DrawnWidget.fixedParts(context, views, kept, "$title, $range", calendar, scale) { chrome, palette, note ->
                 chrome.weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette, note)
             }
+        DrawnWidget.corner(views, look.corner)
         val full = MonthLayout.week(dates, calendar.entries, today)
         // Room for the fade's blank room counted in, as a row that has to be capped is taller than its list.
         val fadeDp = FADE_DP.toFloat()

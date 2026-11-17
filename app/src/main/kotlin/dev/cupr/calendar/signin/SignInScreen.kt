@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.util.Log
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,11 +37,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.work.WorkManager
 import dev.cupr.calendar.R
+import dev.cupr.calendar.app.Choice
 import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.fetch.FetchWork
 import dev.cupr.calendar.ha.HaAddress
 import dev.cupr.calendar.ha.SignInRequest
 import dev.cupr.calendar.store.Account
+import dev.cupr.calendar.store.FetchInterval
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -51,7 +54,8 @@ import java.time.ZoneId
  * Signed out: the address field and "Mit Home Assistant anmelden", which
  * opens Home Assistant's login page in a WebView (D42, D43). Signed in: who
  * is signed in, when the last fetch was, whether it failed or could not read
- * the theme, and "Abmelden" (D46, D47, D48). The status is read off the main thread, again each time the
+ * the theme, "Abmelden" (D46, D47, D48), and how often the app fetches
+ * (D60). The status is read off the main thread, again each time the
  * screen starts ([starts]) and whenever a fetch changes state.
  */
 @Composable
@@ -81,6 +85,10 @@ fun SignInScreen(starts: Int) {
                 scope.launch(Services.io) { Services.account(app).rememberAddress(address) }
             },
             onSignOut = { SignInFlow.signOut(app) },
+            onFetchInterval = { interval ->
+                status = status?.copy(fetchInterval = interval)
+                scope.launch(Services.io) { Services.setFetchInterval(app, interval) }
+            },
         )
         return
     }
@@ -122,6 +130,7 @@ private fun Content(
     problem: Problem?,
     onSignIn: (HaAddress) -> Unit,
     onSignOut: () -> Unit,
+    onFetchInterval: (FetchInterval) -> Unit,
 ) {
     val context = LocalContext.current
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -139,6 +148,9 @@ private fun Content(
             problem?.let { Text(stringResource(it.text), color = MaterialTheme.colorScheme.error) }
             if (status.state == Account.State.SIGNED_IN) {
                 OutlinedButton(enabled = !busy, onClick = onSignOut) { Text(stringResource(R.string.sign_out)) }
+                Choice(R.string.fetch_interval, FetchInterval.entries, status.fetchInterval, ::intervalLabel) {
+                    onFetchInterval(it)
+                }
             } else {
                 AddressForm(status.address, busy, onSignIn)
             }
@@ -205,6 +217,14 @@ private fun LoginPage(
         onRelease = WebView::destroy,
     )
 }
+
+@StringRes
+private fun intervalLabel(interval: FetchInterval): Int =
+    when (interval) {
+        FetchInterval.EVERY_15_MINUTES -> R.string.every_15_minutes
+        FetchInterval.EVERY_30_MINUTES -> R.string.every_30_minutes
+        FetchInterval.EVERY_60_MINUTES -> R.string.every_60_minutes
+    }
 
 /** Keeps a sign-in under way across a configuration change: its address, verifier and state. */
 internal val RequestSaver =

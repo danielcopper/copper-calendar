@@ -10,14 +10,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,11 +33,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import dev.cupr.calendar.R
+import dev.cupr.calendar.app.Choice
+import dev.cupr.calendar.app.Heading
+import dev.cupr.calendar.app.ROW_HEIGHT
 import dev.cupr.calendar.app.Services
+import dev.cupr.calendar.ha.SensorCalendar
 import dev.cupr.calendar.store.BackToToday
 import dev.cupr.calendar.store.PlusCorner
-import dev.cupr.calendar.store.WeekDays
 import dev.cupr.calendar.store.WidgetSettings
+import dev.cupr.calendar.week.WeekDays
+import dev.cupr.calendar.widget.WidgetKind
+import dev.cupr.calendar.widget.Widgets
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.ZoneId
@@ -49,8 +52,9 @@ import java.time.ZoneId
  * The setup of the widget id, a widget of kind: the calendars it shows
  * (D11), the week widgets' days (D20), when the month and "Woche" return to
  * today (D27), and the corner of "+". Its stored settings and the calendars
- * are read off the main thread; "Speichern" stores the settings shown, then
- * calls [onSaved].
+ * are read off the main thread; "Speichern" stores the settings shown,
+ * redraws the widget with them, its list back at today ([Widgets.saved]),
+ * then calls [onSaved].
  */
 @Composable
 fun SetupScreen(
@@ -61,18 +65,16 @@ fun SetupScreen(
     val app = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
     var settings by rememberSaveable(stateSaver = SettingsSaver) { mutableStateOf<WidgetSettings?>(null) }
-    var calendars by remember { mutableStateOf<List<String>?>(null) }
+    var calendars by remember { mutableStateOf<List<SensorCalendar>?>(null) }
     var saving by remember { mutableStateOf(false) }
 
     LaunchedEffect(id) {
-        val (stored, entries) =
-            withContext(Services.io) {
-                val snapshot = Services.snapshots(app).read()
-                Services.widgetSettings(app).read(id) to snapshot?.parse(ZoneId.systemDefault())?.entries.orEmpty()
-            }
+        val (stored, snapshot) =
+            withContext(Services.io) { Services.widgetSettings(app).read(id) to Services.snapshots(app).read() }
         val shown = settings ?: stored
         settings = shown
-        calendars = setupCalendars(entries, stored.leftOut + shown.leftOut)
+        val entries = snapshot?.parse(ZoneId.systemDefault())?.entries.orEmpty()
+        calendars = setupCalendars(snapshot?.calendars, entries, stored.leftOut + shown.leftOut)
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -108,7 +110,10 @@ fun SetupScreen(
                 onClick = {
                     saving = true
                     scope.launch {
-                        withContext(Services.io) { Services.widgetSettings(app).write(id, current) }
+                        withContext(Services.io) {
+                            Services.widgetSettings(app).write(id, current)
+                            Widgets.saved(app, id)
+                        }
                         onSaved()
                     }
                 },
@@ -117,17 +122,21 @@ fun SetupScreen(
     }
 }
 
-/** A box per calendar, ticked unless it is in leftOut; a change hands the new calendars left out to onChange. */
+/**
+ * A box per calendar, named by its name, else its id, ticked unless it is in
+ * leftOut; a change hands the new calendars left out to onChange.
+ */
 @Composable
 private fun Calendars(
-    calendars: List<String>,
+    calendars: List<SensorCalendar>,
     leftOut: Set<String>,
     onChange: (Set<String>) -> Unit,
 ) {
     Column {
         Heading(R.string.setup_calendars)
         if (calendars.isEmpty()) Text(stringResource(R.string.setup_no_calendars))
-        for (calendar in calendars) {
+        for (listed in calendars) {
+            val calendar = listed.id
             val ticked = calendar !in leftOut
             Row(
                 modifier =
@@ -142,52 +151,11 @@ private fun Calendars(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Checkbox(checked = ticked, onCheckedChange = null)
-                Text(calendar, modifier = Modifier.padding(start = 16.dp))
+                Text(listed.name ?: calendar, modifier = Modifier.padding(start = 16.dp))
             }
         }
     }
 }
-
-/** One of options under title, each named by label; selecting one hands it to onSelect. */
-@Composable
-private fun <T> Choice(
-    @StringRes title: Int,
-    options: List<T>,
-    selected: T,
-    label: (T) -> Int,
-    onSelect: (T) -> Unit,
-) {
-    Column(modifier = Modifier.selectableGroup()) {
-        Heading(title)
-        for (option in options) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = ROW_HEIGHT)
-                        .selectable(selected = option == selected, role = Role.RadioButton) { onSelect(option) },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RadioButton(selected = option == selected, onClick = null)
-                Text(stringResource(label(option)), modifier = Modifier.padding(start = 16.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun Heading(
-    @StringRes text: Int,
-) {
-    Text(
-        stringResource(text),
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-    )
-}
-
-/** The least height of a row that taps, Material's touch target. */
-private val ROW_HEIGHT = 48.dp
 
 @StringRes
 private fun daysLabel(days: WeekDays): Int =
@@ -202,9 +170,9 @@ private fun backLabel(back: BackToToday): Int =
         BackToToday.EACH_UPDATE -> R.string.setup_back_each_update
         BackToToday.MIDNIGHT -> R.string.setup_back_midnight
         BackToToday.NEVER -> R.string.setup_back_never
-        BackToToday.EVERY_15_MINUTES -> R.string.setup_back_every_15
-        BackToToday.EVERY_30_MINUTES -> R.string.setup_back_every_30
-        BackToToday.EVERY_60_MINUTES -> R.string.setup_back_every_60
+        BackToToday.EVERY_15_MINUTES -> R.string.every_15_minutes
+        BackToToday.EVERY_30_MINUTES -> R.string.every_30_minutes
+        BackToToday.EVERY_60_MINUTES -> R.string.every_60_minutes
     }
 
 @StringRes
