@@ -125,7 +125,7 @@ class FetcherTest {
         fetcher.fetch()
 
         assertEquals(listOf(SensorCalendar("calendar.a", "A")), snapshots.read()!!.calendars)
-        assertTrue(logs, logs.contains("The sensor's calendar 1 has no id; left out"))
+        assertTrue(logs, logs.contains("The sensor's calendar 1 has no string id; left out"))
         entries(good)
         fetcher.fetch()
         assertNull(snapshots.read()!!.calendars)

@@ -152,7 +152,7 @@ private fun Calendars(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Checkbox(checked = ticked, onCheckedChange = null)
-                Text(listed.name ?: calendar, modifier = Modifier.padding(start = 16.dp))
+                Text(listed.shown, modifier = Modifier.padding(start = 16.dp))
             }
         }
     }

@@ -48,13 +48,21 @@ class SensorCalendarsTest {
         assertEquals(listOf(SensorCalendar("calendar.a")), read.calendars)
         assertEquals(
             listOf(
-                "The sensor's calendar 0 has no id; left out",
-                "The sensor's calendar 1 has no id; left out",
-                "The sensor's calendar 2 has no id; left out",
-                "The sensor's calendar 3 has no id; left out",
-                "The sensor's calendar calendar.a is listed twice",
+                "The sensor's calendar 0 has no string id; left out",
+                "The sensor's calendar 1 has no string id; left out",
+                "The sensor's calendar 2 has no string id; left out",
+                "The sensor's calendar 3 has no string id; left out",
+                "The sensor's calendar calendar.a is listed twice; left out",
             ),
             read.problems,
         )
+    }
+
+    @Test
+    fun `a blank name is none, and the setup shows the calendar's id`() {
+        val read = read("""[{"id":"calendar.a","name":" "},{"id":"calendar.b","name":"B"}]""")
+
+        assertEquals(listOf("calendar.a", "B"), read.calendars?.map { it.shown })
+        assertEquals(emptyList<String>(), read.problems)
     }
 }
