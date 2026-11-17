@@ -71,8 +71,9 @@ class ParsedEntries(
  * An entry's `resolved_color`, the colour the dashboard shows it in (D49),
  * is `#rrggbb`, `#rgb` or a CSS colour name, a fixed colour; or
  * `var(--zuhause-calendar-…)` naming one of [CalendarVariables.all], that
- * calendar variable; or `var(--secondary-text-color)`; each in any case and
- * with spaces around. Any other value but null, which counts as none, is
+ * calendar variable; or `var(--secondary-text-color)`; with spaces around,
+ * `var` and a fixed colour in any case, the variable's name case-sensitive
+ * as CSS reads it. Any other value but null, which counts as none, is
  * dropped and named, and the entry kept with its own colour and its
  * calendar's; unlike an unknown `color`, which leaves the entry out.
  *
@@ -86,8 +87,8 @@ object EntryParser {
     private const val RESOLVED_COLOR = "resolved_color"
     private const val SECONDARY_TEXT = "secondary-text-color"
 
-    /** `var(--name)` as CSS writes it, the name without its dashes; no fallback value. */
-    private val VARIABLE = Regex("""var\(\s*--([a-z0-9-]+)\s*\)""")
+    /** `var(--name)` as CSS writes it, the name without its leading `--`; no fallback value. */
+    private val VARIABLE = Regex("""(?i:var)\(\s*--([A-Za-z0-9-]+)\s*\)""")
 
     fun parse(
         array: JsonArray,
@@ -156,12 +157,12 @@ object EntryParser {
     }
 
     /**
-     * A string of one of the forms of `resolved_color`, else none; read as
-     * tolerantly as a fixed colour ([CssColors]): spaces around it and in
-     * `var( … )` and any case.
+     * A string of one of the forms of `resolved_color`, else none: spaces
+     * around it and in `var( … )`, `var` and a fixed colour ([CssColors]) in
+     * any case; the variable's name is case-sensitive, as in CSS.
      */
     private fun dashboardColor(sent: JsonElement): DashboardColor? {
-        val text = sent.stringContent()?.trim()?.lowercase() ?: return null
+        val text = sent.stringContent()?.trim() ?: return null
         val variable = VARIABLE.matchEntire(text)?.groupValues?.get(1)
         return when (variable) {
             null -> CssColors.parse(text)?.let { DashboardColor.Fixed(it) }

@@ -161,8 +161,8 @@ class EntryParserTest {
     }
 
     @Test
-    fun `the dashboard's colour is read as each calendar's theme variable or the secondary text colour`() {
-        // The names homelab's zuhause.jinja sends (macro calendar_color), written out.
+    fun `the dashboard's colour is read as each calendar variable or the secondary text colour`() {
+        // The names homelab sends (ha-additions.md §5), written out.
         val calendars = listOf("family", "birthdays", "school", "public", "special").map { "zuhause-calendar-$it" }
 
         val parsed =
@@ -176,10 +176,10 @@ class EntryParserTest {
     }
 
     @Test
-    fun `the dashboard's colour is read in any case and with spaces, as a fixed colour is`() {
+    fun `the dashboard's colour is read with spaces, var and a fixed colour in any case`() {
         val sent =
             listOf(
-                "\" VAR(--Zuhause-Calendar-Family) \"",
+                "\" VAR(--zuhause-calendar-family) \"",
                 "\"var( --secondary-text-color )\"",
                 "\" #8855A8 \"",
                 "\"SteelBlue\"",
@@ -208,6 +208,7 @@ class EntryParserTest {
                 "\"var(--primary-color)\"",
                 "\"var(--zuhause-calendar-family\"",
                 "\"var(--zuhause-calendar-family, red)\"",
+                "\"var(--Zuhause-Calendar-Family)\"",
                 "\"\"",
                 "12",
                 "{}",
