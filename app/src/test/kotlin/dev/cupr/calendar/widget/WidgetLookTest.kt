@@ -11,6 +11,7 @@ import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.ListView
+import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
 import androidx.work.testing.SynchronousExecutor
@@ -204,7 +205,8 @@ class WidgetLookTest {
     fun `after an update of the app, the month's and woche's lists set to never scroll once, at their second update`() {
         val month = shadow.createWidget(MonthWidgetProvider::class.java, R.layout.widget_month)
         val week = shadow.createWidget(WeekWidgetProvider::class.java, R.layout.widget_week)
-        val columns = shadow.createWidget(WeekColumnsWidgetProvider::class.java, R.layout.widget_week_columns)
+        // "Woche quer", whose list holds one row, is not marked (D27).
+        shadow.createWidget(WeekColumnsWidgetProvider::class.java, R.layout.widget_week_columns)
         for (id in listOf(month, week)) {
             settings.write(id, WidgetSettings(backToToday = BackToToday.NEVER))
             lists.keep(id, ListState.SETTLED, now)
@@ -215,6 +217,10 @@ class WidgetLookTest {
         ListsRebuiltReceiver().onReceive(context, Intent(Intent.ACTION_MY_PACKAGE_REPLACED))
         assertEquals(listOf(ListState.TO_BUILD, ListState.TO_BUILD), listOf(month, week).map { lists.state(it) })
         assertEquals(listOf(null, null), listOf(month, week).map { lists.lastScroll(it) })
+        assertEquals(
+            "The app was updated: the lists of widgets [$month, $week] are built anew",
+            ShadowLog.getLogsForTag("Widgets").single { it.msg.endsWith(" are built anew") }.msg,
+        )
         Widgets.update(context)
         assertEquals(listOf(0, 0), listOf(month, week).map { list(it).smoothScrolledPosition })
         Widgets.update(context)
@@ -222,7 +228,6 @@ class WidgetLookTest {
         Widgets.update(context)
 
         assertEquals(listOf(0, 0), listOf(month, week).map { list(it).smoothScrolledPosition })
-        assertEquals(ListState.TO_BUILD, lists.state(columns))
     }
 
     @Test
@@ -338,20 +343,48 @@ class WidgetLookTest {
     }
 
     @Test
-    fun `a scroll the launcher did not take, the too-full text shown instead, is not kept, and forgets the last`() {
+    fun `a scroll the system did not take, the too-full text shown instead, is not kept, and forgets the list`() {
         val provider = Recording(WidgetKind.MONTH, taken = false)
         settings.write(4, WidgetSettings(backToToday = BackToToday.EVERY_30_MINUTES))
-        lists.keep(4, ListState.SETTLED, now)
+        lists.keep(4, ListState.SETTLED, Instant.now() - Duration.ofMinutes(31))
 
         provider.onUpdate(context, manager, intArrayOf(4))
 
         val (_, look) = provider.drawn.single()
         assertTrue(look.scroll)
+        assertEquals(ListState.TO_BUILD, lists.state(4))
         assertNull(lists.lastScroll(4))
     }
 
     @Test
-    fun `plain views instead of the list forget its last scroll, so an interval scrolls at the list's next redraw`() {
+    @Config(shadows = [RefusingWidgetManager::class])
+    fun `the month and woche, refused by the system, show the too-full text and keep no scroll`() {
+        shadow.setAlwaysRecreateViewsDuringUpdate(true)
+        val widgets =
+            listOf(
+                MonthWidgetProvider() to R.layout.widget_month,
+                WeekWidgetProvider() to R.layout.widget_week,
+            ).map { (provider, layout) -> provider to shadow.createWidget(provider.javaClass, layout) }
+
+        val kept =
+            widgets.map { (provider, id) ->
+                lists.keep(id, ListState.SETTLED, now)
+                provider.onUpdate(context, manager, intArrayOf(id))
+                val shown = shadow.getViewFor(id).findViewById<TextView>(R.id.plain_text)
+                Triple(shown?.text.toString(), lists.state(id), lists.lastScroll(id))
+            }
+
+        assertEquals(
+            listOf(
+                Triple("Monat zu voll – im Kalender öffnen", ListState.TO_BUILD, null),
+                Triple("Woche zu voll – im Kalender öffnen", ListState.TO_BUILD, null),
+            ),
+            kept,
+        )
+    }
+
+    @Test
+    fun `plain views instead of the list forget its last scroll, so the list's next redraw asks for a scroll`() {
         // Placed by a provider that draws nothing, so the plain views have a widget to go to.
         val id = shadow.createWidget(AppWidgetProvider::class.java, R.layout.widget_plain)
         val provider = Recording(WidgetKind.MONTH)
