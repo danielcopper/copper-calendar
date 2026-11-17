@@ -151,24 +151,25 @@ class WidgetLookTest {
 
     @Test
     fun `a list built anew scrolls as set but does not count, the update after scrolls whatever is set`() {
+        val of = { step: ReturnToToday.Step -> Triple(step.scroll, step.counts, step.next) }
         for (setting in BackToToday.entries) {
             for (redraw in Redraw.entries) {
                 val due = ReturnToToday.due(setting, redraw, null, now)
                 assertEquals(
                     "$setting $redraw",
-                    ReturnToToday.Step(due, counts = false, ListState.TO_SCROLL),
-                    ReturnToToday.step(setting, redraw, ListState.TO_BUILD, null, now),
+                    Triple(due, false, ListState.TO_SCROLL),
+                    of(ReturnToToday.step(setting, redraw, ListState.TO_BUILD, null, now)),
                 )
                 assertEquals(
                     "$setting $redraw",
-                    ReturnToToday.Step(scroll = true, counts = true, ListState.SETTLED),
-                    ReturnToToday.step(setting, redraw, ListState.TO_SCROLL, now, now),
+                    Triple(true, true, ListState.SETTLED),
+                    of(ReturnToToday.step(setting, redraw, ListState.TO_SCROLL, now, now)),
                 )
                 val settled = ReturnToToday.due(setting, redraw, now, now)
                 assertEquals(
                     "$setting $redraw",
-                    ReturnToToday.Step(settled, counts = settled, ListState.SETTLED),
-                    ReturnToToday.step(setting, redraw, ListState.SETTLED, now, now),
+                    Triple(settled, settled, ListState.SETTLED),
+                    of(ReturnToToday.step(setting, redraw, ListState.SETTLED, now, now)),
                 )
             }
         }

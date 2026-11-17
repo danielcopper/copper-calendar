@@ -80,16 +80,18 @@ internal object ReturnToToday {
                 -> passed(lastScroll, now, Duration.ofMinutes(checkNotNull(setting.minutes)))
             }
 
-    /**
-     * One update of a list ([step]): whether it scrolls to today, whether
-     * that scroll counts as the list's last one ([ListStore.lastScroll]), and
-     * where the list stands after it.
-     */
+    /** One update of a list ([step]): whether it scrolls to today, and where the list stands after it. */
     data class Step(
         val scroll: Boolean,
-        val counts: Boolean,
         val next: ListState,
-    )
+    ) {
+        /**
+         * Whether the scroll counts as the list's last one
+         * ([ListStore.lastScroll]): one that leaves the list settled; the
+         * scroll of the update that builds the list does nothing (D27).
+         */
+        val counts: Boolean get() = scroll && next == ListState.SETTLED
+    }
 
     /**
      * The update of the month's or "Woche"'s list at now for redraw, from
@@ -106,9 +108,9 @@ internal object ReturnToToday {
         now: Instant,
     ): Step =
         when (state) {
-            ListState.TO_BUILD -> Step(due(setting, redraw, lastScroll, now), counts = false, ListState.TO_SCROLL)
-            ListState.TO_SCROLL -> Step(scroll = true, counts = true, ListState.SETTLED)
-            ListState.SETTLED -> due(setting, redraw, lastScroll, now).let { Step(it, counts = it, ListState.SETTLED) }
+            ListState.TO_BUILD -> Step(due(setting, redraw, lastScroll, now), ListState.TO_SCROLL)
+            ListState.TO_SCROLL -> Step(scroll = true, ListState.SETTLED)
+            ListState.SETTLED -> Step(due(setting, redraw, lastScroll, now), ListState.SETTLED)
         }
 
     private fun passed(
