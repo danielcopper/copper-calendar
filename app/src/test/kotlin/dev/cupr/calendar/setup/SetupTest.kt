@@ -174,7 +174,9 @@ class SetupTest {
             WeekDays.entries.flatMap { days ->
                 BackToToday.entries.flatMap { back ->
                     PlusCorner.entries.flatMap { corner ->
-                        listOf(emptySet(), setOf("calendar.a", "special")).map { WidgetSettings(it, days, back, corner) }
+                        listOf(emptySet(), setOf("calendar.a", "special")).map { left ->
+                            WidgetSettings(left, days, back, corner)
+                        }
                     }
                 }
             }
@@ -182,10 +184,9 @@ class SetupTest {
         for (settings in all) {
             assertEquals(settings, SettingsSaver.restore(checkNotNull(save(settings))))
         }
-        assertEquals(
-            listOf("from_today", "every_30", "bottom_left", "special"),
-            save(WidgetSettings(setOf("special"), WeekDays.FROM_TODAY, BackToToday.EVERY_30_MINUTES, PlusCorner.BOTTOM_LEFT)),
-        )
+        val left =
+            WidgetSettings(setOf("special"), WeekDays.FROM_TODAY, BackToToday.EVERY_30_MINUTES, PlusCorner.BOTTOM_LEFT)
+        assertEquals(listOf("from_today", "every_30", "bottom_left", "special"), save(left))
         assertNull(save(null))
         assertNull(SettingsSaver.restore(listOf("FROM_TODAY", "every_30", "bottom_left")))
     }

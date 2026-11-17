@@ -64,6 +64,9 @@ class LastScrollStoreTest {
 
         assertEquals(ListState.BUILT_ANEW, scrolls.state(7))
         val logs = ShadowLog.getLogsForTag("LastScroll").joinToString { it.msg }
-        assertTrue(logs, logs.contains("Widget 7: its list's stored state \"scrolled\" is unknown; it reads as built_anew"))
+        assertTrue(
+            logs,
+            logs.contains("Widget 7: its list's stored state \"scrolled\" is unknown; it reads as built_anew"),
+        )
     }
 }

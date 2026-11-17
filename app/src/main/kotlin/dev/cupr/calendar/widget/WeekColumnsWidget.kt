@@ -91,8 +91,9 @@ object WeekColumnsWidget {
         val title = context.getString(days.title)
         val range = WeekLayout.range(dates.first(), dates.last())
         val views = RemoteViews(context.packageName, R.layout.widget_week_columns)
+        val description = "$title, $range"
         val headerPx =
-            DrawnWidget.fixedParts(context, views, kept, "$title, $range", calendar, look.corner) { chrome, palette, note ->
+            DrawnWidget.fixedParts(context, views, kept, description, calendar, look.corner) { chrome, palette, note ->
                 chrome.weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette, note)
             }
         val full = MonthLayout.week(dates, calendar.entries, today)

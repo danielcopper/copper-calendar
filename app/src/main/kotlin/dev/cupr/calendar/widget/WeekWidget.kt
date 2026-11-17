@@ -82,8 +82,9 @@ object WeekWidget {
         val title = context.getString(days.title)
         val range = WeekLayout.range(dates.first(), dates.last())
         val views = RemoteViews(context.packageName, R.layout.widget_week)
+        val description = "$title, $range"
         val headerPx =
-            DrawnWidget.fixedParts(context, views, kept, "$title, $range", calendar, look.corner) { chrome, palette, note ->
+            DrawnWidget.fixedParts(context, views, kept, description, calendar, look.corner) { chrome, palette, note ->
                 chrome.weekHeader(title, range, null, headerWidthPx, scale, palette, note)
             }
         val full = WeekLayout.build(dates, calendar.entries, today)

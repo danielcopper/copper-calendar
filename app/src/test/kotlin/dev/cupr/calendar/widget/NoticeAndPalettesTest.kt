@@ -49,13 +49,17 @@ class NoticeAndPalettesTest {
         listOf(
             Kind(
                 "Monat",
-                { c, calendar, corner -> MonthWidget.views(c, WidgetHost.WIDTH_DP, calendar = calendar, corner = corner) },
+                { c, calendar, corner ->
+                    MonthWidget.views(c, WidgetHost.WIDTH_DP, calendar = calendar, corner = corner)
+                },
                 R.id.week_light,
                 R.id.week_dark,
             ),
             Kind(
                 "Woche",
-                { c, calendar, corner -> WeekWidget.views(c, WidgetHost.WIDTH_DP, calendar = calendar, corner = corner) },
+                { c, calendar, corner ->
+                    WeekWidget.views(c, WidgetHost.WIDTH_DP, calendar = calendar, corner = corner)
+                },
                 R.id.day_light,
                 R.id.day_dark,
             ),

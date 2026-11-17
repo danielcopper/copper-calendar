@@ -43,7 +43,13 @@ class LastScrollStore(
      * state stored under a name this app does not know reads so too, logged.
      */
     fun state(id: Int): ListState =
-        prefs.choice(key(id, STATE), ListState.entries, ListState.BUILT_ANEW, TAG, "Widget $id: its list's stored state")
+        prefs.choice(
+            key(id, STATE),
+            ListState.entries,
+            ListState.BUILT_ANEW,
+            TAG,
+            "Widget $id: its list's stored state",
+        )
 
     /** Keeps where the widget's list stands after an update, and scrolledAt as its last scroll when given. */
     fun keep(

@@ -142,7 +142,8 @@ class WidgetLookTest {
 
     @Test
     fun `a last scroll after now, the clock set back, makes an interval due`() {
-        for (setting in listOf(BackToToday.EVERY_15_MINUTES, BackToToday.EVERY_30_MINUTES, BackToToday.EVERY_60_MINUTES)) {
+        val intervals = listOf(BackToToday.EVERY_15_MINUTES, BackToToday.EVERY_30_MINUTES, BackToToday.EVERY_60_MINUTES)
+        for (setting in intervals) {
             assertTrue("$setting", ReturnToToday.due(setting, Redraw.UPDATE, now + Duration.ofSeconds(1), now))
             assertTrue("$setting", ReturnToToday.due(setting, Redraw.UPDATE, now + Duration.ofDays(1), now))
         }
@@ -174,7 +175,7 @@ class WidgetLookTest {
     }
 
     @Test
-    fun `after plain views, a list set to never or midnight scrolls once, at the update after the one that builds it`() {
+    fun `after plain views, a list set to never or midnight scrolls once, at the update after the rebuild`() {
         for (setting in listOf(BackToToday.NEVER, BackToToday.MIDNIGHT)) {
             val id = shadow.createWidget(AppWidgetProvider::class.java, R.layout.widget_plain)
             val provider = Recording(WidgetKind.MONTH)
@@ -299,7 +300,8 @@ class WidgetLookTest {
 
         provider.onUpdate(context, manager, intArrayOf(4))
 
-        assertTrue(provider.drawn.single().second.scroll)
+        val (_, look) = provider.drawn.single()
+        assertTrue(look.scroll)
         assertNull(scrolls.read(4))
     }
 
@@ -333,7 +335,8 @@ class WidgetLookTest {
         assertNull(scrolls.read(id))
         provider.onUpdate(context, manager, intArrayOf(id))
 
-        assertTrue(provider.drawn.single().second.scroll)
+        val (_, look) = provider.drawn.single()
+        assertTrue(look.scroll)
     }
 
     @Test
@@ -480,7 +483,8 @@ class WidgetLookTest {
 
     @Test
     fun `outside night mode the left plus shows its light drawing`() {
-        val widget = WidgetHost.applied(context) { c, width -> MonthWidget.views(c, width, corner = PlusCorner.BOTTOM_LEFT) }
+        val widget =
+            WidgetHost.applied(context) { c, width -> MonthWidget.views(c, width, corner = PlusCorner.BOTTOM_LEFT) }
 
         assertEquals(View.VISIBLE, widget.findViewById<View>(R.id.fab_left_light).visibility)
         assertEquals(View.GONE, widget.findViewById<View>(R.id.fab_left_dark).visibility)
@@ -489,7 +493,8 @@ class WidgetLookTest {
     @Test
     @Config(qualifiers = "+night")
     fun `in night mode the left plus shows its dark drawing`() {
-        val widget = WidgetHost.applied(context) { c, width -> MonthWidget.views(c, width, corner = PlusCorner.BOTTOM_LEFT) }
+        val widget =
+            WidgetHost.applied(context) { c, width -> MonthWidget.views(c, width, corner = PlusCorner.BOTTOM_LEFT) }
 
         assertEquals(View.GONE, widget.findViewById<View>(R.id.fab_left_light).visibility)
         assertEquals(View.VISIBLE, widget.findViewById<View>(R.id.fab_left_dark).visibility)

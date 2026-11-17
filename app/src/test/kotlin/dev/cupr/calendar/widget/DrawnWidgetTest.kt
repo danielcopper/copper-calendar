@@ -325,9 +325,9 @@ class DrawnWidgetTest {
     fun `views the system takes are handed over once, without the fallback`() {
         val pushed = mutableListOf<RemoteViews>()
         val views = RemoteViews(application.packageName, R.layout.widget_week)
-        assertTrue(
-            DrawnWidget.push(application, 5, Drawn(views, 1, 2), R.string.widget_week_too_full, "Test") { pushed += it },
-        )
+        val taken =
+            DrawnWidget.push(application, 5, Drawn(views, 1, 2), R.string.widget_week_too_full, "Test") { pushed += it }
+        assertTrue(taken)
         assertEquals(listOf(views), pushed)
     }
 
