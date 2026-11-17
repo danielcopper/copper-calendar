@@ -17,6 +17,7 @@ import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.ha.SensorCalendar
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.store.BackToToday
+import dev.cupr.calendar.store.ListState
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.store.WidgetSettingsStore
@@ -152,15 +153,17 @@ class SetupTest {
         val at = Instant.ofEpochMilli(1_000)
         for (id in listOf(3, 4)) {
             store.write(id, left)
-            scrolls.write(id, at)
+            scrolls.keep(id, ListState.SETTLED, at)
         }
 
         WeekWidgetProvider().onDeleted(context, intArrayOf(3))
 
         assertEquals(WidgetSettings.DEFAULT, store.read(3))
         assertNull(scrolls.read(3))
+        assertEquals(ListState.BUILT_ANEW, scrolls.state(3))
         assertEquals(left, store.read(4))
         assertEquals(at, scrolls.read(4))
+        assertEquals(ListState.SETTLED, scrolls.state(4))
     }
 
     @Test

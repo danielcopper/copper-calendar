@@ -4,6 +4,7 @@ import android.app.Application
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
+import android.content.Intent
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.util.Log
@@ -22,6 +23,7 @@ import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.sample.SampleData
 import dev.cupr.calendar.store.BackToToday
+import dev.cupr.calendar.store.ListState
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.tap.Tap
@@ -147,6 +149,95 @@ class WidgetLookTest {
     }
 
     @Test
+    fun `a list built anew scrolls as set but does not count, the update after scrolls whatever is set`() {
+        for (setting in BackToToday.entries) {
+            for (redraw in Redraw.entries) {
+                val due = ReturnToToday.due(setting, redraw, null, now)
+                assertEquals(
+                    "$setting $redraw",
+                    ReturnToToday.Step(due, counts = false, ListState.FIRST_SCROLL),
+                    ReturnToToday.step(setting, redraw, ListState.BUILT_ANEW, null, now),
+                )
+                assertEquals(
+                    "$setting $redraw",
+                    ReturnToToday.Step(scroll = true, counts = true, ListState.SETTLED),
+                    ReturnToToday.step(setting, redraw, ListState.FIRST_SCROLL, now, now),
+                )
+                val settled = ReturnToToday.due(setting, redraw, now, now)
+                assertEquals(
+                    "$setting $redraw",
+                    ReturnToToday.Step(settled, counts = settled, ListState.SETTLED),
+                    ReturnToToday.step(setting, redraw, ListState.SETTLED, now, now),
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `after plain views, a list set to never or midnight scrolls once, at the update after the one that builds it`() {
+        for (setting in listOf(BackToToday.NEVER, BackToToday.MIDNIGHT)) {
+            val id = shadow.createWidget(AppWidgetProvider::class.java, R.layout.widget_plain)
+            val provider = Recording(WidgetKind.MONTH)
+            settings.write(id, WidgetSettings(backToToday = setting))
+            scrolls.keep(id, ListState.SETTLED, now)
+            DrawnWidgetProvider.content = { Content.NoData(R.string.widget_signed_out) }
+            provider.onUpdate(context, manager, intArrayOf(id))
+            DrawnWidgetProvider.content = { SampleData.calendar() }
+
+            provider.onUpdate(context, manager, intArrayOf(id))
+            assertNull("$setting", scrolls.read(id))
+            provider.onUpdate(context, manager, intArrayOf(id))
+            val scrolled = checkNotNull(scrolls.read(id))
+            provider.onUpdate(context, manager, intArrayOf(id))
+
+            assertEquals("$setting", listOf(false, true, false), provider.drawn.map { it.second.scroll })
+            assertEquals("$setting", scrolled, scrolls.read(id))
+            assertEquals("$setting", ListState.SETTLED, scrolls.state(id))
+        }
+    }
+
+    @Test
+    fun `after an update of the app, the month's and woche's lists set to never scroll once, at their second update`() {
+        val month = shadow.createWidget(MonthWidgetProvider::class.java, R.layout.widget_month)
+        val week = shadow.createWidget(WeekWidgetProvider::class.java, R.layout.widget_week)
+        val columns = shadow.createWidget(WeekColumnsWidgetProvider::class.java, R.layout.widget_week_columns)
+        for (id in listOf(month, week)) {
+            settings.write(id, WidgetSettings(backToToday = BackToToday.NEVER))
+            scrolls.keep(id, ListState.SETTLED, now)
+        }
+        shadow.setAlwaysRecreateViewsDuringUpdate(true)
+        val list = { id: Int -> shadowOf(shadow.getViewFor(id).findViewById<ListView>(R.id.list)) }
+
+        AppUpdatedReceiver().onReceive(context, Intent(Intent.ACTION_MY_PACKAGE_REPLACED))
+        assertEquals(listOf(ListState.BUILT_ANEW, ListState.BUILT_ANEW), listOf(month, week).map { scrolls.state(it) })
+        assertEquals(listOf(null, null), listOf(month, week).map { scrolls.read(it) })
+        Widgets.update(context)
+        assertEquals(listOf(0, 0), listOf(month, week).map { list(it).smoothScrolledPosition })
+        Widgets.update(context)
+        assertEquals(listOf(2, 2), listOf(month, week).map { list(it).smoothScrolledPosition })
+        Widgets.update(context)
+
+        assertEquals(listOf(0, 0), listOf(month, week).map { list(it).smoothScrolledPosition })
+        assertEquals(ListState.BUILT_ANEW, scrolls.state(columns))
+    }
+
+    @Test
+    fun `the app's update receiver takes only the broadcast that the app was updated`() {
+        val month = shadow.createWidget(MonthWidgetProvider::class.java, R.layout.widget_month)
+        scrolls.keep(month, ListState.SETTLED, now)
+
+        AppUpdatedReceiver().onReceive(context, Intent(Intent.ACTION_PACKAGE_REPLACED))
+        assertEquals(ListState.SETTLED, scrolls.state(month))
+
+        val receivers =
+            context.packageManager.queryBroadcastReceivers(
+                Intent(Intent.ACTION_MY_PACKAGE_REPLACED).setPackage(context.packageName),
+                0,
+            )
+        assertEquals(listOf(AppUpdatedReceiver::class.java.name), receivers.map { it.activityInfo.name })
+    }
+
+    @Test
     fun `a widget draws without the calendars it leaves out, with its days and its corner of plus`() {
         val provider = Recording(WidgetKind.WEEK)
         settings.write(
@@ -185,13 +276,14 @@ class WidgetLookTest {
     fun `the time of each scroll to today is kept, and an interval scrolls again once it has passed`() {
         val provider = Recording(WidgetKind.MONTH)
         settings.write(4, WidgetSettings(backToToday = BackToToday.EVERY_30_MINUTES))
+        scrolls.keep(4, ListState.SETTLED, null)
 
         provider.onUpdate(context, manager, intArrayOf(4))
         val first = checkNotNull(scrolls.read(4))
         provider.onUpdate(context, manager, intArrayOf(4))
         assertEquals(first, scrolls.read(4))
         val earlier = Instant.now() - Duration.ofMinutes(31)
-        scrolls.write(4, earlier)
+        scrolls.keep(4, ListState.SETTLED, earlier)
         provider.onUpdate(context, manager, intArrayOf(4))
 
         assertEquals(listOf(true, false, true), provider.drawn.map { it.second.scroll })
@@ -203,7 +295,7 @@ class WidgetLookTest {
     fun `a scroll the launcher did not take, the too-full text shown instead, is not kept, and forgets the last`() {
         val provider = Recording(WidgetKind.MONTH, taken = false)
         settings.write(4, WidgetSettings(backToToday = BackToToday.EVERY_30_MINUTES))
-        scrolls.write(4, now)
+        scrolls.keep(4, ListState.SETTLED, now)
 
         provider.onUpdate(context, manager, intArrayOf(4))
 
@@ -217,12 +309,12 @@ class WidgetLookTest {
         val id = shadow.createWidget(AppWidgetProvider::class.java, R.layout.widget_plain)
         val provider = Recording(WidgetKind.MONTH)
         settings.write(id, WidgetSettings(backToToday = BackToToday.EVERY_30_MINUTES))
-        scrolls.write(id, Instant.now())
+        scrolls.keep(id, ListState.SETTLED, Instant.now())
         DrawnWidgetProvider.content = { Content.NoData(R.string.widget_signed_out) }
 
         provider.onUpdate(context, manager, intArrayOf(id))
         assertNull(scrolls.read(id))
-        scrolls.write(id, Instant.now())
+        scrolls.keep(id, ListState.SETTLED, Instant.now())
         val failing =
             object : DrawnWidgetProvider() {
                 override val kind = WidgetKind.MONTH
@@ -270,6 +362,7 @@ class WidgetLookTest {
     fun `set never, the month's list keeps its position on an update but keeps its padding`() {
         val id = shadow.createWidget(MonthWidgetProvider::class.java, R.layout.widget_month)
         settings.write(id, WidgetSettings(backToToday = BackToToday.NEVER))
+        scrolls.keep(id, ListState.SETTLED, null)
         shadow.setAlwaysRecreateViewsDuringUpdate(true)
         ShadowLog.clear()
 
@@ -285,6 +378,7 @@ class WidgetLookTest {
     fun `set never, a widget of a reported height keeps its position too, padded for today on top`() {
         val id = shadow.createWidget(WeekWidgetProvider::class.java, R.layout.widget_week)
         settings.write(id, WidgetSettings(backToToday = BackToToday.NEVER))
+        scrolls.keep(id, ListState.SETTLED, null)
         shadow.setAlwaysRecreateViewsDuringUpdate(true)
         val options =
             Bundle().apply {
@@ -313,6 +407,7 @@ class WidgetLookTest {
     fun `set only at midnight, the month's list scrolls at midnight, not on an update`() {
         val id = shadow.createWidget(MonthWidgetProvider::class.java, R.layout.widget_month)
         settings.write(id, WidgetSettings(backToToday = BackToToday.MIDNIGHT))
+        scrolls.keep(id, ListState.SETTLED, null)
         shadow.setAlwaysRecreateViewsDuringUpdate(true)
 
         Widgets.update(context)

@@ -13,7 +13,7 @@ object Settings {
     /** Each widget's settings from its setup (D57). */
     fun widgets(context: Context) = WidgetSettingsStore(widgetPrefs(context))
 
-    /** When each widget's list last scrolled to today, beside its settings (D59). */
+    /** Where each widget's list stands and when it last scrolled to today, beside its settings (D59). */
     fun lastScrolls(context: Context) = LastScrollStore(widgetPrefs(context))
 
     /** The settings set once for the app, which signing out keeps (D60). */

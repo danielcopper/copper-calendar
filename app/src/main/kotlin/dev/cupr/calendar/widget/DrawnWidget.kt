@@ -23,6 +23,7 @@ import dev.cupr.calendar.render.HeaderNote
 import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
+import dev.cupr.calendar.store.LastScrollStore
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
@@ -318,9 +319,10 @@ internal object DrawnWidget {
  * Each widget draws by its settings from its setup: without the calendars
  * it leaves out (D11), with its days and its corner of "+" ([Look]); the
  * month's and "Woche"'s lists scroll to today when their "Zurück zu heute"
- * says the redraw should ([ReturnToToday]), and the time of that scroll is
- * kept for the intervals. The launcher's updates, every 30 minutes and for
- * a new or resized widget, count as [Redraw.UPDATE].
+ * says the redraw should, or when they were just built anew
+ * ([ReturnToToday.step]), and where each list stands is kept
+ * ([LastScrollStore]). The launcher's updates, every 30 minutes and for a
+ * new or resized widget, count as [Redraw.UPDATE].
  */
 abstract class DrawnWidgetProvider : AppWidgetProvider() {
     /** Which of the app's widgets it provides. */
@@ -414,9 +416,10 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
     }
 
     /**
-     * Draws calendar on the widget id by its settings, and keeps the time
-     * when its list scrolled to today, once the launcher took the drawing;
-     * when it shows the plain too-full text instead, the list is gone
+     * Draws calendar on the widget id by its settings. For the month and
+     * "Woche", once the launcher took the drawing, it keeps where their list
+     * stands and when it scrolled to today ([ReturnToToday.step]); when the
+     * launcher shows the plain too-full text instead, the list is gone
      * ([shownPlain]).
      */
     private fun draw(
@@ -427,13 +430,18 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         redraw: Redraw,
     ) {
         val settings = Settings.widgets(context).read(id)
+        val shown = calendar.without(settings.leftOut)
+        if (!kind.backToToday) {
+            update(context, manager, id, shown, Look.of(settings, scroll = false))
+            return
+        }
         val scrolls = Settings.lastScrolls(context)
         val now = Instant.now()
-        val scroll = kind.backToToday && ReturnToToday.due(settings.backToToday, redraw, scrolls.read(id), now)
-        val pushed = update(context, manager, id, calendar.without(settings.leftOut), Look.of(settings, scroll))
-        when {
-            !pushed -> shownPlain(context, id)
-            scroll -> scrolls.write(id, now)
+        val step = ReturnToToday.step(settings.backToToday, redraw, scrolls.state(id), scrolls.read(id), now)
+        if (update(context, manager, id, shown, Look.of(settings, step.scroll))) {
+            scrolls.keep(id, step.next, now.takeIf { step.counts })
+        } else {
+            shownPlain(context, id)
         }
     }
 
@@ -449,8 +457,9 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
     }
 
     /**
-     * Forgets the last scroll of the widget id, which shows plain views
-     * instead of its list, so its list scrolls to today again (D59).
+     * Forgets the list of the widget id, which shows plain views instead, so
+     * the list is built anew at its next update and scrolls to today at the
+     * one after ([ReturnToToday.step]).
      */
     private fun shownPlain(
         context: Context,

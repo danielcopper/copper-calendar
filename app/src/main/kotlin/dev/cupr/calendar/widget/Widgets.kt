@@ -9,6 +9,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
+import dev.cupr.calendar.app.Settings
 import java.time.Clock
 import java.time.Duration
 import java.time.LocalDate
@@ -70,6 +71,19 @@ object Widgets {
         if (id !in provider.ids(context, manager)) return false
         withContent(context) { provider.updateAll(context, manager, intArrayOf(id), it, Redraw.SAVED) }
         return true
+    }
+
+    /**
+     * Forgets the lists of the month's and "Woche"'s widgets after an update
+     * of the app ([AppUpdatedReceiver]): the system shows each widget's first
+     * layout again and asks for an update, which builds the list anew, so the
+     * update after it scrolls to today (D59).
+     */
+    fun appUpdated(context: Context) {
+        val manager = AppWidgetManager.getInstance(context)
+        val ids = providers.filter { it.kind.backToToday }.flatMap { it.ids(context, manager).asList() }
+        Settings.lastScrolls(context).forget(ids.toIntArray())
+        Log.i(TAG, "The app was updated: the lists of widgets $ids are built anew")
     }
 
     /**

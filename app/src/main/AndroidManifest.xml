@@ -68,6 +68,16 @@
                 android:resource="@xml/widget_week_columns_info" />
         </receiver>
 
+        <!-- The app updated, the widgets' lists are built anew (D59); only the
+             system sends this broadcast, to this app alone. -->
+        <receiver
+            android:name=".widget.AppUpdatedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <!-- WorkManager starts on demand (CopperApp, D46), not with every process. -->
         <provider
             android:name="androidx.startup.InitializationProvider"

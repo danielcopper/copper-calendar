@@ -1,6 +1,8 @@
 package dev.cupr.calendar.widget
 
 import dev.cupr.calendar.store.BackToToday
+import dev.cupr.calendar.store.LastScrollStore
+import dev.cupr.calendar.store.ListState
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.week.WeekDays
@@ -78,6 +80,37 @@ internal object ReturnToToday {
                 BackToToday.EVERY_60_MINUTES,
                 -> passed(lastScroll, now, Duration.ofMinutes(checkNotNull(setting.minutes)))
             }
+
+    /**
+     * One update of a list ([step]): whether it scrolls to today, whether
+     * that scroll counts as the list's last one ([LastScrollStore.read]), and
+     * where the list stands after it.
+     */
+    data class Step(
+        val scroll: Boolean,
+        val counts: Boolean,
+        val next: ListState,
+    )
+
+    /**
+     * The update of the month's or "Woche"'s list at now for redraw, from
+     * where the list stands (D59): the update that builds the list anew
+     * scrolls as [due] says, but its scroll does nothing (D27) and does not
+     * count; the update after it scrolls to today whatever the setting, and
+     * counts; from then on [due] decides, and a scroll counts.
+     */
+    fun step(
+        setting: BackToToday,
+        redraw: Redraw,
+        state: ListState,
+        lastScroll: Instant?,
+        now: Instant,
+    ): Step =
+        when (state) {
+            ListState.BUILT_ANEW -> Step(due(setting, redraw, lastScroll, now), counts = false, ListState.FIRST_SCROLL)
+            ListState.FIRST_SCROLL -> Step(scroll = true, counts = true, ListState.SETTLED)
+            ListState.SETTLED -> due(setting, redraw, lastScroll, now).let { Step(it, counts = it, ListState.SETTLED) }
+        }
 
     private fun passed(
         lastScroll: Instant?,
