@@ -72,7 +72,7 @@ class HaClient(
 
     private fun sensorOf(response: Response): Result<Sensor> {
         val state = if (response.isSuccessful) parseObject(response.body.string()) else null
-        val attributes = state?.get("attributes") as? JsonObject
+        val attributes = state?.objectField("attributes")
         val entries = attributes?.get("entries") as? JsonArray
         return when {
             !response.isSuccessful -> {

@@ -79,6 +79,8 @@ class HaClientTest {
         assertEquals(failed("HTTP 200 for $sensor, but no JSON object", FailureKind.UNEXPECTED), client.sensor(access))
         home.states = { FakeHomeAssistant.json("""{"entity_id":"$sensor","attributes":{}}""") }
         assertEquals(failed("$sensor has no list of entries", FailureKind.NOT_FOUND), client.sensor(access))
+        home.states = { FakeHomeAssistant.json("""{"entity_id":"$sensor","attributes":[{"entries":[]}]}""") }
+        assertEquals(failed("$sensor has no list of entries", FailureKind.NOT_FOUND), client.sensor(access))
     }
 
     @Test
