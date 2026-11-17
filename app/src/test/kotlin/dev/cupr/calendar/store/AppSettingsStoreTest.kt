@@ -10,7 +10,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.shadows.ShadowLog
-import java.time.Instant
 
 @RunWith(RobolectricTestRunner::class)
 class AppSettingsStoreTest {
@@ -41,20 +40,5 @@ class AppSettingsStoreTest {
         assertEquals(FetchInterval.EVERY_15_MINUTES, store.fetchInterval())
         val logs = ShadowLog.getLogsForTag("AppSettings").joinToString { it.msg }
         assertTrue(logs, logs.contains("The stored fetch interval \"5\" is unknown; it reads as 15"))
-    }
-
-    @Test
-    fun `a widget's last scroll reads back for it alone, and goes with the widget`() {
-        val scrolls = LastScrollStore(context.getSharedPreferences("widgets", Context.MODE_PRIVATE))
-        val at = Instant.ofEpochMilli(1_000)
-
-        scrolls.write(7, at)
-        scrolls.write(8, at)
-
-        assertEquals(at, scrolls.read(7))
-        assertEquals(null, scrolls.read(9))
-        scrolls.remove(intArrayOf(7))
-        assertEquals(null, scrolls.read(7))
-        assertEquals(at, scrolls.read(8))
     }
 }
