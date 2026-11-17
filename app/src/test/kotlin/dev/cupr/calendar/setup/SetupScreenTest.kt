@@ -6,7 +6,6 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.appwidget.AppWidgetProviderInfo
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import androidx.annotation.StringRes
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -74,6 +73,7 @@ class SetupScreenTest {
 
     private val context = ApplicationProvider.getApplicationContext<Application>()
     private lateinit var io: CoroutineDispatcher
+    private val opened = mutableListOf<ActivityController<SetupActivity>>()
 
     @Before
     fun setUp() {
@@ -84,6 +84,7 @@ class SetupScreenTest {
 
     @After
     fun tearDown() {
+        for (controller in opened) controller.pause().stop().destroy()
         Services.io = io
     }
 
@@ -133,21 +134,75 @@ class SetupScreenTest {
     }
 
     @Test
-    fun `going back without saving stores and redraws nothing`() {
+    fun `the setup shows the widget's stored settings, and saving after ticking all again keeps its choices`() {
         writeSnapshot()
+        val stored =
+            WidgetSettings(setOf(HOLIDAYS, GONE), WeekDays.FROM_TODAY, BackToToday.NEVER, PlusCorner.BOTTOM_LEFT)
+        Settings.widgets(context).write(ID, stored)
+        val activity = open(WeekWidgetProvider::class.java).get()
+
+        node("Ferien").assertIsOff()
+        node("Arbeit").assertIsOn()
+        // Left out, but no calendar of the sensor: listed by its id, so it can be ticked again.
+        node(GONE).assertIsOff()
+        node(R.string.setup_days_from_today).assertIsSelected()
+        node(R.string.setup_back_never).assertIsSelected()
+        node(R.string.setup_plus_bottom_left).assertIsSelected()
+        tap("Ferien")
+        tap(GONE)
+        tap(R.string.setup_save)
+
+        assertEquals(stored.copy(leftOut = emptySet()), Settings.widgets(context).read(ID))
+        assertEquals(Activity.RESULT_OK, shadowOf(activity).resultCode)
+    }
+
+    @Test
+    fun `the settings shown outlive a configuration change, and saving after it stores them`() {
+        writeSnapshot()
+        val controller = open(WeekWidgetProvider::class.java)
+        tap(R.string.setup_days_from_today)
+        tap("Ferien")
+
+        controller.recreate()
+        compose.waitForIdle()
+
+        node(R.string.setup_days_from_today).assertIsSelected()
+        node("Ferien").assertIsOff()
+        tap(R.string.setup_save)
+        assertEquals(
+            WidgetSettings(setOf(HOLIDAYS), WeekDays.FROM_TODAY),
+            Settings.widgets(context).read(ID),
+        )
+    }
+
+    @Test
+    fun `saving with nothing stored and no calendar known stores the defaults and ends with RESULT_OK`() {
+        val activity = open(WeekWidgetProvider::class.java).get()
+
+        tap(R.string.setup_save)
+
+        assertEquals(Activity.RESULT_OK, shadowOf(activity).resultCode)
+        assertEquals(WidgetSettings.DEFAULT, Settings.widgets(context).read(ID))
+    }
+
+    @Test
+    fun `going back without saving keeps the stored settings and redraws nothing`() {
+        writeSnapshot()
+        val stored =
+            WidgetSettings(setOf(WORK), WeekDays.MONDAY_TO_SUNDAY, BackToToday.MIDNIGHT, PlusCorner.BOTTOM_LEFT)
+        Settings.widgets(context).write(ID, stored)
         val activity = open(WeekWidgetProvider::class.java).get()
         ShadowLog.clear()
         tap("Ferien")
         tap(R.string.setup_days_from_today)
-        tap(R.string.setup_plus_bottom_left)
+        tap(R.string.setup_plus_bottom_right)
 
         activity.onBackPressedDispatcher.onBackPressed()
         compose.waitForIdle()
 
         assertTrue(activity.isFinishing)
         assertEquals(Activity.RESULT_CANCELED, shadowOf(activity).resultCode)
-        val prefs = context.getSharedPreferences("widgets", Context.MODE_PRIVATE)
-        assertEquals(emptyList<String>(), prefs.all.keys.filter { it.startsWith("$ID.") })
+        assertEquals(stored, Settings.widgets(context).read(ID))
         assertEquals(emptyList<String>(), ShadowLog.getLogsForTag(WeekWidget.TAG).map { it.msg })
     }
 
@@ -245,7 +300,10 @@ class SetupScreenTest {
         info.provider = ComponentName(context, provider)
         shadowOf(AppWidgetManager.getInstance(context)).addBoundWidget(ID, info)
         val intent = Intent(context, SetupActivity::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, ID)
-        return Robolectric.buildActivity(SetupActivity::class.java, intent).setup().also { compose.waitForIdle() }
+        val controller = Robolectric.buildActivity(SetupActivity::class.java, intent).setup()
+        opened += controller
+        compose.waitForIdle()
+        return controller
     }
 
     private companion object {
@@ -253,5 +311,8 @@ class SetupScreenTest {
         const val WORK = "calendar.work"
         const val HOLIDAYS = "calendar.holidays"
         const val SCHOOL = "calendar.school"
+
+        /** A calendar left out that the sensor no longer lists. */
+        const val GONE = "calendar.gone"
     }
 }

@@ -32,6 +32,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.android.controller.ActivityController
 import java.util.concurrent.TimeUnit
 import javax.crypto.KeyGenerator
 
@@ -45,6 +46,7 @@ class SignInScreenTest {
     private val key = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
     private lateinit var keystoreCipher: () -> TokenCipher
     private lateinit var io: CoroutineDispatcher
+    private val opened = mutableListOf<ActivityController<SignInActivity>>()
 
     @Before
     fun setUp() {
@@ -65,6 +67,7 @@ class SignInScreenTest {
 
     @After
     fun tearDown() {
+        for (controller in opened) controller.pause().stop().destroy()
         Services.cipher = keystoreCipher
         Services.io = io
         WorkManagerTestInitHelper.closeWorkDatabase()
@@ -117,7 +120,7 @@ class SignInScreenTest {
             ?.repeatIntervalMillis
 
     private fun open() {
-        Robolectric.buildActivity(SignInActivity::class.java).setup()
+        opened += Robolectric.buildActivity(SignInActivity::class.java).setup()
         compose.waitForIdle()
     }
 
