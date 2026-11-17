@@ -49,7 +49,7 @@ Per widget: which calendars it shows (D11), the tap targets above, the corner of
 A widget's own screen, opened from the launcher's long-press menu; placing a widget opens nothing (D56). In the phone's own colours, light or dark with the system, as the sign-in screen. Without stored settings a widget has the defaults (D57).
 
 - Title "Widget „Monat“", "Widget „Woche“" or "Widget „Woche quer“".
-- "Kalender": a box per calendar, ticked unless the widget leaves it out; by name in the dashboard's order once the sensor lists its calendars, until then by id (D57); with none known, "Keine Kalender bekannt".
+- "Kalender": a box per calendar, ticked unless the widget leaves it out; by name in the dashboard's order as the sensor lists its calendars, by id while it does not (D57); with none known, "Keine Kalender bekannt".
 - "Tage" ("Woche", "Woche quer"): "Montag bis Sonntag" or "Heute und die sechs Tage danach" (D20).
 - "Zurück zu heute" ("Monat", "Woche"): "Bei jeder Aktualisierung", "Nur um Mitternacht", "Nie", "Alle 15 Minuten", "Alle 30 Minuten", "Alle 60 Minuten" (D27, D59).
 - "Ecke für „+“": "Unten rechts" or "Unten links" (D58).

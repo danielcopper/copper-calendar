@@ -15,8 +15,8 @@ data class SensorCalendar(
 
 /**
  * The sensor's attribute `calendars`, the calendars it reads in the
- * dashboard's order, `[{id, name}]` (D57); a widget's setup lists them by
- * name. Read leniently until its form is final: an item without a string
+ * dashboard's order, `[{id, name, color}]` (D57); a widget's setup lists them
+ * by name, and `color` is not read. Read leniently: an item without a string
  * id, or with an id already listed, is left out, a problem for the caller to
  * log; a name that is no string or blank is none, without a problem, and the
  * setup shows the id; an attribute that is no list is none at all, a

@@ -25,6 +25,21 @@ class SensorCalendarsTest {
     }
 
     @Test
+    fun `an item's colour, as the sensor sends it, is not read`() {
+        val read =
+            read(
+                """[{"id":"calendar.family","name":"Familie","color":"#8855a8"},""" +
+                    """{"id":"special","name":"besondere Tage","color":"var(--zuhause-calendar-special)"}]""",
+            )
+
+        assertEquals(
+            listOf(SensorCalendar("calendar.family", "Familie"), SensorCalendar("special", "besondere Tage")),
+            read.calendars,
+        )
+        assertEquals(emptyList<String>(), read.problems)
+    }
+
+    @Test
     fun `without the attribute there are none, and no problem`() {
         val read = read(null)
 
