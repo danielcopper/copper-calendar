@@ -55,8 +55,8 @@ class HaClient(
         val calendars: JsonElement?,
     )
 
-    /** The sensor's attribute `entries`, the list as Home Assistant sends it, with its calendars. */
-    fun entries(accessToken: AccessToken): Result<Sensor> {
+    /** The sensor's attributes the app reads ([Sensor]), as Home Assistant sends them. */
+    fun sensor(accessToken: AccessToken): Result<Sensor> {
         val request =
             Request
                 .Builder()
@@ -64,13 +64,13 @@ class HaClient(
                 .header("Authorization", "Bearer ${accessToken.value}")
                 .build()
         return try {
-            http.newCall(request).execute().use { response -> entriesOf(response) }
+            http.newCall(request).execute().use { response -> sensorOf(response) }
         } catch (e: IOException) {
             Result.Failed(e.javaClass.simpleName, FailureKind.of(e))
         }
     }
 
-    private fun entriesOf(response: Response): Result<Sensor> {
+    private fun sensorOf(response: Response): Result<Sensor> {
         val state = if (response.isSuccessful) parseObject(response.body.string()) else null
         val attributes = state?.get("attributes") as? JsonObject
         val entries = attributes?.get("entries") as? JsonArray

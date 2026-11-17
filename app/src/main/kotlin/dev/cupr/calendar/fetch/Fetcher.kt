@@ -244,15 +244,15 @@ class Fetcher(
         client: HaClient,
         accessToken: AccessToken,
     ): Outcome =
-        when (val entries = client.entries(accessToken)) {
+        when (val sensor = client.sensor(accessToken)) {
             is HaClient.Result.Failed -> {
-                Outcome.Failed(entries.reason, causeOf(entries.kind, online))
+                Outcome.Failed(sensor.reason, causeOf(sensor.kind, online))
             }
 
             is HaClient.Result.Ok -> {
                 when (val userAndTheme = client.userAndTheme(accessToken)) {
                     is HaClient.Result.Failed -> Outcome.Failed(userAndTheme.reason, causeOf(userAndTheme.kind, online))
-                    is HaClient.Result.Ok -> store(entries.value, userAndTheme.value)
+                    is HaClient.Result.Ok -> store(sensor.value, userAndTheme.value)
                 }
             }
         }
