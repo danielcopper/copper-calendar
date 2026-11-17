@@ -216,13 +216,15 @@ class FetchWorkTest {
     }
 
     @Test
-    fun `a new interval while signed in enqueues the periodic fetch anew at it`() {
+    fun `a new interval while signed in enqueues the periodic fetch anew at it, with a network`() {
         signIn()
         FetchWork.start(context)
 
         FetchWork.setInterval(context, FetchInterval.EVERY_30_MINUTES)
 
         assertEquals(30L, periodicMinutes)
+        val periodic = manager.getWorkInfosForUniqueWork(FetchWork.PERIODIC).get().single { !it.state.isFinished }
+        assertEquals(NetworkType.CONNECTED, periodic.constraints.requiredNetworkType)
         assertEquals(FetchInterval.EVERY_30_MINUTES, Settings.app(context).fetchInterval())
     }
 
