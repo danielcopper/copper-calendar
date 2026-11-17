@@ -6,7 +6,6 @@ import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.FakeHomeAssistant
 import dev.cupr.calendar.ha.RefreshToken
-import dev.cupr.calendar.ha.SensorCalendar
 import dev.cupr.calendar.ha.SignInRequest
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.AesGcmCipher
@@ -113,18 +112,18 @@ class FetcherTest {
     }
 
     @Test
-    fun `the sensor's calendars go into the snapshot, its problems into the log, and none without them`() {
+    fun `the sensor's calendars go into the snapshot as sent, their problems into the log, and none without them`() {
         signIn()
+        val calendars = """[{"id":"calendar.a","name":"A"},{"name":"no id"}]"""
         home.states = {
             FakeHomeAssistant.json(
-                """{"entity_id":"sensor.family_calendar","attributes":{"entries":[$good],""" +
-                    """"calendars":[{"id":"calendar.a","name":"A"},{"name":"no id"}]}}""",
+                """{"entity_id":"sensor.family_calendar","attributes":{"entries":[$good],"calendars":$calendars}}""",
             )
         }
 
         fetcher.fetch()
 
-        assertEquals(listOf(SensorCalendar("calendar.a", "A")), snapshots.read()!!.calendars)
+        assertEquals(Json.parseToJsonElement(calendars), snapshots.read()!!.calendars)
         assertTrue(logs, logs.contains("The sensor's calendar 1 has no string id; left out"))
         entries(good)
         fetcher.fetch()

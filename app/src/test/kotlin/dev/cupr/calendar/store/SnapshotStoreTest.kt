@@ -135,6 +135,20 @@ class SnapshotStoreTest {
     }
 
     @Test
+    fun `the sensor's calendars are kept as sent, so no form of them makes the snapshot unreadable`() {
+        for (calendars in listOf("""[{"id":"calendar.a","name":"A"}]""", """[{"id":3}]""", """"calendar.a"""", "{}")) {
+            file.writeText(
+                """{"fetchedAtMillis":1,"user":"Anna","entries":[$entry],"calendars":$calendars}""",
+            )
+
+            val read = store.read()
+
+            assertEquals(calendars, Json.parseToJsonElement(calendars), read?.calendars)
+            assertEquals(calendars, listOf(entry), read?.entryJson)
+        }
+    }
+
+    @Test
     fun `clearing deletes the snapshot`() {
         store.write(snapshot)
 

@@ -39,8 +39,9 @@ import java.time.Clock
  * the last failure kept for the sign-in screen, and the next fetch tries
  * again. That the theme could not be read, and from which fetch the colours
  * drawn are, is kept for the sign-in screen (D48). Entries that cannot be
- * read are left out and logged, one line each; the rest are used; so are
- * the sensor's calendars ([SensorCalendars]).
+ * read are left out and logged, one line each; the rest are used. The
+ * sensor's calendars are kept as Home Assistant sent them, and the problems
+ * of reading them logged ([SensorCalendars]).
  *
  * The log names what failed, never a token, the code or the address.
  */
@@ -264,12 +265,11 @@ class Fetcher(
         val entries = sensor.entries
         val parsed = EntryParser.parse(entries, clock.zone)
         parsed.problems.forEach { Log.w(TAG, it) }
-        val calendars = SensorCalendars.read(sensor.calendars)
-        calendars.problems.forEach { Log.w(TAG, it) }
+        SensorCalendars.read(sensor.calendars).problems.forEach { Log.w(TAG, it) }
         val theme = themeToKeep(userAndTheme.theme, { snapshots.read() }, { themes.read() })
         val json = parsed.read.map { it.json }
         return try {
-            snapshots.write(Snapshot(clock.millis(), userAndTheme.user, json, theme.json, calendars.calendars))
+            snapshots.write(Snapshot(clock.millis(), userAndTheme.user, json, theme.json, sensor.calendars))
             if (theme.unreadable == null) themes.clear() else themes.write(theme.unreadable)
             Outcome.Fetched(parsed.read.size, entries.size - parsed.read.size)
         } catch (e: IOException) {

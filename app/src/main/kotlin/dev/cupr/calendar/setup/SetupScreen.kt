@@ -39,6 +39,7 @@ import dev.cupr.calendar.app.ROW_HEIGHT
 import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.ha.SensorCalendar
+import dev.cupr.calendar.ha.SensorCalendars
 import dev.cupr.calendar.store.BackToToday
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.WidgetSettings
@@ -76,7 +77,8 @@ fun SetupScreen(
         val shown = settings ?: stored
         settings = shown
         val entries = snapshot?.parse(ZoneId.systemDefault())?.entries.orEmpty()
-        calendars = setupCalendars(snapshot?.calendars, entries, stored.leftOut + shown.leftOut)
+        val sensor = SensorCalendars.read(snapshot?.calendars).calendars
+        calendars = setupCalendars(sensor, entries, stored.leftOut + shown.leftOut)
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {

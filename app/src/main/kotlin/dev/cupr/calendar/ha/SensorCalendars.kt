@@ -1,12 +1,10 @@
 package dev.cupr.calendar.ha
 
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
 /** A calendar of the sensor: its id, as entries name it, and its name in Home Assistant, when it has one. */
-@Serializable
 data class SensorCalendar(
     val id: String,
     val name: String? = null,
