@@ -1,18 +1,16 @@
 package dev.cupr.calendar.store
 
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.core.content.edit
 import java.time.Instant
 
 /**
  * Why a fetch failed, as the sign-in screen names it in plain words (D46;
- * which failure is which: `ha.FailureKind` and `fetch.Fetcher`). [stored]
- * is the name kept in the preferences, fixed apart from the enum's names.
+ * which failure is which: `ha.FailureKind` and `fetch.Fetcher`).
  */
 enum class FetchCause(
-    val stored: String,
-) {
+    override val stored: String,
+) : StoredChoice {
     UNREACHABLE("unreachable"),
     NO_NETWORK("no_network"),
     TIMEOUT("timeout"),
@@ -35,11 +33,8 @@ class FailedFetchStore(
     /** The last failed fetch; a cause stored under a name this app does not know reads as unexpected, logged. */
     fun read(): FailedFetch? {
         val at = prefs.getLong(AT, -1)
-        val name = prefs.getString(CAUSE, null)
-        if (at < 0 || name == null) return null
-        val cause =
-            FetchCause.entries.firstOrNull { it.stored == name }
-                ?: FetchCause.UNEXPECTED.also { Log.w(TAG, "A failed fetch's cause \"$name\" is unknown") }
+        if (at < 0 || !prefs.contains(CAUSE)) return null
+        val cause = prefs.choice(CAUSE, FetchCause.entries, FetchCause.UNEXPECTED, TAG, "A failed fetch's cause")
         return FailedFetch(Instant.ofEpochMilli(at), cause)
     }
 
