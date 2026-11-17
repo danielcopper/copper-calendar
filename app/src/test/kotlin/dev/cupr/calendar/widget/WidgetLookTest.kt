@@ -37,6 +37,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowLog
 import java.time.Duration
@@ -321,6 +322,23 @@ class WidgetLookTest {
         val atRight = WidgetHost.boundsIn(right, right.findViewById<View>(R.id.fab))
         assertEquals(margin, right.width - atRight.right)
         assertEquals(View.GONE, right.findViewById<View>(R.id.plus_left).visibility)
+    }
+
+    @Test
+    fun `outside night mode the left plus shows its light drawing`() {
+        val widget = WidgetHost.applied(context) { c, width -> MonthWidget.views(c, width, corner = PlusCorner.BOTTOM_LEFT) }
+
+        assertEquals(View.VISIBLE, widget.findViewById<View>(R.id.fab_left_light).visibility)
+        assertEquals(View.GONE, widget.findViewById<View>(R.id.fab_left_dark).visibility)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun `in night mode the left plus shows its dark drawing`() {
+        val widget = WidgetHost.applied(context) { c, width -> MonthWidget.views(c, width, corner = PlusCorner.BOTTOM_LEFT) }
+
+        assertEquals(View.GONE, widget.findViewById<View>(R.id.fab_left_light).visibility)
+        assertEquals(View.VISIBLE, widget.findViewById<View>(R.id.fab_left_dark).visibility)
     }
 
     /** What a tap on view sends to the tap activity. */
