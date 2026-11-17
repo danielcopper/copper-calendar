@@ -8,8 +8,10 @@ import android.appwidget.AppWidgetProviderInfo
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.util.Xml
 import androidx.compose.runtime.saveable.SaverScope
 import androidx.test.core.app.ApplicationProvider
+import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.ha.SensorCalendar
@@ -24,6 +26,7 @@ import dev.cupr.calendar.widget.SampleContent
 import dev.cupr.calendar.widget.WeekColumnsWidgetProvider
 import dev.cupr.calendar.widget.WeekWidget
 import dev.cupr.calendar.widget.WeekWidgetProvider
+import dev.cupr.calendar.widget.WidgetHost
 import dev.cupr.calendar.widget.WidgetKind
 import dev.cupr.calendar.widget.Widgets
 import org.junit.Assert.assertEquals
@@ -38,6 +41,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowLog
+import org.xmlpull.v1.XmlPullParser
 import java.time.Instant
 import java.time.LocalDateTime
 
@@ -219,6 +223,50 @@ class SetupTest {
         assertEquals(id, shadowOf(saved).resultIntent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1))
         assertTrue(gone.isFinishing)
         assertEquals(Activity.RESULT_CANCELED, shadowOf(gone).resultCode)
+    }
+
+    @Test
+    fun `each widget names the setup as its configuration, which it may skip and open again`() {
+        for (info in listOf(R.xml.widget_month_info, R.xml.widget_week_info, R.xml.widget_week_columns_info)) {
+            val name = context.resources.getResourceEntryName(info)
+
+            assertEquals(name, SetupActivity::class.java.name, providerString(info, android.R.attr.configure))
+            assertEquals(
+                name,
+                AppWidgetProviderInfo.WIDGET_FEATURE_RECONFIGURABLE or
+                    AppWidgetProviderInfo.WIDGET_FEATURE_CONFIGURATION_OPTIONAL,
+                WidgetHost.providerAttribute(context, info, android.R.attr.widgetFeatures),
+            )
+        }
+    }
+
+    @Test
+    fun `the launcher's configure intent opens the setup, which it may start`() {
+        val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).setPackage(context.packageName)
+
+        val found = context.packageManager.queryIntentActivities(intent, 0).map { it.activityInfo }
+
+        assertEquals(listOf(SetupActivity::class.java.name), found.map { it.name })
+        assertTrue(found.single().exported)
+    }
+
+    /** A string attribute of a widget's provider info (res/xml). */
+    private fun providerString(
+        xml: Int,
+        attribute: Int,
+    ): String? {
+        val parser = context.resources.getXml(xml)
+        try {
+            while (parser.next() != XmlPullParser.START_TAG) continue
+            val array = context.obtainStyledAttributes(Xml.asAttributeSet(parser), intArrayOf(attribute))
+            try {
+                return array.getString(0)
+            } finally {
+                array.recycle()
+            }
+        } finally {
+            parser.close()
+        }
     }
 
     /** Places a widget of provider under id, as the launcher binds it. */
