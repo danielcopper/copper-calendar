@@ -22,6 +22,7 @@ import dev.cupr.calendar.widget.MonthWidgetProvider
 import dev.cupr.calendar.widget.WeekColumnsWidgetProvider
 import dev.cupr.calendar.widget.WeekWidgetProvider
 import dev.cupr.calendar.widget.WidgetKind
+import dev.cupr.calendar.widget.Widgets
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -62,6 +63,14 @@ class SetupTest {
         assertEquals(listOf(WidgetKind.MONTH, WidgetKind.WEEK, WidgetKind.WEEK_COLUMNS), kinds)
         assertEquals(listOf(false, true, true), kinds.map { it?.days })
         assertEquals(listOf(true, true, false), kinds.map { it?.backToToday })
+    }
+
+    @Test
+    fun `each provider's widgets are of the provider's kind`() {
+        for (provider in Widgets.providers) {
+            assertEquals(provider.kind, WidgetKind.of(context, ComponentName(context, provider.javaClass)))
+        }
+        assertEquals(WidgetKind.entries, Widgets.providers.map { it.kind })
     }
 
     @Test

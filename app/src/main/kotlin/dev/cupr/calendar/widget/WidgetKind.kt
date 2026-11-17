@@ -22,20 +22,10 @@ enum class WidgetKind(
     ;
 
     companion object {
-        /** The kind of a widget of provider; none for a provider that is not one of this app's. */
+        /** The kind of a widget of provider; none for a provider that is not one of this app's ([Widgets.provider]). */
         fun of(
             context: Context,
             provider: ComponentName,
-        ): WidgetKind? =
-            if (provider.packageName != context.packageName) {
-                null
-            } else {
-                when (provider.className) {
-                    MonthWidgetProvider::class.java.name -> MONTH
-                    WeekWidgetProvider::class.java.name -> WEEK
-                    WeekColumnsWidgetProvider::class.java.name -> WEEK_COLUMNS
-                    else -> null
-                }
-            }
+        ): WidgetKind? = Widgets.provider(context, provider)?.kind
     }
 }

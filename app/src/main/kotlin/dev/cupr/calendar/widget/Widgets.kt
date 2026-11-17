@@ -1,6 +1,7 @@
 package dev.cupr.calendar.widget
 
 import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.util.Log
 import androidx.work.ExistingWorkPolicy
@@ -24,8 +25,15 @@ import java.util.concurrent.TimeUnit
 object Widgets {
     private const val TAG = "Widgets"
 
-    private val providers: List<DrawnWidgetProvider>
+    /** The app's widget providers, one of each [WidgetKind]. */
+    internal val providers: List<DrawnWidgetProvider>
         get() = listOf(MonthWidgetProvider(), WeekWidgetProvider(), WeekColumnsWidgetProvider())
+
+    /** The app's provider named component; none for another app's or another class. */
+    internal fun provider(
+        context: Context,
+        component: ComponentName,
+    ): DrawnWidgetProvider? = providers.firstOrNull { ComponentName(context, it.javaClass) == component }
 
     /** Redraws every widget and schedules the next midnight anew. */
     fun update(context: Context) {
@@ -54,11 +62,12 @@ object Widgets {
     fun saved(
         context: Context,
         id: Int,
+        kind: WidgetKind,
     ) {
         val manager = AppWidgetManager.getInstance(context)
-        val provider = providers.firstOrNull { id in it.ids(context, manager) }
-        if (provider == null) {
-            Log.w(TAG, "Widget $id: saved, but none of the app's widgets, so nothing is redrawn")
+        val provider = providers.single { it.kind == kind }
+        if (id !in provider.ids(context, manager)) {
+            Log.w(TAG, "Widget $id: saved, but none of the app's widgets of its kind, so nothing is redrawn")
             return
         }
         withContent(context) { provider.updateAll(context, manager, intArrayOf(id), it, Redraw.SAVED) }

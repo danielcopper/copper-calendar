@@ -120,7 +120,7 @@ fun SetupScreen(
                     scope.launch {
                         withContext(Services.io) {
                             Settings.widgets(app).write(id, current)
-                            Widgets.saved(app, id)
+                            Widgets.saved(app, id, kind)
                         }
                         onSaved()
                     }
