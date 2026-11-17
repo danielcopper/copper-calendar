@@ -24,8 +24,7 @@ import java.time.ZoneId
  * name; when it was fetched; and the sensor's attribute `calendars` as
  * Home Assistant sent it, none while the sensor has none: the setup reads
  * it where it lists them (`ha.SensorCalendars`), so a form the app cannot
- * read, while the attribute's form is not final (D57), leaves the snapshot
- * readable. Replaced whole by each successful fetch, deleted by each new
+ * read (D57) leaves the snapshot readable. Replaced whole by each successful fetch, deleted by each new
  * sign-in and by signing out.
  */
 @Serializable

@@ -25,7 +25,7 @@ class SensorCalendarsTest {
     }
 
     @Test
-    fun `an item's colour, as the sensor sends it, is not read`() {
+    fun `an item's colour, as the sensor sends it, keeps the item and is no problem`() {
         val read =
             read(
                 """[{"id":"calendar.family","name":"Familie","color":"#8855a8"},""" +
