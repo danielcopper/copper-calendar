@@ -15,7 +15,7 @@ sealed interface DashboardColor {
     ) : DashboardColor
 
     /** A calendar's theme variable, one of [CalendarVariables.all]. */
-    data class ThemeVariable(
+    data class CalendarVariable(
         val name: String,
     ) : DashboardColor {
         init {

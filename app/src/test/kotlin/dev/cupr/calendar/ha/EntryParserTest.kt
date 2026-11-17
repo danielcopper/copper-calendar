@@ -162,12 +162,38 @@ class EntryParserTest {
 
     @Test
     fun `the dashboard's colour is read as each calendar's theme variable or the secondary text colour`() {
-        val tokens = CalendarVariables.all + "secondary-text-color"
+        // The names homelab's zuhause.jinja sends (macro calendar_color), written out.
+        val calendars = listOf("family", "birthdays", "school", "public", "special").map { "zuhause-calendar-$it" }
 
-        val parsed = parse(tokens.joinToString(",", "[", "]") { resolved("\"var(--$it)\"") })
+        val parsed =
+            parse((calendars + "secondary-text-color").joinToString(",", "[", "]") { resolved("\"var(--$it)\"") })
 
         assertEquals(
-            CalendarVariables.all.map { DashboardColor.ThemeVariable(it) } + DashboardColor.SecondaryText,
+            calendars.map { DashboardColor.CalendarVariable(it) } + DashboardColor.SecondaryText,
+            parsed.entries.map { it.dashboardColor },
+        )
+        assertEquals(emptyList<String>(), parsed.problems)
+    }
+
+    @Test
+    fun `the dashboard's colour is read in any case and with spaces, as a fixed colour is`() {
+        val sent =
+            listOf(
+                "\" VAR(--Zuhause-Calendar-Family) \"",
+                "\"var( --secondary-text-color )\"",
+                "\" #8855A8 \"",
+                "\"SteelBlue\"",
+            )
+
+        val parsed = parse(sent.joinToString(",", "[", "]") { resolved(it) })
+
+        assertEquals(
+            listOf(
+                DashboardColor.CalendarVariable(CalendarVariables.FAMILY),
+                DashboardColor.SecondaryText,
+                DashboardColor.Fixed(0xFF8855A8.toInt()),
+                DashboardColor.Fixed(0xFF4682B4.toInt()),
+            ),
             parsed.entries.map { it.dashboardColor },
         )
         assertEquals(emptyList<String>(), parsed.problems)
@@ -181,8 +207,10 @@ class EntryParserTest {
                 "\"var(--zuhause-calendar-other)\"",
                 "\"var(--primary-color)\"",
                 "\"var(--zuhause-calendar-family\"",
+                "\"var(--zuhause-calendar-family, red)\"",
                 "\"\"",
                 "12",
+                "{}",
             )
 
         val parsed = parse(unreadable.joinToString(",", "[", "]") { resolved(it) })
@@ -224,13 +252,18 @@ class EntryParserTest {
             parse(
                 "[$birthday,$timed,${birthday.replace("\"year\":2000", "\"year\":2030")}," +
                     "${resolved("\"var(--zuhause-calendar-family)\"")},${resolved("\"#8855a8\"")}," +
-                    "${resolved("\"var(--other)\"")}]",
+                    "${resolved("\"var(--other)\"")}," +
+                    resolved("\"var(--other)\"").replace("}", ",\"year\":2030}") + "]",
             )
 
         val again = EntryParser.parse(JsonArray(first.read.map { it.json }), berlin)
 
         assertEquals(JsonPrimitive("var(--zuhause-calendar-family)"), first.read[3].json["resolved_color"])
-        assertEquals(DashboardColor.ThemeVariable(CalendarVariables.FAMILY), again.entries[3].dashboardColor)
+        // Both dropped from the one entry: its birth year and the dashboard's colour.
+        assertFalse(first.read[6].json.containsKey("year"))
+        assertFalse(first.read[6].json.containsKey("resolved_color"))
+        assertEquals(2, first.problems.count { it.startsWith("Entry 6 ") })
+        assertEquals(DashboardColor.CalendarVariable(CalendarVariables.FAMILY), again.entries[3].dashboardColor)
         assertEquals(first.entries, again.entries)
         assertEquals(emptyList<String>(), again.problems)
     }

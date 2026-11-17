@@ -7,7 +7,7 @@ import android.graphics.Color
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.R
 import dev.cupr.calendar.model.CalendarVariables.FAMILY
-import dev.cupr.calendar.model.DashboardColor.ThemeVariable
+import dev.cupr.calendar.model.DashboardColor.CalendarVariable
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.model.Kinds
 import dev.cupr.calendar.model.Palette
@@ -162,7 +162,7 @@ class DayRowRenderTest {
     @Test
     fun `a timed entry's bar takes the dashboard's colour in the mode, not its own`() {
         val thursday = LocalDate.of(2026, 11, 12)
-        val family = Probe.timed(thursday, icon = null).copy(dashboardColor = ThemeVariable(FAMILY))
+        val family = Probe.timed(thursday, icon = null).copy(dashboardColor = CalendarVariable(FAMILY))
         val barX = scale.px(PhoneMonth.CARD_SIDE + DayRowRenderer.STACKED_COLUMN + TileWeek.COLUMN_GAP + 1f)
         val y = scale.hairline + scale.px(TileWeek.ROW_PAD + DayRowRenderer.TIME_LINE / 2)
 

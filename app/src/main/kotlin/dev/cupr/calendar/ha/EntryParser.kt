@@ -10,7 +10,6 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import java.time.DateTimeException
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -21,8 +20,8 @@ import java.time.ZoneId
  * One entry of `sensor.family_calendar`'s attribute `entries` as Home
  * Assistant delivers it (macro `calendar_entries` in homelab's
  * `zuhause.jinja`). Fields the app does not read, such as `recurrence_id`,
- * are ignored; `resolved_color` is read apart from these, since a value the
- * app cannot read leaves the entry in (EntryParser).
+ * are ignored. `resolved_color` stays JSON here, read by EntryParser, since
+ * a value the app cannot read leaves the entry in.
  */
 @Serializable
 private data class WireEntry(
@@ -38,6 +37,7 @@ private data class WireEntry(
     val year: Int? = null,
     val drawing: String? = null,
     val uid: String? = null,
+    @SerialName("resolved_color") val resolvedColor: JsonElement? = null,
 )
 
 /**
@@ -72,7 +72,8 @@ class ParsedEntries(
  * An entry's `resolved_color`, the colour the dashboard shows it in (D49),
  * is `#rrggbb`, `#rgb` or a CSS colour name, a fixed colour; or
  * `var(--zuhause-calendar-…)` naming one of [CalendarVariables.all], that
- * theme variable; or `var(--secondary-text-color)`. Any other value is
+ * calendar variable; or `var(--secondary-text-color)`; each in any case and
+ * with spaces around. Any other value but null, which counts as none, is
  * dropped and named, and the entry kept with its own colour and its
  * calendar's; unlike an unknown `color`, which leaves the entry out.
  *
@@ -85,6 +86,9 @@ object EntryParser {
 
     private const val RESOLVED_COLOR = "resolved_color"
     private const val SECONDARY_TEXT = "secondary-text-color"
+
+    /** `var(--name)` as CSS writes it, the name without its dashes; no fallback value. */
+    private val VARIABLE = Regex("""var\(\s*--([a-z0-9-]+)\s*\)""")
 
     fun parse(
         array: JsonArray,
@@ -126,7 +130,8 @@ object EntryParser {
             year = null
             kept = JsonObject(kept - "year")
         }
-        val sent = element[RESOLVED_COLOR]?.takeUnless { it is JsonNull }
+        // A JSON null counts as none, whether it decodes as null or as JsonNull.
+        val sent = wire.resolvedColor?.takeUnless { it is JsonNull }
         val dashboardColor = sent?.let(::dashboardColor)
         if (sent != null && dashboardColor == null) {
             problems += "$name: resolved_color $sent is no colour the app reads, so its own or its calendar's applies"
@@ -151,14 +156,18 @@ object EntryParser {
         return ReadEntry(entry, kept)
     }
 
-    /** A string of one of the forms of `resolved_color`, else none. */
+    /**
+     * A string of one of the forms of `resolved_color`, else none; read as
+     * tolerantly as a fixed colour ([CssColors]): spaces around it and in
+     * `var( … )` and any case.
+     */
     private fun dashboardColor(sent: JsonElement): DashboardColor? {
-        val text = (sent as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return null
-        val variable = text.removeSurrounding("var(--", ")").takeIf { it != text }
+        val text = sent.stringContent()?.trim()?.lowercase() ?: return null
+        val variable = VARIABLE.matchEntire(text)?.groupValues?.get(1)
         return when (variable) {
             null -> CssColors.parse(text)?.let { DashboardColor.Fixed(it) }
             SECONDARY_TEXT -> DashboardColor.SecondaryText
-            in CalendarVariables.all -> DashboardColor.ThemeVariable(variable)
+            in CalendarVariables.all -> DashboardColor.CalendarVariable(variable)
             else -> null
         }
     }

@@ -128,7 +128,7 @@ class FetcherTest {
             snapshot.entryJson.map { it["resolved_color"] },
         )
         assertEquals(
-            listOf(DashboardColor.ThemeVariable(CalendarVariables.FAMILY), DashboardColor.Fixed(0xFF8855A8.toInt())),
+            listOf(DashboardColor.CalendarVariable(CalendarVariables.FAMILY), DashboardColor.Fixed(0xFF8855A8.toInt())),
             snapshot.parse(ZoneId.of("Europe/Berlin")).entries.map { it.dashboardColor },
         )
     }

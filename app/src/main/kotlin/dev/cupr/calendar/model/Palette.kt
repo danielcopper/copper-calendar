@@ -54,7 +54,7 @@ data class Palette(
     private fun colorOf(color: DashboardColor): Int =
         when (color) {
             is DashboardColor.Fixed -> color.argb
-            is DashboardColor.ThemeVariable -> calendars.getValue(color.name)
+            is DashboardColor.CalendarVariable -> calendars.getValue(color.name)
             DashboardColor.SecondaryText -> secondaryText
         }
 }

@@ -28,11 +28,11 @@ class PaletteTest {
 
     @Test
     fun `the dashboard's theme variable takes the mode's colour, whatever the calendar`() {
-        val family = entry.copy(calendar = "calendar.a", dashboardColor = DashboardColor.ThemeVariable(FAMILY))
+        val family = entry.copy(calendar = "calendar.a", dashboardColor = DashboardColor.CalendarVariable(FAMILY))
 
         assertEquals(0xFF359F65.toInt(), SampleData.light.colorOf(family))
         assertEquals(0xFF3CB371.toInt(), SampleData.dark.colorOf(family))
-        val school = entry.copy(color = 0xFF123456.toInt(), dashboardColor = DashboardColor.ThemeVariable(SCHOOL))
+        val school = entry.copy(color = 0xFF123456.toInt(), dashboardColor = DashboardColor.CalendarVariable(SCHOOL))
         assertEquals(0xFF2D9D92.toInt(), SampleData.light.colorOf(school))
         assertEquals(0xFF40E0D0.toInt(), SampleData.dark.colorOf(school))
     }
@@ -47,7 +47,7 @@ class PaletteTest {
 
     @Test
     fun `a theme variable the palettes have no colour for is no dashboard colour`() {
-        assertThrows(IllegalArgumentException::class.java) { DashboardColor.ThemeVariable("zuhause-calendar-other") }
+        assertThrows(IllegalArgumentException::class.java) { DashboardColor.CalendarVariable("zuhause-calendar-other") }
     }
 
     @Test

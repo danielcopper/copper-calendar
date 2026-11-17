@@ -27,7 +27,8 @@ object SampleData {
 
     // Calendars. The family calendar's id is a neutral one of the form the
     // app colours by (CalendarVariables); the fixed ones are Home Assistant's
-    // (the dashboard's calendar_colors).
+    // (homelab's table _calendars in zuhause.jinja, which CalendarVariables
+    // ports).
     const val FAMILY = "calendar.family_sample"
     const val BIRTHDAYS = "calendar.contact_birthdays"
     const val SCHOOL_HOLIDAYS = "calendar.schulferien_hessen"
