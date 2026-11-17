@@ -45,6 +45,8 @@ import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowLog
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.CountDownLatch
+import kotlin.concurrent.thread
 import kotlin.math.roundToInt
 
 /** Each widget drawn by its settings: its calendars, days and corner of "+", and when its list returns to today. */
@@ -221,6 +223,32 @@ class WidgetLookTest {
 
         assertEquals(listOf(0, 0), listOf(month, week).map { list(it).smoothScrolledPosition })
         assertEquals(ListState.TO_BUILD, lists.state(columns))
+    }
+
+    @Test
+    fun `forgetting the lists after an update of the app waits for a redraw running meanwhile`() {
+        val month = shadow.createWidget(MonthWidgetProvider::class.java, R.layout.widget_month)
+        val drawing = CountDownLatch(1)
+        val drawn = CountDownLatch(1)
+        val redraw =
+            thread {
+                Widgets.withContent(context) {
+                    drawing.countDown()
+                    drawn.await()
+                    lists.keep(month, ListState.SETTLED, now)
+                }
+            }
+        drawing.await()
+
+        val updated = thread { Widgets.appUpdated(context) }
+        updated.join(WAIT_MS)
+        val waited = updated.isAlive
+        drawn.countDown()
+        redraw.join()
+        updated.join()
+
+        assertTrue("the lists were forgotten while the redraw held the lock", waited)
+        assertEquals(ListState.TO_BUILD, lists.state(month))
     }
 
     @Test
@@ -536,5 +564,10 @@ class WidgetLookTest {
             Scale(context.resources.displayMetrics.density).px(PhoneMonth.FAB_MARGIN).roundToInt(),
             widget.width - fab.right,
         )
+    }
+
+    private companion object {
+        /** How long a thread that should wait for the lock is given to get past it. */
+        const val WAIT_MS = 200L
     }
 }

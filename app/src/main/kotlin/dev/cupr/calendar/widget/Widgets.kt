@@ -79,12 +79,18 @@ object Widgets {
      * Forgets the lists of the month's and "Woche"'s widgets after an update
      * of the app ([AppUpdatedReceiver]): the system shows each widget's first
      * layout again and asks for an update, which builds the list anew, so the
-     * update after it scrolls to today (D59).
+     * update after it scrolls to today (D59). It takes the redraws' lock
+     * ([withContent]), so a redraw running meanwhile cannot keep its list's
+     * state over the forgetting.
      */
     fun appUpdated(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
-        val ids = providers.filter { it.kind.backToToday }.flatMap { it.ids(context, manager).asList() }
-        Settings.lists(context).forget(ids.toIntArray())
+        val ids =
+            synchronized(lock) {
+                providers.filter { it.kind.backToToday }.flatMap { it.ids(context, manager).asList() }.also {
+                    Settings.lists(context).forget(it.toIntArray())
+                }
+            }
         Log.i(TAG, "The app was updated: the lists of widgets $ids are built anew")
     }
 
