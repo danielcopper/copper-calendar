@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit
  * through each provider alone and leave WorkManager alone, so it does not
  * start with every process they start (D46). Besides: the redraw of one
  * widget whose settings were just saved ([saved]), and forgetting the
- * widgets' lists after the system built them anew ([listsRebuilt]).
+ * widgets' lists after the system dropped them ([listsRebuilt]).
  */
 object Widgets {
     private const val TAG = "Widgets"

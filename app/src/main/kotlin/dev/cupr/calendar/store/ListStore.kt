@@ -6,7 +6,7 @@ import java.time.Instant
 
 /**
  * What the next update of the month's or "Woche"'s list does, by where the
- * list stands since the app last learned it was built anew (D59).
+ * list stands since the app last learned it was dropped (D59).
  */
 enum class ListState(
     override val stored: String,
@@ -24,8 +24,7 @@ enum class ListState(
 /**
  * Each widget's list by the widget's id: when the app last scrolled it to
  * today, which "Zurück zu heute" every 15, 30 or 60 minutes counts from, and
- * where it stands since it was built ([ListState]) (D59); forgotten when the
- * list is built anew and when the widget is removed.
+ * where it stands since it was built ([ListState]) (D59).
  */
 class ListStore(
     private val prefs: SharedPreferences,
@@ -57,8 +56,8 @@ class ListStore(
     }
 
     /**
-     * Forgets the lists of the widgets ids, when they are removed or built
-     * anew (D59); until a state is kept again, a list reads to build
+     * Forgets the lists of the widgets' ids, when they are removed or their
+     * lists dropped (D59); until a state is kept again, a list reads to build
      * ([ListState.TO_BUILD]).
      */
     fun forget(ids: IntArray) =
