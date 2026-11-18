@@ -13,7 +13,7 @@ import java.time.YearMonth
 
 /**
  * The month's display rules, each rule's test naming the dashboard's rule it
- * pins (the dashboard's file is named in PhoneMonth), the checks on days,
+ * pins (the dashboard's files and commits are named in PhoneMonth), the checks on days,
  * weeks and bars, and the sample month.
  */
 class MonthLayoutTest {
