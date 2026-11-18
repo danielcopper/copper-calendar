@@ -128,11 +128,11 @@ Nextcloud's `webhook_listeners` app offers calendar object events ([admin manual
 
 **Sign-in with the HA login.** HA's OAuth accepts a native app's own scheme as redirect (for example `app:/callback`) only when the `client_id` page, an https URL, advertises it (`indieauth.py:65-68`, `:163-176` at Core `2026.10.4`, S). `homeassistant://auth-callback` is reserved for the official apps (`:54-59`, S). A redirect on the same scheme and host as the `client_id` is accepted without any fetch (`:41-47`, S), and a `client_id` may be a loopback or other local address (`_parse_client_id`, `:384-418`, S). So a native app can use `http://127.0.0.1:<port>/` as `client_id` and a redirect on the same address (the loopback pattern of RFC 8252) without any public page; not tried in a browser.
 
-**Local preview.** Robolectric 4.17 (2026-09-10) and Paparazzi (2.0 only as alpha, 2026-09-28) render Android drawing on the JVM to images, which would allow looking at widget renders on the Deck without a phone; not tried.
+**Local preview.** Robolectric 4.17 (2026-09-10) and Paparazzi (2.0 only as alpha, 2026-09-28) render Android drawing on the JVM to images, which would allow looking at widget renders on the dev machine without a phone; not tried.
 
 **Icons.** MDI 7.4.47 is Apache-2.0 ([license](https://pictogrammers.com/docs/general/license/)). Only the icons in `calendar_icons` are needed, so a small vector set or a subset is enough. HA's own button widget draws MDI to bitmaps (S). AndroidSVG 1.4 renders static SVG and has no SMIL or CSS animation (D), so drawings are still images in a widget. RemoteViews has no general animation API (D).
 
-**Toolchain on this machine.** Android SDK in `$HOME` needs no root (D, inference); AGP 9.5 needs JDK 17 and Gradle 9.6 (D). `/dev/kvm` exists and is world-writable here, measured today; whether the emulator runs on SteamOS is ?. GitHub Actions Ubuntu 24.04 images carry the SDK up to API 37 (D). Wireless `adb pair` works on Android 11+ (D).
+**Toolchain.** Android SDK in `$HOME` needs no root (D, inference); AGP 9.5 needs JDK 17 and Gradle 9.6 (D). GitHub Actions Ubuntu 24.04 images carry the SDK up to API 37 (D). Wireless `adb pair` works on Android 11+ (D).
 
 **Distribution.**
 
