@@ -25,7 +25,7 @@ package dev.cupr.calendar.render
  *   `_calendars` and the macro `calendar_color` beside it, which decides
  *   each entry's `resolved_color` (D49);
  *
- * and at 7610716:
+ * and at 76107163:
  * - `infra/homeassistant/config/dashboards/templates.yaml`: the tile's rows
  *   (`calendar_lines`, which WeekLayout ports) and their styles ([TileWeek]'s
  *   row measures).
