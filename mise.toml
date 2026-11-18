@@ -37,8 +37,12 @@ if [ ! -x "$tools/bin/android" ]; then
   mv "$download/cmdline-tools" "$tools"
   rm -rf "$download"
 fi
-"$tools/bin/android" --no-metrics --sdk="$sdk" sdk install \
-  platform-tools platforms/android-37.0 build-tools/36.0.0
+packages="platform-tools platforms/android-37.0 build-tools/36.0.0"
+"$tools/bin/android" --no-metrics --sdk="$sdk" sdk install $packages
+# `sdk install` exits 0 for a package it does not find.
+for package in $packages; do
+  test -d "$sdk/$package" || { echo "setup: $package not installed" >&2; exit 1; }
+done
 if [ -f local.properties ]; then
   echo "local.properties kept: $(grep '^sdk.dir=' local.properties || echo 'no sdk.dir')"
 else
