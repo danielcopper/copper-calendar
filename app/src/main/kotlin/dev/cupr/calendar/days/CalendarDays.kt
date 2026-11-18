@@ -33,8 +33,9 @@ val DAY_AND_MONTH: DateTimeFormatter = DateTimeFormatter.ofPattern("d. MMM", Loc
 /**
  * The dashboard's rule `calendar_days` as the month and the week share it
  * (the dashboard's file is named in [dev.cupr.calendar.render.PhoneMonth]):
- * which entries a run of days shows and the day each stands on; and the
- * month's order there, the week having its own rows (D61).
+ * which entries a run of days shows and the day each stands on; the
+ * month's order there; and the title and start orders the week's own rows
+ * sort with (D61).
  */
 internal object CalendarDays {
     private val collator: Collator = Collator.getInstance(Locale.GERMAN)

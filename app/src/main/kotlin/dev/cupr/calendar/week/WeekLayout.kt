@@ -104,7 +104,7 @@ data class DayEntry internal constructor(
             require(time != null) { "A timed row has its time: ${entry.title}" }
         } else {
             require(time == null || (time is RowTime.Until && time.end is End.Later && time.end.time == null)) {
-                "An all-day row's only time is the day its entry ends on, after the last day shown: ${entry.title}"
+                "An all-day row's only time is a later last day, without a time of day: ${entry.title}"
             }
             require(!over) { "An all-day entry is never over: ${entry.title}" }
         }

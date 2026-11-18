@@ -70,6 +70,18 @@ class WeekWidgetTest {
         return list.getChildAt(index - list.firstVisiblePosition)
     }
 
+    /** The day rows a widget of the default width draws, with the app's assets and texts. */
+    private fun rowsAtDefaultWidth(): DayRowRenderer {
+        val assets = RenderAssets.of(application)
+        return DayRowRenderer.forWidth(
+            assets.fonts,
+            assets.icons,
+            assets.drawings,
+            WeekTexts.of(application.resources),
+            WidgetHost.WIDTH_DP,
+        )
+    }
+
     /** What a tap on view sends to the tap activity. */
     private fun tapOf(view: View): Tap? {
         assertTrue("no click listener on ${view.contentDescription}", view.hasOnClickListeners())
@@ -188,15 +200,7 @@ class WeekWidgetTest {
         val scale = Scale(application.resources.displayMetrics.density)
         assertEquals(3.5f, scale.px(1f), 0.001f)
         val entries = row(5).findViewById<ViewGroup>(R.id.entries)
-        val assets = RenderAssets.of(application)
-        val rows =
-            DayRowRenderer.forWidth(
-                assets.fonts,
-                assets.icons,
-                assets.drawings,
-                WeekTexts.of(application.resources),
-                WidgetHost.WIDTH_DP,
-            )
+        val rows = rowsAtDefaultWidth()
         val day = WeekLayout.build(WeekDays.MONDAY_TO_SUNDAY.dates(wednesday), SampleData.entries, SampleData.now)[5]
         val rowPx = scale.px(WidgetHost.WIDTH_DP - 2 * PhoneMonth.CARD_BORDER).roundToInt()
         val areas = rows.entryAreas(day, rowPx, scale)
@@ -223,15 +227,7 @@ class WeekWidgetTest {
         val list = WidgetHost.laidOut(application, views = views).findViewById<ListView>(R.id.list)
         val image = list.getChildAt(2 - list.firstVisiblePosition).findViewById<ImageView>(R.id.day_light)
         val drawn = (image.drawable as BitmapDrawable).bitmap
-        val assets = RenderAssets.of(application)
-        val rows =
-            DayRowRenderer.forWidth(
-                assets.fonts,
-                assets.icons,
-                assets.drawings,
-                WeekTexts.of(application.resources),
-                WidgetHost.WIDTH_DP,
-            )
+        val rows = rowsAtDefaultWidth()
         val scale = Scale(application.resources.displayMetrics.density)
         val dates = WeekDays.MONDAY_TO_SUNDAY.dates(wednesday)
         val at = { now: LocalDateTime ->
