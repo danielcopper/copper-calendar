@@ -32,15 +32,70 @@ data class MonthView internal constructor(
 data class Week internal constructor(
     /** Its seven days in order: Monday to Sunday in the month, from any day on in "Woche quer". */
     val days: List<Day>,
-    /** The entries over several days that cross this week, as bars. */
+    /** The entries over several days that cross this week, as bars, each in its lane. */
     val bars: List<Bar>,
 ) {
     init {
         require(days.size == DAYS_IN_WEEK) { "A week has $DAYS_IN_WEEK days, not ${days.size}" }
     }
 
-    /** How many lanes the bars take; the cells' own entries start below them. */
-    val lanes: Int get() = bars.maxOfOrNull { it.lane + 1 } ?: 0
+    /** The days' entries shown, each in its lane (D62). */
+    val lines: List<Line> = placed()
+
+    /** How many lanes the week has: as many as its fullest day needs. */
+    val lanes: Int get() = (bars.map { it.lane } + lines.map { it.lane }).maxOfOrNull { it + 1 } ?: 0
+
+    /**
+     * The lines the day in column takes: its lanes down to its last entry
+     * shown, and "+N" when it counts any (D40).
+     */
+    fun linesIn(column: Int): Int {
+        val lanes = lines.filter { it.column == column }.maxOfOrNull { it.lane + 1 } ?: 0
+        return lanes + if (days[column].more > 0) 1 else 0
+    }
+
+    private fun placed(): List<Line> {
+        val lanes = Lanes()
+        for (bar in bars) lanes.take(bar.lane, bar.from, bar.to)
+        return days.flatMapIndexed { column, day -> day.shown.map { Line(it, column, lanes.place(column, column)) } }
+    }
+}
+
+/** An entry of one day shown in its week's lanes (D62). */
+@ConsistentCopyVisibility
+data class Line internal constructor(
+    val entry: Entry,
+    /** Its day's column in the week (0 = the week's first day). */
+    val column: Int,
+    val lane: Int,
+)
+
+/** A week's lanes as they fill, by the columns each has taken. */
+private class Lanes {
+    private val taken = mutableListOf<BooleanArray>()
+
+    /** Takes the top lane free on all the columns from to, and gives it. */
+    fun place(
+        from: Int,
+        to: Int,
+    ): Int {
+        val lane = taken.indexOfFirst { columns -> (from..to).none { columns[it] } }.takeIf { it >= 0 } ?: taken.size
+        take(lane, from, to)
+        return lane
+    }
+
+    /** Takes lane on the columns from to, which none has taken yet. */
+    fun take(
+        lane: Int,
+        from: Int,
+        to: Int,
+    ) {
+        while (taken.size <= lane) taken.add(BooleanArray(DAYS_IN_WEEK))
+        for (column in from..to) {
+            require(!taken[lane][column]) { "Two bars take lane $lane on column $column" }
+            taken[lane][column] = true
+        }
+    }
 }
 
 @ConsistentCopyVisibility
@@ -60,9 +115,10 @@ data class Day internal constructor(
      */
     val marks: List<Entry>,
     /**
-     * Its own entries shown in the cell, in order; in "Woche quer" every one,
-     * the marks with no room beside the number among them, unless a full
-     * week leaves out its last ones for the bitmap limit (D40).
+     * Its own entries shown in the week's lanes, in order ([Week.lines]); in
+     * "Woche quer" every one, the marks with no room beside the number among
+     * them, unless a full week leaves out its last ones for the bitmap limit
+     * (D40).
      */
     val shown: List<Entry>,
     /**
@@ -78,9 +134,6 @@ data class Day internal constructor(
     }
 
     val weekend: Boolean get() = date.isWeekend
-
-    /** The lines its cell draws below the number and bars: its entries shown, and "+N" when it counts any. */
-    val lines: Int get() = shown.size + if (more > 0) 1 else 0
 
     /** The day leaving out its last entry shown, counted in "+N"; it has one left to show. */
     internal fun leaveOutLast(): Day {
@@ -237,30 +290,27 @@ object MonthLayout {
         )
     }
 
-    /**
-     * The bars crossing the week from [start], by first day and then the
-     * longer first (bars of the same span keep their days' order), each in
-     * the first lane free since its first column.
-     */
+    /** The bars' order (D62). */
+    private val barOrder: Comparator<Span> =
+        compareBy<Span> { it.row.entry.start }
+            .thenByDescending { it.row.entry.end }
+            .thenBy(CalendarDays.byTitle) { it.row.entry }
+
+    /** The bars crossing the week from [start], each in its lane (D62). */
     private fun lanes(
         spans: List<Span>,
         dates: List<LocalDate>,
         start: Int,
     ): List<Bar> {
         val end = start + DAYS_IN_WEEK - 1
-        val ends = mutableListOf<Int>()
+        val lanes = Lanes()
         return spans
             .filter { it.from <= end && it.to >= start }
-            .sortedWith(compareBy<Span> { it.from }.thenByDescending { it.to - it.from })
+            .sortedWith(barOrder)
             .map { span ->
                 val from = maxOf(span.from, start) - start
                 val to = minOf(span.to, end) - start
-                var lane = ends.indexOfFirst { it < from }
-                if (lane < 0) {
-                    ends.add(0)
-                    lane = ends.lastIndex
-                }
-                ends[lane] = to
+                val lane = lanes.place(from, to)
                 val opens = span.row.first == dates[span.from] && span.from >= start
                 val closes = span.row.last == dates[span.to] && span.to <= end
                 Bar(span.row.entry, from, to, lane, opens, closes)

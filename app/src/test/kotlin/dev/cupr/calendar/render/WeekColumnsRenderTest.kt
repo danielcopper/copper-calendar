@@ -62,9 +62,9 @@ class WeekColumnsRenderTest {
                 write(header, row, palette, File(output, name))
             }
         }
-        // Saturday's eight entries: 3 + 22 + 2 + 8 × 16.5 + 4 dp.
+        // Saturday's eight entries in eight lanes: 3 + 22 + 2 + 8 × 15 + 4 dp.
         val monday = MonthLayout.week(WeekDays.MONDAY_TO_SUNDAY.dates(today), SampleData.entries, today)
-        assertEquals(163f, rows.heightDp(monday), 0.01f)
+        assertEquals(151f, rows.heightDp(monday), 0.01f)
     }
 
     /**

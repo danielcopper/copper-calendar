@@ -14,7 +14,7 @@ import dev.cupr.calendar.render.PhoneMonth.CELL_SIDE
 import dev.cupr.calendar.render.PhoneMonth.CELL_TOP
 import dev.cupr.calendar.render.PhoneMonth.GAP
 import dev.cupr.calendar.render.PhoneMonth.LANE
-import dev.cupr.calendar.render.PhoneMonth.LINE
+import dev.cupr.calendar.render.PhoneMonth.LANE_LINE
 import dev.cupr.calendar.render.PhoneMonth.MARK
 import dev.cupr.calendar.render.PhoneMonth.NUMBER_ROW
 import dev.cupr.calendar.render.PhoneMonth.TIMED_SIDE
@@ -124,21 +124,14 @@ internal object Probe {
     /** The left edge of a column. */
     fun columnX(index: Int): Float = index * column
 
-    /** The top of a cell's first entry line below lanes of bars. */
-    fun lineTop(
-        lanes: Int,
-        line: Int = 0,
-    ): Float = scale.hairline + scale.px(CELL_TOP + NUMBER_ROW + GAP + lanes * LANE + GAP + line * (LINE + GAP))
+    /** The top of the "+N" line below a week's lanes. */
+    fun moreTop(lanes: Int): Float = scale.hairline + scale.px(CELL_TOP + NUMBER_ROW + GAP + lanes * LANE + GAP)
 
-    /** The vertical middle of an entry line. */
-    fun lineMiddle(
-        lanes: Int,
-        line: Int = 0,
-    ): Float = lineTop(lanes, line) + scale.px(LINE) / 2
+    /** The top of a lane, and of a bar's or an entry's line in it. */
+    fun laneTop(lane: Int): Float = scale.hairline + scale.px(CELL_TOP + NUMBER_ROW + lane * LANE)
 
-    /** The vertical middle of a lane of bars. */
-    fun laneMiddle(lane: Int): Float =
-        scale.hairline + scale.px(CELL_TOP + NUMBER_ROW + lane * LANE + PhoneMonth.BAR_HEIGHT / 2)
+    /** The vertical middle of a bar's or an entry's line in a lane. */
+    fun laneMiddle(lane: Int): Float = laneTop(lane) + scale.px(LANE_LINE) / 2
 
     /** x of a point of a timed entry's mark, in units of MDI's 24-unit box. */
     fun markX(

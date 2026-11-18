@@ -28,7 +28,8 @@ package dev.cupr.calendar.render
  * and at 76107163:
  * - `infra/homeassistant/config/dashboards/templates.yaml`: the tile's rows
  *   (`calendar_lines`, which WeekLayout ports) and their styles ([TileWeek]'s
- *   row measures).
+ *   row measures); the month's lanes (`calendar_month_view`, which
+ *   MonthLayout ports) and their styles at phone size ([LANE], [LANE_LINE]).
  */
 internal object PhoneMonth {
     /** The card around the widget: its border, its padding at the left and right, and at the top and bottom. */
@@ -78,8 +79,12 @@ internal object PhoneMonth {
     /** The height of the row with the day's number. */
     const val NUMBER_ROW = 22f
 
-    /** The height of one lane of bars. */
+    /** The height of one lane, where bars and the days' entries stand (D62). */
     const val LANE = 15f
+
+    /** A bar's or an entry's line in its lane: the lane less the gap to the next. */
+    const val LANE_GAP = 3f
+    const val LANE_LINE = LANE - LANE_GAP
 
     /** A cell's least height. */
     const val CELL_MIN = 66f
@@ -87,9 +92,9 @@ internal object PhoneMonth {
     /** The gap between the rows of a cell. */
     const val GAP = 2f
 
-    /** The entries' text size and the height of an entry's line (1.45 times the text size). */
+    /** The entries' text size and the height of the "+N" line (1.45 times the text size). */
     const val FONT = 10f
-    const val LINE = FONT * 1.45f
+    const val MORE_LINE = FONT * 1.45f
 
     /** A marked entry's mark beside the day's number (its drawing, icon or dot). */
     const val DRAWING = 17f
@@ -127,10 +132,8 @@ internal object PhoneMonth {
     /** "+N": its space to the left. */
     const val MORE_LEFT = 4f
 
-    /** A bar: inset from a column edge where it begins or ends, its gap to the next lane, text size, padding. */
+    /** A bar: inset from a column edge where it begins or ends, text size, padding. */
     const val BAR_INSET = 3f
-    const val BAR_LANE_GAP = 3f
-    const val BAR_HEIGHT = LANE - BAR_LANE_GAP
     const val BAR_FONT = 9.5f
     const val BAR_SIDE = 3f
 

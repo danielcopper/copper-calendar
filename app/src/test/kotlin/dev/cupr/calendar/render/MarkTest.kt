@@ -37,7 +37,7 @@ class MarkTest {
     private val monday = LocalDate.of(2026, 11, 16)
     private val scale = Probe.scale
 
-    /** The left edge of an all-day chip's mark in Monday's first line. */
+    /** The left edge of an all-day chip's mark in Monday's first lane. */
     private val chipMarkX = Probe.cellX(0) + scale.px(PhoneMonth.CHIP_LEFT + PhoneMonth.CHIP_DRAWING_SHIFT)
 
     /**
@@ -72,35 +72,35 @@ class MarkTest {
     @Test
     fun `an icon the app does not ship draws the entry's dot`() {
         val bitmap = render(Probe.timed(monday, icon = "mdi:does-not-exist"))
-        assertEquals(RED, bitmap.at(Probe.markX(0, MARK_CENTRE), Probe.lineMiddle(0)))
+        assertEquals(RED, bitmap.at(Probe.markX(0, MARK_CENTRE), Probe.laneMiddle(0)))
     }
 
     @Test
     fun `an entry without an icon draws the dot`() {
         val bitmap = render(Probe.timed(monday, icon = null))
-        assertEquals(RED, bitmap.at(Probe.markX(0, MARK_CENTRE), Probe.lineMiddle(0)))
+        assertEquals(RED, bitmap.at(Probe.markX(0, MARK_CENTRE), Probe.laneMiddle(0)))
     }
 
     @Test
     fun `a shipped icon draws its outline in the entry's colour, not the dot`() {
         // chevron-right is open at the box's centre and filled at x = 14.5 of 24.
         val bitmap = render(Probe.timed(monday, icon = "mdi:chevron-right"))
-        assertEquals(0, bitmap.at(Probe.markX(0, MARK_CENTRE), Probe.lineMiddle(0)))
-        assertEquals(RED, bitmap.at(Probe.markX(0, CHEVRON_FILLED), Probe.lineMiddle(0)))
+        assertEquals(0, bitmap.at(Probe.markX(0, MARK_CENTRE), Probe.laneMiddle(0)))
+        assertEquals(RED, bitmap.at(Probe.markX(0, CHEVRON_FILLED), Probe.laneMiddle(0)))
     }
 
     @Test
     fun `a timed entry's drawing wins over its icon`() {
         val bitmap = render(Probe.timed(monday, icon = "mdi:plus", drawing = "lantern.svg"))
         val left = Probe.markX(0, 0f)
-        val top = Probe.lineMiddle(0) - scale.px(PhoneMonth.MARK) / 2
+        val top = Probe.laneMiddle(0) - scale.px(PhoneMonth.MARK) / 2
         assertLantern(bitmap, left, top, scale.px(PhoneMonth.MARK))
     }
 
     @Test
     fun `an all-day chip draws its drawing before the title`() {
         val bitmap = render(Probe.allDay(monday, drawing = "lantern.svg"))
-        val top = Probe.lineMiddle(0) - scale.px(PhoneMonth.MARK) / 2
+        val top = Probe.laneMiddle(0) - scale.px(PhoneMonth.MARK) / 2
         assertLantern(bitmap, chipMarkX, top, scale.px(PhoneMonth.MARK))
     }
 
@@ -131,7 +131,7 @@ class MarkTest {
     fun `an all-day chip with a drawing the app does not ship draws its icon`() {
         // plus is filled at the box's centre.
         val bitmap = render(Probe.allDay(monday, drawing = "not-shipped.svg", icon = "mdi:plus"))
-        assertEquals(RED, bitmap.at(chipMarkX + scale.px(PhoneMonth.MARK) / 2, Probe.lineMiddle(0)))
+        assertEquals(RED, bitmap.at(chipMarkX + scale.px(PhoneMonth.MARK) / 2, Probe.laneMiddle(0)))
     }
 
     @Test

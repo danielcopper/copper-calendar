@@ -358,13 +358,138 @@ class MonthLayoutTest {
     }
 
     @Test
-    fun `calendar_month_view keeps bars of the same span in their days' order`() {
+    fun `calendar_month_view puts bars of the same start and end by title`() {
         val week =
             build(
                 allDay(date(11, 16), days = 3, title = "Beta"),
                 allDay(date(11, 16), days = 3, title = "Alpha"),
+                // As long as the all-day "Zelt", from the same midnight: the title, not the day's order, decides.
+                timed(date(11, 16).atStartOfDay(), date(11, 19).atStartOfDay(), "Anreise"),
+                allDay(date(11, 16), days = 3, title = "Zelt"),
             ).weeks[3]
-        assertEquals(listOf("Alpha" to 0, "Beta" to 1), week.bars.map { it.entry.title to it.lane })
+        assertEquals(
+            listOf("Alpha" to 0, "Anreise" to 1, "Beta" to 2, "Zelt" to 3),
+            week.bars.map { it.entry.title to it.lane }.sortedBy { it.second },
+        )
+    }
+
+    // calendar_month_view: one lane system per week, bars first, then the days' entries shown (D62).
+
+    @Test
+    fun `calendar_month_view puts the bar that really began first on top, also when both began before the days`() {
+        val first =
+            build(
+                allDay(date(10, 22), days = 7, title = "Lang"),
+                allDay(date(10, 20), days = 7, title = "Früher"),
+            ).weeks[0]
+        assertEquals(
+            listOf("Früher" to 0, "Lang" to 1),
+            first.bars.map { it.entry.title to it.lane }.sortedBy { it.second },
+        )
+        val fromWednesday =
+            week(
+                date(11, 11),
+                allDay(date(11, 10), days = 9, title = "Länger"),
+                allDay(date(11, 9), days = 8, title = "Davor"),
+            )
+        assertEquals(
+            listOf("Davor" to 0, "Länger" to 1),
+            fromWednesday.bars.map { it.entry.title to it.lane }.sortedBy { it.second },
+        )
+    }
+
+    @Test
+    fun `calendar_month_view puts the bar with the later end first on the same start`() {
+        val start = date(11, 16).atTime(10, 0)
+        val week =
+            build(
+                timed(start, date(11, 18).atTime(12, 0), "Alpha"),
+                timed(start, date(11, 18).atTime(20, 0), "Beta"),
+            ).weeks[3]
+        assertEquals(
+            listOf("Beta" to 0, "Alpha" to 1),
+            week.bars.map { it.entry.title to it.lane }.sortedBy { it.second },
+        )
+    }
+
+    @Test
+    fun `a day's entry stands in the top lane free on its day, above a bar of other days`() {
+        val week =
+            build(
+                allDay(date(11, 16), days = 3, title = "Reise"),
+                allDay(date(11, 16), title = "Montag"),
+                allDay(date(11, 19), title = "Donnerstag"),
+            ).weeks[3]
+        assertEquals(0, week.bars.single().lane)
+        assertEquals(
+            listOf(Line(week.days[0].shown.single(), 0, 1), Line(week.days[3].shown.single(), 3, 0)),
+            week.lines,
+        )
+        assertEquals(2, week.lanes)
+    }
+
+    @Test
+    fun `a day's entries fill the lanes the bars leave free, its all-day ones above its timed ones`() {
+        val week =
+            build(
+                allDay(date(11, 16), days = 4, title = "Oben"),
+                allDay(date(11, 18), days = 3, title = "Mitte"),
+                allDay(date(11, 17), days = 2, title = "Unten"),
+                // Thursday: lane 0 taken by "Oben", lane 2 by "Mitte", lane 1 free.
+                timed(date(11, 19).atTime(8, 0), date(11, 19).atTime(9, 0), "Früh"),
+                allDay(date(11, 19), title = "Ganztags"),
+            ).weeks[3]
+        assertEquals(
+            listOf("Oben" to 0, "Unten" to 1, "Mitte" to 2),
+            week.bars.map { it.entry.title to it.lane }.sortedBy { it.second },
+        )
+        assertEquals(listOf("Ganztags" to 1, "Früh" to 3), week.lines.map { it.entry.title to it.lane })
+        assertEquals(listOf(3, 3), week.lines.map { it.column })
+        assertEquals(4, week.lanes)
+    }
+
+    @Test
+    fun `a week has as many lanes as its fullest day needs`() {
+        val week =
+            build(
+                allDay(date(11, 18), days = 2, title = "Balken"),
+                allDay(date(11, 16), title = "A"),
+                allDay(date(11, 16), title = "B"),
+            ).weeks[3]
+        assertEquals(listOf(0, 1), week.lines.map { it.lane })
+        assertEquals(2, week.lanes)
+        assertEquals(0, build().weeks[3].lanes)
+    }
+
+    @Test
+    fun `+N never counts the bars, and an entry counted in it gets no lane`() {
+        val bars = List(3) { allDay(date(11, 16), days = 2, title = "Balken $it") }
+        val two = build(*(bars + allDay(date(11, 16), title = "A") + allDay(date(11, 16), title = "B")).toTypedArray())
+        assertEquals(listOf("A", "B"), two.day(date(11, 16)).shown.map { it.title })
+        assertEquals(0, two.day(date(11, 16)).more)
+        assertEquals(listOf(3, 4), two.weeks[3].lines.map { it.lane })
+        val three =
+            build(
+                allDay(date(11, 16), title = "A"),
+                allDay(date(11, 16), title = "B"),
+                allDay(date(11, 16), title = "C"),
+            )
+        assertEquals(2, three.day(date(11, 16)).more)
+        assertEquals(listOf("A" to 0), three.weeks[3].lines.map { it.entry.title to it.lane })
+        assertEquals(1, three.weeks[3].lanes)
+    }
+
+    @Test
+    fun `a week's bars may not share a lane on a day`() {
+        val week = build().weeks[3]
+        val entry = allDay(date(11, 16), days = 3)
+        val first = Bar(entry, from = 0, to = 2, lane = 0, opens = true, closes = true)
+        val error =
+            assertThrows(IllegalArgumentException::class.java) {
+                week.copy(bars = listOf(first, first.copy(from = 2, to = 4)))
+            }
+        assertEquals("Two bars take lane 0 on column 2", error.message)
+        assertEquals(1, week.copy(bars = listOf(first, first.copy(from = 3, to = 4))).lanes)
     }
 
     // Checks on days, weeks and bars.
@@ -409,7 +534,7 @@ class MonthLayoutTest {
         val view = MonthLayout.build(SampleData.month, SampleData.entries, LocalDate.now(SampleData.clock))
         assertEquals(6, view.weeks.size)
         assertEquals(2, view.todayWeek)
-        assertEquals(listOf(0, 0, 0, 1, 1, 0), view.weeks.map { it.lanes })
+        assertEquals(listOf(1, 1, 2, 1, 1, 1), view.weeks.map { it.lanes })
         val holiday = view.weeks[3].bars.single()
         assertEquals("Kurzurlaub Ostsee" to (4 to 6), holiday.entry.title to (holiday.from to holiday.to))
         val trip = view.weeks[4].bars.single()
@@ -437,6 +562,15 @@ class MonthLayoutTest {
         val day = week(date(11, 9), *entries.toTypedArray()).days[3]
         assertEquals(listOf("T0", "T1", "T2", "T3", "T4"), day.shown.map { it.title })
         assertEquals(0, day.more)
+    }
+
+    @Test
+    fun `a week gives every entry of a day a lane, below the bars on its day`() {
+        val entries = List(5) { timed(date(11, 12).atTime(8 + it, 0), date(11, 12).atTime(9 + it, 0), "T$it") }
+        val week = week(date(11, 9), allDay(date(11, 11), days = 2, title = "Balken"), *entries.toTypedArray())
+        assertEquals(0, week.bars.single().lane)
+        assertEquals(listOf(1, 2, 3, 4, 5), week.lines.map { it.lane })
+        assertEquals(6, week.lanes)
     }
 
     @Test

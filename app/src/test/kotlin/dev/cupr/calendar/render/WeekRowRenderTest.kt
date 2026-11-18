@@ -66,8 +66,8 @@ class WeekRowRenderTest {
                     write(bitmap, palette, "week-$index-$mode.png")
                     bitmap.height
                 }
-            // 66 dp plus the 2 px divider is 176 px; the week of 23 November, 79 dp, is 210 px.
-            assertEquals(listOf(176, 176, 176, 176, 210, 176), heights)
+            // 66 dp plus the 2 px divider is 176 px; the week of 9 November, 77.5 dp, is 206 px.
+            assertEquals(listOf(176, 176, 206, 176, 176, 176), heights)
             val header = chrome.header(SampleData.month, widthPx, scale, palette)
             val fab = chrome.fab(scale, palette)
             bytes += header.allocationByteCount + fab.allocationByteCount
@@ -85,9 +85,9 @@ class WeekRowRenderTest {
 
     @Test
     fun `the rows of the sample month are as tall as their tallest cell, at least the cell's least height`() {
-        // 66 dp, and 79 dp for the week whose bar lane sits above two lines.
+        // 66 dp, and 77.5 dp for the week whose two lanes stand above a "+N".
         val heights = view.weeks.map { rows.heightDp(it) }
-        assertEquals(listOf(66f, 66f, 66f, 66f, 79f, 66f), heights)
+        assertEquals(listOf(66f, 66f, 77.5f, 66f, 66f, 66f), heights)
     }
 
     @Test
