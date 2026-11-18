@@ -231,9 +231,9 @@ object WeekLayout {
 
     /**
      * A day's rows in the tile's order: the all-day rows, those continued
-     * from an earlier day before the day's own, which go by title; then the
-     * timed rows, again the continued ones before the day's own, each by
-     * start, then title.
+     * from an earlier day before the day's own, which go by title, while the
+     * continued ones keep the order they come in; then the timed rows, again
+     * the continued ones before the day's own, each by start, then title.
      */
     private fun ordered(rows: List<DayEntry>): List<DayEntry> {
         val byTitle = compareBy(CalendarDays.byTitle) { row: DayEntry -> row.entry }
