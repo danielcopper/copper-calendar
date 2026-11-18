@@ -14,10 +14,10 @@ import java.time.temporal.TemporalAdjusters
 /**
  * The month as the dashboard's calendar page shows it at phone size, one
  * [Week] per row: its rules `calendar_grid`, `calendar_days`,
- * `calendar_marked` and `calendar_month_view` (the dashboard's file is named
- * in [dev.cupr.calendar.render.PhoneMonth]). Only the display rules are
- * ported; an entry's kind, drawing and colour come with the entry (D4).
- * [MonthLayout] makes it, and the types below it.
+ * `calendar_marked` and `calendar_month_view` (the dashboard's files and
+ * commits are named in [dev.cupr.calendar.render.PhoneMonth]). Only the
+ * display rules are ported; an entry's kind, drawing and colour come with
+ * the entry (D4). [MonthLayout] makes it, and the types below it.
  */
 @ConsistentCopyVisibility
 data class MonthView internal constructor(
@@ -39,25 +39,24 @@ data class Week internal constructor(
         require(days.size == DAYS_IN_WEEK) { "A week has $DAYS_IN_WEEK days, not ${days.size}" }
     }
 
+    // Placed after the check above: placing reads a column of each of the seven days.
+
     /** The days' entries shown, each in its lane (D62). */
     val lines: List<Line> = placed()
 
     /** How many lanes the week has: as many as its fullest day needs. */
-    val lanes: Int get() = (bars.map { it.lane } + lines.map { it.lane }).maxOfOrNull { it + 1 } ?: 0
+    val lanes: Int = (bars.map { it.lane } + lines.map { it.lane }).maxOfOrNull { it + 1 } ?: 0
 
     /**
-     * The lines the day in column takes: its lanes down to its last entry
-     * shown, and "+N" when it counts any (D40).
+     * How deep the day in column reaches: its lanes down to its last entry
+     * shown, 0 when it shows none (D40, D62).
      */
-    fun linesIn(column: Int): Int {
-        val lanes = lines.filter { it.column == column }.maxOfOrNull { it.lane + 1 } ?: 0
-        return lanes + if (days[column].more > 0) 1 else 0
-    }
+    fun depthOf(column: Int): Int = lines.filter { it.column == column }.maxOfOrNull { it.lane + 1 } ?: 0
 
     private fun placed(): List<Line> {
-        val lanes = Lanes()
-        for (bar in bars) lanes.take(bar.lane, bar.from, bar.to)
-        return days.flatMapIndexed { column, day -> day.shown.map { Line(it, column, lanes.place(column, column)) } }
+        val taken = Lanes()
+        for (bar in bars) taken.take(bar.lane, bar.from, bar.to)
+        return days.flatMapIndexed { column, day -> day.shown.map { Line(it, column, taken.place(column, column)) } }
     }
 }
 
@@ -68,7 +67,12 @@ data class Line internal constructor(
     /** Its day's column in the week (0 = the week's first day). */
     val column: Int,
     val lane: Int,
-)
+) {
+    init {
+        require(column in 0 until DAYS_IN_WEEK) { "A line stands in column $column of a week" }
+        require(lane >= 0) { "A line's lane is $lane" }
+    }
+}
 
 /** A week's lanes as they fill, by the columns each has taken. */
 private class Lanes {

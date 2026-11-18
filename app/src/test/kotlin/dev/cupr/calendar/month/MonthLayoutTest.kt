@@ -413,17 +413,20 @@ class MonthLayoutTest {
     }
 
     @Test
-    fun `a day's entry stands in the top lane free on its day, above a bar of other days`() {
+    fun `a day's entry stands in the top lane free on its day, above a bar where that lane is free`() {
         val week =
             build(
-                allDay(date(11, 16), days = 3, title = "Reise"),
+                allDay(date(11, 16), days = 2, title = "Erste"),
+                allDay(date(11, 17), days = 3, title = "Zweite"),
                 allDay(date(11, 16), title = "Montag"),
-                allDay(date(11, 19), title = "Donnerstag"),
+                allDay(date(11, 18), title = "Mittwoch"),
+                allDay(date(11, 20), title = "Freitag"),
             ).weeks[3]
-        assertEquals(0, week.bars.single().lane)
+        assertEquals(listOf("Erste" to 0, "Zweite" to 1), week.bars.map { it.entry.title to it.lane })
+        // Monday below "Erste"; Wednesday above "Zweite", whose lane 0 "Erste" left free; Friday on top.
         assertEquals(
-            listOf(Line(week.days[0].shown.single(), 0, 1), Line(week.days[3].shown.single(), 3, 0)),
-            week.lines,
+            listOf("Montag" to (0 to 1), "Mittwoch" to (2 to 0), "Freitag" to (4 to 0)),
+            week.lines.map { it.entry.title to (it.column to it.lane) },
         )
         assertEquals(2, week.lanes)
     }
@@ -511,6 +514,15 @@ class MonthLayoutTest {
         assertThrows(IllegalArgumentException::class.java) {
             Bar(entry, from = -1, to = 1, lane = 0, opens = true, closes = true)
         }
+    }
+
+    @Test
+    fun `a line stays inside its week, in a lane`() {
+        val entry = allDay(date(11, 16))
+        assertThrows(IllegalArgumentException::class.java) { Line(entry, column = 7, lane = 0) }
+        assertThrows(IllegalArgumentException::class.java) { Line(entry, column = -1, lane = 0) }
+        val error = assertThrows(IllegalArgumentException::class.java) { Line(entry, column = 0, lane = -1) }
+        assertEquals("A line's lane is -1", error.message)
     }
 
     @Test

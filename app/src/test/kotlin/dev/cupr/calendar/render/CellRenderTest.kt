@@ -68,12 +68,20 @@ class CellRenderTest {
 
     @Test
     fun `an entry's line is as tall as a bar's, from the top of its lane`() {
-        val bitmap = render(0 to Probe.day(monday, shown = listOf(chip(monday))))
-        // Past the rounded corner, where the chip's tint runs from its top to its bottom.
-        val x = (Probe.cellX(0) + Probe.scale.px(PhoneMonth.ENTRY_RADIUS) + 1).toInt()
+        val wednesday = monday.plusDays(2)
+        val trip = chip(wednesday).copy(title = "Reise", end = wednesday.plusDays(3).atStartOfDay())
+        val bar = Bar(trip, from = 2, to = 4, lane = 0, opens = true, closes = true)
+        val days = mapOf(0 to Probe.day(monday, shown = listOf(chip(monday))))
+        val bitmap = rows.render(Probe.week(monday, days, listOf(bar)), Probe.widthPx, Probe.scale, palette)
         // Below the number row's middle, past the week's divider.
         val below = Probe.scale.px(PhoneMonth.CELL_TOP + PhoneMonth.NUMBER_ROW / 2).toInt()
-        val chip = (below until bitmap.height).filter { y -> Color.alpha(bitmap.getPixel(x, y)) > 0 }
+        val rowsAt = { x: Float ->
+            (below until bitmap.height).filter { y -> Color.alpha(bitmap.at(x, y.toFloat())) > 0 }
+        }
+        // The chip past its rounded corner, the bar in its middle column: each tinted from top to bottom.
+        val chip = rowsAt(Probe.cellX(0) + Probe.scale.px(PhoneMonth.ENTRY_RADIUS) + 1)
+        val barRows = rowsAt(Probe.columnX(3) + Probe.scale.px(PhoneMonth.BAR_SIDE))
+        assertEquals(barRows, chip)
         // Its top and bottom edges fall inside pixel rows, which they cover in part.
         val top = Probe.laneTop(0)
         assertEquals(top.toInt(), chip.first())

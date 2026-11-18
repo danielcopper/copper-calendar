@@ -14,6 +14,7 @@ import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.R
 import dev.cupr.calendar.model.Entry
+import dev.cupr.calendar.month.Bar
 import dev.cupr.calendar.month.MonthLayout
 import dev.cupr.calendar.render.Probe
 import dev.cupr.calendar.sample.SampleData
@@ -181,10 +182,10 @@ class DrawnWidgetTest {
     }
 
     @Test
-    fun `woche quer takes from the day with the most lines, counting its +N line`() {
+    fun `woche quer takes from the day reaching deepest into the lanes, not counting its +N`() {
         val monday = LocalDate.of(2026, 11, 9)
         val four = List(4) { Probe.allDay(monday) }
-        // Monday shows four, Tuesday four and "+1": Tuesday has more lines.
+        // Monday shows four, Tuesday four and "+1": as deep, as "+N" is one row below all lanes, so Monday.
         val week =
             Probe.week(
                 monday,
@@ -194,16 +195,56 @@ class DrawnWidgetTest {
                 ),
             )
         val less = checkNotNull(WeekColumnsWidget.leaveOutOne(week))
-        assertEquals(listOf(4, 3), less.days.take(2).map { it.shown.size })
-        assertEquals(listOf(0, 2), less.days.take(2).map { it.more })
+        assertEquals(listOf(3, 4), less.days.take(2).map { it.shown.size })
+        assertEquals(listOf(1, 1), less.days.take(2).map { it.more })
         assertThrows(IllegalStateException::class.java) { Probe.day(monday).leaveOutLast() }
-        // Two days with as many lines: the first of them.
+        // Two days as deep, without "+N": the first of them.
         val tie =
             Probe.week(
                 monday,
                 mapOf(0 to Probe.day(monday, shown = four), 1 to Probe.day(monday.plusDays(1), shown = four)),
             )
         assertEquals(listOf(3, 4), checkNotNull(WeekColumnsWidget.leaveOutOne(tie)).days.take(2).map { it.shown.size })
+    }
+
+    @Test
+    fun `woche quer takes from a day whose one entry bars push down, before a day with two`() {
+        val monday = LocalDate.of(2026, 11, 9)
+        val tuesday = monday.plusDays(1)
+        val bars = List(3) { Bar(Probe.allDay(monday), from = 0, to = 0, lane = it, opens = true, closes = true) }
+        val week =
+            Probe.week(
+                monday,
+                mapOf(
+                    0 to Probe.day(monday, shown = listOf(Probe.allDay(monday))),
+                    1 to Probe.day(tuesday, shown = List(2) { Probe.allDay(tuesday) }),
+                ),
+                bars,
+            )
+        assertEquals(listOf(4, 2), listOf(week.depthOf(0), week.depthOf(1)))
+        val less = checkNotNull(WeekColumnsWidget.leaveOutOne(week))
+        assertEquals(listOf(0, 2), less.days.take(2).map { it.shown.size })
+        assertEquals(3, less.lanes)
+    }
+
+    @Test
+    fun `an entry woche quer leaves out loses its lane, and the week a lane when its day was the fullest`() {
+        val monday = LocalDate.of(2026, 11, 9)
+        val tuesday = monday.plusDays(1)
+        val entries = List(4) { Probe.allDay(monday).copy(title = "Eintrag $it") }
+        val week =
+            Probe.week(
+                monday,
+                mapOf(
+                    0 to Probe.day(monday, shown = entries),
+                    1 to Probe.day(tuesday, shown = List(2) { Probe.allDay(tuesday) }),
+                ),
+            )
+        assertEquals(4, week.lanes)
+        val less = checkNotNull(WeekColumnsWidget.leaveOutOne(week))
+        assertTrue(less.lines.none { it.entry == entries.last() })
+        assertEquals(entries.dropLast(1), less.lines.filter { it.column == 0 }.map { it.entry })
+        assertEquals(3, less.lanes)
     }
 
     @Test
