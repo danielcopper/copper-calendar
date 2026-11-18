@@ -9,14 +9,12 @@ import dev.cupr.calendar.days.DAY_AND_MONTH
 import dev.cupr.calendar.days.isWeekend
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.model.Kinds
-import java.text.Collator
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
-import java.util.Locale
 
 /** The days a week widget shows, set per widget (D20), and its header's title. */
 enum class WeekDays(
@@ -105,7 +103,9 @@ data class DayEntry internal constructor(
         if (timed) {
             require(time != null) { "A timed row has its time: ${entry.title}" }
         } else {
-            require(time == null || time is RowTime.Until) { "An all-day row has no time: ${entry.title}" }
+            require(time == null || (time is RowTime.Until && time.end is End.Later && time.end.time == null)) {
+                "An all-day row's only time is the day its entry ends on, after the last day shown: ${entry.title}"
+            }
             require(!over) { "An all-day entry is never over: ${entry.title}" }
         }
     }
@@ -173,6 +173,7 @@ sealed interface End {
      * row's day, else its date; and its time, none when it ends at midnight.
      */
     data class Later(
+        /** The entry's last day: for an end at midnight, the day before. */
         val day: LocalDate,
         val weekday: Boolean,
         val time: String?,
@@ -189,8 +190,6 @@ sealed interface End {
  * today whose end has passed is over.
  */
 object WeekLayout {
-    private val titles: Collator = Collator.getInstance(Locale.GERMAN)
-
     /** The days of dates, which run on without a gap, as they stand at now. */
     fun build(
         dates: List<LocalDate>,
@@ -237,8 +236,8 @@ object WeekLayout {
      * start, then title.
      */
     private fun ordered(rows: List<DayEntry>): List<DayEntry> {
-        val byTitle = compareBy(titles) { row: DayEntry -> row.entry.title }
-        val byStart = compareBy<DayEntry> { it.entry.start }.then(byTitle)
+        val byTitle = compareBy(CalendarDays.byTitle) { row: DayEntry -> row.entry }
+        val byStart = compareBy(CalendarDays.byStartThenTitle) { row: DayEntry -> row.entry }
         val (timed, allDay) = rows.partition { it.timed }
         return allDay.filter { it.continued } +
             allDay.filterNot { it.continued }.sortedWith(byTitle) +

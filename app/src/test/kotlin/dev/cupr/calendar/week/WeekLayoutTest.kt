@@ -224,6 +224,27 @@ class WeekLayoutTest {
     }
 
     @Test
+    fun `an all-day row's only time is a later last day it names, without a time of day`() {
+        val entry = allDay(date(12), days = 5)
+        val row = { time: RowTime -> DayEntry(entry, time, null, continued = false, over = false) }
+        row(RowTime.Until(End.Later(date(16), true, null)))
+        for (time in listOf(
+            RowTime.Within("09:00", null),
+            RowTime.Until(End.At("24:00")),
+            RowTime.Until(End.Later(date(16), true, "18:00")),
+        )) {
+            assertThrows("$time", IllegalArgumentException::class.java) { row(time) }
+        }
+    }
+
+    @Test
+    fun `continued all-day rows keep the order they are given in, as the tile's do`() {
+        val week = build(allDay(date(12), days = 2, title = "Zelten"), allDay(date(12), days = 2, title = "Ausflug"))
+        assertEquals(listOf("Ausflug", "Zelten"), week.titles(12))
+        assertEquals(listOf("Zelten", "Ausflug"), week.titles(13))
+    }
+
+    @Test
     fun `on the first day shown, an entry that began before it sorts among the day's own rows`() {
         val week =
             build(

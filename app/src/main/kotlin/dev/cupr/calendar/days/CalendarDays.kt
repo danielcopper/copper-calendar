@@ -39,13 +39,20 @@ val DAY_AND_MONTH: DateTimeFormatter = DateTimeFormatter.ofPattern("d. MMM", Loc
 internal object CalendarDays {
     private val collator: Collator = Collator.getInstance(Locale.GERMAN)
 
+    /** Entries by title, in German order. */
+    val byTitle: Comparator<Entry> = compareBy(collator) { entry: Entry -> entry.title }
+
+    /** Entries by start, then by title. */
+    val byStartThenTitle: Comparator<Entry> = compareBy<Entry> { it.start }.then(byTitle)
+
     /**
      * On each day, the all-day entries and those carried onto the first date
-     * first, then the timed ones by time, then by title.
+     * first, by title, then the timed ones by time, then by title.
      */
     private val order: Comparator<Placed> =
-        compareBy<Placed>({ it.timed }, { if (it.timed) it.entry.start else null })
-            .then { a, b -> collator.compare(a.entry.title, b.entry.title) }
+        compareBy<Placed> { it.byTime }.then { a, b ->
+            (if (a.byTime) byStartThenTitle else byTitle).compare(a.entry, b.entry)
+        }
 
     /** An entry on the day it stands on: its first day, or the first date for one that began before it. */
     class Placed(
@@ -64,7 +71,7 @@ internal object CalendarDays {
         val multi: Boolean get() = last.isAfter(first)
 
         /** Timed and standing on its own first day, so ordered by its time. */
-        val timed: Boolean get() = !entry.allDay && first == date
+        val byTime: Boolean get() = !entry.allDay && first == date
     }
 
     /**
