@@ -15,13 +15,17 @@ previews = "widget_month_preview widget_week_preview widget_week_columns_preview
 description = "Install the Android command-line tools and SDK packages into $HOME/Android/Sdk and point local.properties at them"
 # The command-line tools archive is pinned by its file name and checked
 # against the SHA-1 Google's repository index (repository2-3.xml) publishes
-# for it. The packages are the ones the build needs: platform 37 (compileSdk),
-# the build tools AGP 9.5 defaults to (36.0.0), and platform-tools for adb.
+# for it. Its `android` launcher, which replaces sdkmanager, fetches the Android
+# CLI itself on first use from Google's `latest` channel into ~/.android/bin;
+# that download is not pinned. `android sdk install` accepts the SDK license
+# on its own, and --no-metrics keeps the CLI from sending usage data. The
+# packages are the ones the build needs: platform 37 (compileSdk), the build
+# tools AGP 9.5 defaults to (36.0.0), and platform-tools for adb.
 run = """
 set -eu
 sdk="{{ vars.sdk }}"
 tools="$sdk/cmdline-tools/latest"
-if [ ! -x "$tools/bin/sdkmanager" ]; then
+if [ ! -x "$tools/bin/android" ]; then
   archive=commandlinetools-linux-16111833_latest.zip
   download="$sdk/.download"
   mkdir -p "$download"
@@ -33,8 +37,12 @@ if [ ! -x "$tools/bin/sdkmanager" ]; then
   mv "$download/cmdline-tools" "$tools"
   rm -rf "$download"
 fi
-yes | "$tools/bin/sdkmanager" --sdk_root="$sdk" --licenses > /dev/null
-"$tools/bin/sdkmanager" --sdk_root="$sdk" "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+packages="platform-tools platforms/android-37.0 build-tools/36.0.0"
+"$tools/bin/android" --no-metrics --sdk="$sdk" sdk install $packages
+# `sdk install` exits 0 for a package it does not find.
+for package in $packages; do
+  test -d "$sdk/$package" || { echo "setup: $package not installed" >&2; exit 1; }
+done
 if [ -f local.properties ]; then
   echo "local.properties kept: $(grep '^sdk.dir=' local.properties || echo 'no sdk.dir')"
 else
