@@ -4,8 +4,8 @@ package dev.cupr.calendar.render
  * The month widget's measures at phone size, in dp, copied from the Home
  * Assistant dashboard so the widget looks like its calendar page.
  *
- * This is the one place the code names the dashboard's files, all in homelab
- * at 24b4a670:
+ * This is the one place the code says at which commits homelab's files were
+ * read; the dashboard's files at 24b4a670:
  * - `infra/homeassistant/config/dashboards/zuhause.yaml`: the calendar page's
  *   month styles at phone size (these measures) and the rules MonthLayout
  *   ports;
@@ -18,7 +18,12 @@ package dev.cupr.calendar.render
  * - `infra/homeassistant/config/dashboards/templates.yaml`: the tile
  *   "Kalender · diese Woche" (template `calendar`), its styles ([TileWeek]'s
  *   measures), its rule `calendar_days`, which CalendarDays ports, and its
- *   table `calendar_colors`, which CalendarVariables ports.
+ *   table `calendar_colors`, which CalendarVariables ports;
+ *
+ * and at 6cff6a36, where that table lives now:
+ * - `infra/homeassistant/config/custom_templates/zuhause.jinja`: the table
+ *   `_calendars` and the macro `calendar_color` beside it, which decides
+ *   each entry's `resolved_color` (D49).
  */
 internal object PhoneMonth {
     /** The card around the widget: its border, its padding at the left and right, and at the top and bottom. */

@@ -5,7 +5,6 @@ import dev.cupr.calendar.model.CalendarVariables
 import dev.cupr.calendar.model.Palette
 import dev.cupr.calendar.model.Palettes
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlin.math.roundToInt
 
 /**
@@ -84,7 +83,7 @@ object ThemePalettes {
                 missing += "$name $variable"
                 return default
             }
-            val text = (value as? JsonPrimitive)?.takeIf { it.isString }?.content
+            val text = value.stringContent()
             return text?.let(::parseColor) ?: throw UnreadableThemeException("$name $variable is not a colour: $value")
         }
     }
