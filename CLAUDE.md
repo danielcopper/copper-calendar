@@ -9,10 +9,10 @@ An Android app with home-screen widgets that draw the family calendar like the H
 - **Dependency change**: `mise run deps-refresh` rewrites the lock files (`*.lockfile`) and `gradle/verification-metadata.xml`, which every build checks; commit them with the change after reading the diff.
 - **Worktree task**: `mise run worktree-new`
 - **Agent rules**:
-  - The dev machine is a Steam Deck on SteamOS with an immutable root: no `sudo`, no system packages. Tools come through mise or live under `$HOME`; the Android SDK is in `$HOME/Android/Sdk`.
-  - `/tmp` is a tmpfs: scratch files go in the agent's scratchpad under `/var/tmp/claude-1000/…`, never inside the worktree.
-  - Heavy runs one at a time, never in parallel: Gradle, tests, lint. Gradle uses four workers and a 2 GB heap (`gradle.properties`).
-  - Run the gate once; it takes about 2 minutes, 3 in a fresh worktree. Never start a second run while one is still going.
+  - Install no system packages; `mise run setup` brings what the build needs.
+  - Scratch files go in the agent's scratchpad, never inside the worktree.
+  - Heavy runs one at a time, never in parallel: Gradle, tests, lint. A full gate adds a few gigabytes of memory use; the daemon's workers and heap are capped in `gradle.properties`, the test JVM's heap in `app/build.gradle.kts`.
+  - Run the gate once; it takes about 2 minutes.
   - Absolute paths in every command (`git -C <worktree>`); the shell's working directory resets between calls.
   - Clean up only your own processes, by PID; stop the Gradle daemon with `./gradlew --stop`, never with `pkill -f`.
   - `mise run render` writes the render tests' PNGs to `app/build/render/`; look at them after a change to the drawing, then write the widget picker's preview anew with `mise run preview` and commit it.
