@@ -23,7 +23,12 @@ package dev.cupr.calendar.render
  * and at 6cff6a36, where that table lives now:
  * - `infra/homeassistant/config/custom_templates/zuhause.jinja`: the table
  *   `_calendars` and the macro `calendar_color` beside it, which decides
- *   each entry's `resolved_color` (D49).
+ *   each entry's `resolved_color` (D49);
+ *
+ * and at 76107163:
+ * - `infra/homeassistant/config/dashboards/templates.yaml`: the tile's rows
+ *   (`calendar_lines`, which WeekLayout ports) and their styles ([TileWeek]'s
+ *   row measures).
  */
 internal object PhoneMonth {
     /** The card around the widget: its border, its padding at the left and right, and at the top and bottom. */

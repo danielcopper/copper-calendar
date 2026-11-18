@@ -17,6 +17,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 /**
  * What the widgets show (D2): the snapshot's calendar, or a plain text when
@@ -30,15 +31,18 @@ sealed interface Content {
 
     /**
      * The calendar to draw: its entries, the palettes to draw them with,
-     * today, and what the header shows at its right instead of its range and
-     * chevron, none while the snapshot is fresh and the sign-in usable.
+     * the time it is drawn at, and what the header shows at its right
+     * instead of its range and chevron, none while the snapshot is fresh and
+     * the sign-in usable.
      */
     data class Calendar(
         val entries: List<Entry>,
         val palettes: Palettes,
-        val today: LocalDate,
+        val now: LocalDateTime,
         val notice: Notice? = null,
     ) : Content {
+        val today: LocalDate get() = now.toLocalDate()
+
         /** This calendar without the entries of the calendars leftOut (D11). */
         fun without(leftOut: Set<String>): Calendar =
             if (leftOut.isEmpty()) this else copy(entries = entries.filter { it.calendar !in leftOut })
@@ -93,7 +97,7 @@ sealed interface Content {
                         stale(context, snapshot.fetchedAt, clock)?.let(Notice::Stale)
                     }
                 }
-            return Calendar(parsed.entries, palettes(snapshot.theme), LocalDate.now(clock), notice)
+            return Calendar(parsed.entries, palettes(snapshot.theme), LocalDateTime.now(clock), notice)
         }
 
         /**

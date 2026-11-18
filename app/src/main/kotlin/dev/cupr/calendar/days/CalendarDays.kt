@@ -15,8 +15,7 @@ val LocalDate.isWeekend: Boolean get() = dayOfWeek == DayOfWeek.SATURDAY || dayO
 
 /**
  * The day's long German name, "Mittwoch, 11. November", from Java's German
- * locale: a day's description for accessibility, and the last day an entry's
- * "bis" names (D18, D25).
+ * locale: a day's description for accessibility (D25).
  */
 val LocalDate.longName: String get() = format(LONG_NAME)
 
@@ -34,19 +33,27 @@ val DAY_AND_MONTH: DateTimeFormatter = DateTimeFormatter.ofPattern("d. MMM", Loc
 /**
  * The dashboard's rule `calendar_days` as the month and the week share it
  * (the dashboard's file is named in [dev.cupr.calendar.render.PhoneMonth]):
- * which entries a run of days shows, the day each stands on, and their order
- * there.
+ * which entries a run of days shows and the day each stands on; the
+ * month's order there; and the title and start orders the week's own rows
+ * sort with (D61).
  */
 internal object CalendarDays {
     private val collator: Collator = Collator.getInstance(Locale.GERMAN)
 
+    /** Entries by title, in German order. */
+    val byTitle: Comparator<Entry> = compareBy(collator) { entry: Entry -> entry.title }
+
+    /** Entries by start, then by title. */
+    val byStartThenTitle: Comparator<Entry> = compareBy<Entry> { it.start }.then(byTitle)
+
     /**
      * On each day, the all-day entries and those carried onto the first date
-     * first, then the timed ones by time, then by title.
+     * first, by title, then the timed ones by time, then by title.
      */
     private val order: Comparator<Placed> =
-        compareBy<Placed>({ it.timed }, { if (it.timed) it.entry.start else null })
-            .then { a, b -> collator.compare(a.entry.title, b.entry.title) }
+        compareBy<Placed> { it.byTime }.then { a, b ->
+            (if (a.byTime) byStartThenTitle else byTitle).compare(a.entry, b.entry)
+        }
 
     /** An entry on the day it stands on: its first day, or the first date for one that began before it. */
     class Placed(
@@ -65,7 +72,7 @@ internal object CalendarDays {
         val multi: Boolean get() = last.isAfter(first)
 
         /** Timed and standing on its own first day, so ordered by its time. */
-        val timed: Boolean get() = !entry.allDay && first == date
+        val byTime: Boolean get() = !entry.allDay && first == date
     }
 
     /**
@@ -97,7 +104,7 @@ internal object CalendarDays {
     }
 
     /** The entries [place] placed for the same dates, per date, in the order above. */
-    fun byDay(
+    private fun byDay(
         dates: List<LocalDate>,
         placed: List<Placed>,
     ): List<List<Placed>> {

@@ -151,7 +151,7 @@ class DrawnWidgetTest {
 
     @Test
     fun `the cap takes from the day showing the most entries, one at a time, until the week fits`() {
-        val days = WeekLayout.build(WeekDays.MONDAY_TO_SUNDAY.dates(wednesday), fullEntries, wednesday)
+        val days = WeekLayout.build(WeekDays.MONDAY_TO_SUNDAY.dates(wednesday), fullEntries, SampleData.now)
         val untouched = BitmapLimit.capped(days, Long.MAX_VALUE, { 1L }, WeekWidget::leaveOutOne)
         assertEquals(days, untouched.drawn)
         assertEquals(0, untouched.left)
@@ -172,7 +172,7 @@ class DrawnWidgetTest {
         val tuesday = LocalDate.of(2026, 11, 10)
         val thursday = LocalDate.of(2026, 11, 12)
         val entries = (8 until 13).map { halfHour(tuesday, it) } + (8 until 14).map { halfHour(thursday, it) }
-        val days = WeekLayout.build(WeekDays.MONDAY_TO_SUNDAY.dates(wednesday), entries, wednesday)
+        val days = WeekLayout.build(WeekDays.MONDAY_TO_SUNDAY.dates(wednesday), entries, SampleData.now)
         assertEquals(listOf(0, 5, 0, 6, 0, 0, 0), days.map { it.shown.size })
         val once = checkNotNull(WeekWidget.leaveOutOne(days))
         assertEquals(listOf(0, 0, 0, 1, 0, 0, 0), once.map { it.more })
@@ -215,7 +215,7 @@ class DrawnWidgetTest {
                 .build(
                     WeekDays.MONDAY_TO_SUNDAY.dates(wednesday),
                     fullEntries,
-                    wednesday,
+                    SampleData.now,
                 ).sumOf { it.entries.size }
         val warning = ShadowLog.getLogsForTag("WeekWidget").single { it.type == Log.WARN }.msg
         assertEquals(

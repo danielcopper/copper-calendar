@@ -7,13 +7,13 @@ import dev.cupr.calendar.days.CalendarDays
 import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.days.DAY_AND_MONTH
 import dev.cupr.calendar.days.isWeekend
-import dev.cupr.calendar.days.longName
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.model.Kinds
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
+import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
 
 /** The days a week widget shows, set per widget (D20), and its header's title. */
@@ -40,8 +40,9 @@ enum class WeekDays(
 
 /**
  * A day of the week's rows ("Woche"), as the dashboard's tile shows it
- * (`calendar_days` with `empty`, `past` and `runs`; the dashboard's file is
- * named in [dev.cupr.calendar.render.PhoneMonth]). [WeekLayout] makes it.
+ * (`calendar_days` with `empty`, `past` and `runs`, and `calendar_lines`;
+ * the dashboard's file is named in [dev.cupr.calendar.render.PhoneMonth]).
+ * [WeekLayout] makes it.
  */
 @ConsistentCopyVisibility
 data class WeekDay internal constructor(
@@ -49,10 +50,8 @@ data class WeekDay internal constructor(
     val today: Boolean,
     /** Before today: the whole row is dimmed. */
     val past: Boolean,
-    /** Its entries, in order. */
+    /** Its entries' rows, in order: an entry over several days has one on each day it covers (D61). */
     val entries: List<DayEntry>,
-    /** The titles of the entries over several days that it lies in after their first day shown. */
-    val running: List<String>,
     /**
      * How many of its last entries the row leaves out and counts in a
      * "+N weitere" line instead, 0 for none: only a full week does, for the
@@ -65,8 +64,8 @@ data class WeekDay internal constructor(
         require(more in 0..entries.size) { "A day of ${entries.size} entries cannot leave out $more" }
     }
 
-    /** A public holiday stands on it: its number is red. */
-    val holiday: Boolean get() = entries.any { it.entry.kind == Kinds.HOLIDAY }
+    /** A public holiday stands on it, not one continued from an earlier day: its number is red. */
+    val holiday: Boolean get() = entries.any { !it.continued && it.entry.kind == Kinds.HOLIDAY }
 
     val weekend: Boolean get() = date.isWeekend
 
@@ -80,21 +79,39 @@ data class WeekDay internal constructor(
     }
 }
 
-/** An entry as a row of the week shows it. [WeekLayout] makes it. */
+/** An entry's row on a day of the week. [WeekLayout] makes it. */
 @ConsistentCopyVisibility
 data class DayEntry internal constructor(
     val entry: Entry,
-    /** Timed within this day: its time ("16:00–16:45"); none for an entry drawn as a chip. */
-    val time: String?,
+    /**
+     * What the row says quietly at its right end: on every row of a timed
+     * entry its time there, on an all-day row only the end of an entry that
+     * runs on after the last day shown.
+     */
+    val time: RowTime?,
     /** Its short addition after the title; none for no addition. */
     val addition: Addition?,
+    /** It stands on an earlier day shown: a further day of an entry over several days. */
+    val continued: Boolean,
+    /** A timed entry of today whose end has passed: its row is dimmed. */
+    val over: Boolean,
 ) {
+    /** A timed entry's row, drawn as one; else an all-day row. */
+    val timed: Boolean get() = !entry.allDay
+
     init {
-        require(time == null || !entry.allDay) { "An all-day entry has no time: ${entry.title}" }
+        if (timed) {
+            require(time != null) { "A timed row has its time: ${entry.title}" }
+        } else {
+            require(time == null || (time is RowTime.Until && time.end is End.Later && time.end.time == null)) {
+                "An all-day row's only time is a later last day, without a time of day: ${entry.title}"
+            }
+            require(!over) { "An all-day entry is never over: ${entry.title}" }
+        }
     }
 }
 
-/** An entry's short addition, worded by the app while drawing (D18). */
+/** An entry's short addition after its title, worded by the app while drawing (D18). */
 sealed interface Addition {
     /** A public holiday's "Feiertag". */
     data object Holiday : Addition
@@ -107,43 +124,91 @@ sealed interface Addition {
             require(age >= 0) { "A birthday turns $age" }
         }
     }
+}
 
-    /** An entry over several days: "bis" and when it ends, a day ("Sonntag, 22. November") or a time ("01:00"). */
+/** What a row says at its right end, worded by the app while drawing (D61). */
+sealed interface RowTime {
+    /** A timed entry within its day: its start and its end, "12:30–13:30"; its start alone when it has no length. */
+    data class Within(
+        val start: String,
+        val end: String?,
+    ) : RowTime
+
+    /** A timed entry over several days on its first day: "ab 09:00". */
+    data class From(
+        val start: String,
+    ) : RowTime
+
+    /** A timed entry over several days on a day between its first and last: "Tag 2 von 3". */
+    data class DayOf(
+        val day: Int,
+        val days: Int,
+    ) : RowTime {
+        init {
+            require(day in 2 until days) { "Day $day of $days lies not between the first and the last" }
+        }
+    }
+
+    /** Where an entry over several days ends: "bis 16:00" on its last day, "bis Di" on the last day shown before it. */
     data class Until(
-        val end: String,
-    ) : Addition
+        val end: End,
+    ) : RowTime
+
+    /** A timed entry that begins on the last day shown and ends after it: "08:00 – Di, 18:00". */
+    data class FromTo(
+        val start: String,
+        val end: End.Later,
+    ) : RowTime
+}
+
+/** Where an entry over several days ends, as one of its rows names it. */
+sealed interface End {
+    /** On the row's own day: its time, "24:00" for the midnight after it. */
+    data class At(
+        val time: String,
+    ) : End
+
+    /**
+     * On a later day: its weekday when it lies at most six days after the
+     * row's day, else its date; and its time, none when it ends at midnight.
+     */
+    data class Later(
+        /** The entry's last day: for an end at midnight, the day before. */
+        val day: LocalDate,
+        val weekday: Boolean,
+        val time: String?,
+    ) : End
 }
 
 /**
- * The days of the week's rows from the entries (`calendar_days`, shared with
- * the month as [CalendarDays]). Every day shows, also an empty one; an entry
- * stands on its first day, one that began before the first day on that; past
- * entries stay. An entry over several days says "bis" and its last day, and
- * each further day shown inside it carries its title in [WeekDay.running].
- * Timed entries ending today are not marked over.
+ * The days of the week's rows from the entries, after the dashboard's tile
+ * (`calendar_days`, which places the entries as [CalendarDays] does for the
+ * month, and `calendar_lines`). Every day shows, also an empty one; past
+ * entries stay. An entry has a row on its first day, one that began before
+ * the first day on that, and an entry over several days one on each further
+ * day it covers, which says what that day needs (D61). A timed entry of
+ * today whose end has passed is over.
  */
 object WeekLayout {
-    /** The days of dates, which run on without a gap. */
+    /** The days of dates, which run on without a gap, as they stand at now. */
     fun build(
         dates: List<LocalDate>,
         entries: List<Entry>,
-        today: LocalDate,
+        now: LocalDateTime,
     ): List<WeekDay> {
-        val placed = CalendarDays.place(dates, entries, keepFirstMidnight = false)
-        val running = mutableMapOf<LocalDate, MutableList<String>>()
-        for (entry in placed.filter { it.multi }) {
-            for (date in dates.filter { it.isAfter(entry.date) && !it.isAfter(entry.last) }) {
-                running.getOrPut(date) { mutableListOf() } += entry.entry.title
+        val today = now.toLocalDate()
+        val rows = dates.associateWith { mutableListOf<DayEntry>() }
+        for (placed in CalendarDays.place(dates, entries, keepFirstMidnight = false)) {
+            for (date in dates.filter { it == placed.date || (it.isAfter(placed.date) && !it.isAfter(placed.last)) }) {
+                rows.getValue(date) += row(placed, date, dates.last(), now)
             }
         }
-        val days = CalendarDays.byDay(dates, placed)
-        return dates.mapIndexed { index, date ->
+        return dates.map { date ->
             WeekDay(
                 date = date,
                 today = date == today,
                 past = date.isBefore(today),
-                entries = days[index].map(::dayEntry),
-                running = running[date].orEmpty(),
+                entries = ordered(rows.getValue(date)),
             )
         }
     }
@@ -164,38 +229,86 @@ object WeekLayout {
         }
     }
 
-    /** An entry as it stands on its day: its time when it is timed there, and its addition. */
-    private fun dayEntry(placed: CalendarDays.Placed): DayEntry {
-        val entry = placed.entry
-        // A year of birth after the entry's year is wrong data; it gets no age.
-        val age = entry.year?.let { entry.start.year - it }?.takeIf { it >= 0 }
-        val addition =
-            when {
-                entry.kind == Kinds.HOLIDAY -> Addition.Holiday
-                entry.kind == Kinds.BIRTHDAY && age != null -> Addition.Turns(age)
-                placed.multi -> Addition.Until(until(placed))
-                else -> null
-            }
-        val time =
-            when {
-                !placed.timed -> null
-                placed.multi || !entry.end.isAfter(entry.start) -> entry.start.format(CLOCK_TIME)
-                else -> "${entry.start.format(CLOCK_TIME)}–${endOfDay(entry.end, placed.first)}"
-            }
-        return DayEntry(entry, time, addition)
+    /** A day's rows in the tile's order (D61). */
+    private fun ordered(rows: List<DayEntry>): List<DayEntry> {
+        val byTitle = compareBy(CalendarDays.byTitle) { row: DayEntry -> row.entry }
+        val byStart = compareBy(CalendarDays.byStartThenTitle) { row: DayEntry -> row.entry }
+        val (timed, allDay) = rows.partition { it.timed }
+        return allDay.filter { it.continued } +
+            allDay.filterNot { it.continued }.sortedWith(byTitle) +
+            timed.filter { it.continued }.sortedWith(byStart) +
+            timed.filterNot { it.continued }.sortedWith(byStart)
     }
 
-    /**
-     * Where an entry over several days ends, as its "bis" says: a timed one
-     * that began before the day it stands on and ends on it, its time; any
-     * other, its last day.
-     */
-    private fun until(placed: CalendarDays.Placed): String =
-        if (!placed.entry.allDay && placed.first.isBefore(placed.date) && placed.last == placed.date) {
-            endOfDay(placed.entry.end, placed.date)
-        } else {
-            placed.last.longName
+    /** An entry's row on date, one of the days it covers; lastShown is the last day shown. */
+    private fun row(
+        placed: CalendarDays.Placed,
+        date: LocalDate,
+        lastShown: LocalDate,
+        now: LocalDateTime,
+    ): DayEntry {
+        val entry = placed.entry
+        // The last row shown of an entry that runs on after it names its end.
+        val latest = date == lastShown && placed.last.isAfter(date)
+        val time =
+            when {
+                !entry.allDay -> timeOf(placed, date, latest)
+                latest -> RowTime.Until(later(placed, date))
+                else -> null
+            }
+        return DayEntry(
+            entry = entry,
+            time = time,
+            addition = if (placed.multi) null else additionOf(entry),
+            continued = date != placed.date,
+            over = !entry.allDay && date == now.toLocalDate() && !entry.end.isAfter(now),
+        )
+    }
+
+    /** A timed entry's time on date; latest: its last row shown, before its last day. */
+    private fun timeOf(
+        placed: CalendarDays.Placed,
+        date: LocalDate,
+        latest: Boolean,
+    ): RowTime {
+        val entry = placed.entry
+        val start = entry.start.format(CLOCK_TIME)
+        return when {
+            !placed.multi -> RowTime.Within(start, endOfDay(entry.end, date).takeIf { entry.end.isAfter(entry.start) })
+            latest && placed.first == date -> RowTime.FromTo(start, later(placed, date))
+            latest -> RowTime.Until(later(placed, date))
+            placed.first == date -> RowTime.From(start)
+            placed.last == date -> RowTime.Until(End.At(endOfDay(entry.end, date)))
+            else -> RowTime.DayOf(dayNumber(placed.first, date), dayNumber(placed.first, placed.last))
         }
+    }
+
+    /** An entry's end as named from date, an earlier day than its last. */
+    private fun later(
+        placed: CalendarDays.Placed,
+        date: LocalDate,
+    ): End.Later {
+        val end = placed.entry.end
+        val time = end.format(CLOCK_TIME).takeIf { !placed.entry.allDay && end.toLocalDate() == placed.last }
+        return End.Later(placed.last, ChronoUnit.DAYS.between(date, placed.last) <= WEEKDAY_DAYS, time)
+    }
+
+    /** A public holiday's "Feiertag", a birthday's age; none for any other entry. */
+    private fun additionOf(entry: Entry): Addition? {
+        // A year of birth after the entry's year is wrong data; it gets no age.
+        val age = entry.year?.let { entry.start.year - it }?.takeIf { it >= 0 }
+        return when {
+            entry.kind == Kinds.HOLIDAY -> Addition.Holiday
+            entry.kind == Kinds.BIRTHDAY && age != null -> Addition.Turns(age)
+            else -> null
+        }
+    }
+
+    /** Which of an entry's days date is, counted from its first day as 1. */
+    private fun dayNumber(
+        first: LocalDate,
+        date: LocalDate,
+    ): Int = ChronoUnit.DAYS.between(first, date).toInt() + 1
 
     /** A time that ends on day, "24:00" for the midnight after it. */
     private fun endOfDay(
@@ -204,4 +317,7 @@ object WeekLayout {
     ): String = if (end.toLocalDate() == day) end.format(CLOCK_TIME) else MIDNIGHT
 
     private const val MIDNIGHT = "24:00"
+
+    /** An end at most this many days after a row's day is named by its weekday, a later one by its date. */
+    private const val WEEKDAY_DAYS = 6
 }

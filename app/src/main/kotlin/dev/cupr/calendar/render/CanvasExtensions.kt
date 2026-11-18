@@ -94,7 +94,7 @@ internal fun Canvas.drawDrawing(
 
 /**
  * An entry's mark in a size × size box at (x, y), wherever a mark stands (a
- * month cell's line, chip or number, a week row's line or chip): its drawing,
+ * month cell's line, chip or number, a week's row): its drawing,
  * else its icon in color, else a dot dot wide in color, also for a drawing or
  * icon the app does not ship (D22, D24); both are looked up in assets. The
  * icon is looked up only when no drawing is drawn.

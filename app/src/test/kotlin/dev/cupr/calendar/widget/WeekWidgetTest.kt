@@ -28,6 +28,7 @@ import dev.cupr.calendar.tap.Taps
 import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.week.WeekLayout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -39,6 +40,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowLog
 import java.time.LocalDate
+import java.time.LocalDateTime
 import kotlin.math.roundToInt
 
 @RunWith(RobolectricTestRunner::class)
@@ -49,6 +51,9 @@ class WeekWidgetTest {
 
     private companion object {
         const val ROW_PX = 600
+
+        /** A height at which the sample week's days from today fit in the list. */
+        const val FIT_HEIGHT_DP = 480
     }
 
     private val application = ApplicationProvider.getApplicationContext<Application>()
@@ -63,6 +68,18 @@ class WeekWidgetTest {
     private fun row(index: Int): View {
         val list = WidgetHost.laidOut(application, views = week).findViewById<ListView>(R.id.list)
         return list.getChildAt(index - list.firstVisiblePosition)
+    }
+
+    /** The day rows a widget of the default width draws, with the app's assets and texts. */
+    private fun rowsAtDefaultWidth(): DayRowRenderer {
+        val assets = RenderAssets.of(application)
+        return DayRowRenderer.forWidth(
+            assets.fonts,
+            assets.icons,
+            assets.drawings,
+            WeekTexts.of(application.resources),
+            WidgetHost.WIDTH_DP,
+        )
     }
 
     /** What a tap on view sends to the tap activity. */
@@ -108,7 +125,7 @@ class WeekWidgetTest {
     fun `an entry with a UID opens that entry on its day`() {
         val entries = row(2).findViewById<ViewGroup>(R.id.entries)
         val parade = entries.getChildAt(2).findViewById<View>(R.id.entry)
-        assertEquals("17:00–18:30 Martinsumzug Kita", parade.contentDescription)
+        assertEquals("Martinsumzug Kita 17:00–18:30", parade.contentDescription)
         val uid = checkNotNull(SampleData.entries.single { it.title == "Martinsumzug Kita" }.uid)
         assertEquals(Tap.Entry(uid, wednesday), tapOf(parade))
     }
@@ -125,11 +142,11 @@ class WeekWidgetTest {
     fun `an entry with an empty or blank UID opens its day`() {
         for (uid in listOf("", " ")) {
             val entry = Probe.timed(wednesday, icon = null).copy(uid = uid)
-            val day = WeekLayout.build(listOf(wednesday), listOf(entry), wednesday).single()
+            val day = WeekLayout.build(listOf(wednesday), listOf(entry), SampleData.now).single()
             assertEquals(Tap.Day(wednesday), WeekWidget.tap(day.entries.single(), wednesday))
         }
         val entry = Probe.timed(wednesday, icon = null).copy(uid = "abc")
-        val day = WeekLayout.build(listOf(wednesday), listOf(entry), wednesday).single()
+        val day = WeekLayout.build(listOf(wednesday), listOf(entry), SampleData.now).single()
         assertEquals(Tap.Entry("abc", wednesday), WeekWidget.tap(day.entries.single(), wednesday))
     }
 
@@ -143,15 +160,16 @@ class WeekWidgetTest {
         // Below the divider and the row's padding, from the entries' column on.
         assertEquals(scale.hairline + scale.px(5f), (entries.top + first.top).toFloat(), 1f)
         assertEquals(scale.px(PhoneMonth.CARD_SIDE + 44f + 8f), (entries.left + first.left).toFloat(), 1f)
-        assertEquals(scale.px(21f), entries.getChildAt(1).top.toFloat() - first.top, 1f)
+        assertEquals(scale.px(24f), entries.getChildAt(1).top.toFloat() - first.top, 1f)
     }
 
     @Test
     fun `narrower than 4 cells the rows stack, and each timed entry's tap area spans its two lines`() {
         val scale = Scale(application.resources.displayMetrics.density)
         // Saturday's entries are all timed: stacked, each takes its time's line above its title's.
-        val oneLine = scale.px(TileWeek.LINE + TileWeek.LINE_GAP)
-        val twoLines = scale.px(DayRowRenderer.TIME_LINE + TileWeek.LINE + TileWeek.LINE_GAP)
+        val pad = 2 * TileWeek.ENTRY_PAD + TileWeek.LINE_GAP
+        val oneLine = scale.px(pad + TileWeek.LINE)
+        val twoLines = scale.px(pad + DayRowRenderer.TIME_LINE + TileWeek.LINE)
         // Both sides of the switch at 250 dp (D39), and 3 and 4 cells by Android's cell-size table.
         for ((widthDp, height) in listOf(203 to twoLines, 249 to twoLines, 250 to oneLine, 276 to oneLine)) {
             val list = WidgetHost.applied(application, widthDp, week).findViewById<ListView>(R.id.list)
@@ -182,16 +200,8 @@ class WeekWidgetTest {
         val scale = Scale(application.resources.displayMetrics.density)
         assertEquals(3.5f, scale.px(1f), 0.001f)
         val entries = row(5).findViewById<ViewGroup>(R.id.entries)
-        val assets = RenderAssets.of(application)
-        val rows =
-            DayRowRenderer.forWidth(
-                assets.fonts,
-                assets.icons,
-                assets.drawings,
-                WeekTexts.of(application.resources),
-                WidgetHost.WIDTH_DP,
-            )
-        val day = WeekLayout.build(WeekDays.MONDAY_TO_SUNDAY.dates(wednesday), SampleData.entries, wednesday)[5]
+        val rows = rowsAtDefaultWidth()
+        val day = WeekLayout.build(WeekDays.MONDAY_TO_SUNDAY.dates(wednesday), SampleData.entries, SampleData.now)[5]
         val rowPx = scale.px(WidgetHost.WIDTH_DP - 2 * PhoneMonth.CARD_BORDER).roundToInt()
         val areas = rows.entryAreas(day, rowPx, scale)
         assertEquals(areas.size, entries.childCount)
@@ -200,6 +210,32 @@ class WeekWidgetTest {
             assertEquals("top of $index", area.top.roundToInt(), entries.top + slot.top)
             assertEquals("bottom of $index", area.bottom.roundToInt(), entries.top + slot.bottom)
         }
+    }
+
+    @Test
+    fun `today's row is drawn at the calendar's time, a timed entry already over dimmed`() {
+        val over =
+            Probe
+                .timed(
+                    wednesday,
+                    icon = null,
+                ).copy(start = wednesday.atTime(7, 0), end = wednesday.atTime(8, 0))
+        val calendar = SampleData.calendar(SampleData.entries + over)
+        val views = { context: android.content.Context, width: Int ->
+            WeekWidget.draw(context, width, Look(), 1, Long.MAX_VALUE, calendar).views
+        }
+        val list = WidgetHost.laidOut(application, views = views).findViewById<ListView>(R.id.list)
+        val image = list.getChildAt(2 - list.firstVisiblePosition).findViewById<ImageView>(R.id.day_light)
+        val drawn = (image.drawable as BitmapDrawable).bitmap
+        val rows = rowsAtDefaultWidth()
+        val scale = Scale(application.resources.displayMetrics.density)
+        val dates = WeekDays.MONDAY_TO_SUNDAY.dates(wednesday)
+        val at = { now: LocalDateTime ->
+            val day = WeekLayout.build(dates, calendar.entries, now)[2]
+            rows.render(day, drawn.width, scale, calendar.palettes.light)
+        }
+        assertTrue(drawn.sameAs(at(SampleData.now)))
+        assertFalse("drawn as at midnight, nothing over", drawn.sameAs(at(wednesday.atStartOfDay())))
     }
 
     @Test
@@ -222,7 +258,7 @@ class WeekWidgetTest {
         val assets = RenderAssets.of(application)
         val rows = DayRowRenderer(assets.fonts, assets.icons, assets.drawings, WeekTexts.of(application.resources))
         val scale = Scale(application.resources.displayMetrics.density)
-        val week = WeekLayout.build(WeekDays.MONDAY_TO_SUNDAY.dates(wednesday), SampleData.entries, wednesday)
+        val week = WeekLayout.build(WeekDays.MONDAY_TO_SUNDAY.dates(wednesday), SampleData.entries, SampleData.now)
         val views = { index: Int ->
             val drawn = rows.render(week[index], ROW_PX, scale, SampleData.light)
             WeekWidget.row(application, rows, week[index], drawn, drawn, scale)
@@ -243,7 +279,7 @@ class WeekWidgetTest {
         assertEquals(8, entries.childCount)
         assertEquals(drawnHeight, height(row))
         views(1).reapply(application, row)
-        assertEquals(listOf("07:45–08:15 Elterngespräch Schule", "15:30–16:15 Zahnarzt Ben"), entries.descriptions())
+        assertEquals(listOf("Elterngespräch Schule 07:45–08:15", "Zahnarzt Ben 15:30–16:15"), entries.descriptions())
         views(6).reapply(application, row)
         assertEquals(0, entries.childCount)
     }
@@ -266,7 +302,7 @@ class WeekWidgetTest {
     @Test
     fun `scrolled to its target, today stands at the top, the days after it below`() {
         // From 200 to 360 dp the days from today on fill more than the list; 2 cells wide too, its rows stacked.
-        for ((size, expected) in listOf(200 to 276 to 3, 220 to 276 to 3, 360 to 276 to 4, 220 to 146 to 2)) {
+        for ((size, expected) in listOf(200 to 276 to 2, 220 to 276 to 3, 360 to 276 to 4, 220 to 146 to 2)) {
             val (heightDp, widthDp) = size
             val (list, target) = scrolled(heightDp, widthDp)
             assertEquals("$heightDp x $widthDp dp", expected, target)
@@ -275,8 +311,8 @@ class WeekWidgetTest {
             // The list does not clip its rows to its padding, so the day after the target shows in it.
             assertNotNull("$heightDp x $widthDp dp: day ${target + 1} is not shown", day(target + 1))
         }
-        // At 4 cells the days from today fill less than the list, so it scrolls to its end, unpadded.
-        val (list, target) = scrolled(WidgetHost.HEIGHT_DP)
+        // At 480 dp the days from today fill less than the list, so it scrolls to its end, unpadded.
+        val (list, target) = scrolled(FIT_HEIGHT_DP)
         assertEquals(6, target)
         assertEquals(0, list.paddingBottom)
         assertEquals(list.height, list.getChildAt(6 - list.firstVisiblePosition).bottom)
@@ -284,15 +320,15 @@ class WeekWidgetTest {
 
     @Test
     fun `when today's row alone is taller than the list, it ends above the fading edge and its top is cut`() {
-        // At the least height, 110 dp, the list is 50 px high; today's row, 73 px, gets no padding.
+        // At the least height, 110 dp, the list is 50 px high; today's row, 81 px, gets no padding.
         val (list, target) = scrolled(110)
         assertEquals(2, target)
         assertEquals(0, list.paddingBottom)
         val today = list.getChildAt(2 - list.firstVisiblePosition)
         assertEquals(list.height - ViewConfiguration.get(application).scaledFadingEdgeLength, today.bottom)
-        assertEquals(-35, today.top)
+        assertEquals(-43, today.top)
         val log = ShadowLog.getLogsForTag("WeekWidget").last { it.type == Log.INFO }.msg
-        assertTrue(log, log.contains("; today is row 2, scrolls to row 2, 1 row, 73 of the list's 50 px, no padding: "))
+        assertTrue(log, log.contains("; today is row 2, scrolls to row 2, 1 row, 81 of the list's 50 px, no padding: "))
         assertTrue(log, log.contains(" no padding: today's row is taller than the list less the scroll's 12 px; "))
     }
 
@@ -318,8 +354,8 @@ class WeekWidgetTest {
     fun `an update to a height where the days from today fit clears the padding before`() {
         val (list, _) = scrolled(220)
         assertTrue("${list.paddingBottom}", list.paddingBottom > 0)
-        val height = WidgetHeight(WidgetHost.HEIGHT_DP, null)
-        WidgetHost.reapplied(application, list.rootView) { context, width ->
+        val height = WidgetHeight(FIT_HEIGHT_DP, null)
+        WidgetHost.reapplied(application, list.rootView, FIT_HEIGHT_DP) { context, width ->
             WeekWidget
                 .draw(context, width, Look(), 1, Long.MAX_VALUE, SampleData.calendar(), height)
                 .views
@@ -355,8 +391,8 @@ class WeekWidgetTest {
         ShadowLog.clear()
         WeekWidgetProvider().onAppWidgetOptionsChanged(application, manager, id, options)
         val log = ShadowLog.getLogsForTag("WeekWidget").single { it.type == Log.INFO }.msg
-        assertTrue(log, log.contains("; today is row 2, scrolls to row 4, 3 rows, 156 of the list's 240 px, "))
-        assertTrue(log, log.contains(", bottom padding 84 px, at least the 12 px the scroll stops above the bottom; "))
+        assertTrue(log, log.contains("; today is row 2, scrolls to row 4, 3 rows, 171 of the list's 240 px, "))
+        assertTrue(log, log.contains(", bottom padding 69 px, at least the 12 px the scroll stops above the bottom; "))
         assertTrue(log, log.endsWith("; 300 dp (appWidgetMaxHeight, 200 dp least)"))
     }
 

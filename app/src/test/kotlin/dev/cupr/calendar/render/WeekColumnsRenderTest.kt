@@ -108,7 +108,7 @@ class WeekColumnsRenderTest {
         entries: List<Entry>,
         widthDp: Int,
     ): Long {
-        val week = WeekLayout.build(dates, entries, today)
+        val week = WeekLayout.build(dates, entries, SampleData.now)
         val headerPx = scale.px(widthDp - 2 * PhoneMonth.CARD_INSET).roundToInt()
         val rowPx = scale.px(widthDp - 2 * PhoneMonth.CARD_BORDER).roundToInt()
         val renderer = if (DayRowRenderer.stacksAt(widthDp)) stackedRows else dayRows

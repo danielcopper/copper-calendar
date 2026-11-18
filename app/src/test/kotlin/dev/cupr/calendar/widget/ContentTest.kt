@@ -74,6 +74,7 @@ class ContentTest {
         val calendar = calendar()
         assertEquals(listOf("Anna"), calendar.entries.map { it.title })
         assertEquals(LocalDate.of(2026, 11, 12), calendar.today)
+        assertEquals("the time it is drawn at, not only its day", now, calendar.now)
         assertEquals(Palettes.BUILT_IN, calendar.palettes)
         assertNull(calendar.notice)
     }
