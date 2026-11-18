@@ -11,12 +11,18 @@
     <!-- A week widget's header: Monday to Sunday, or today and the six days after it (D20). -->
     <string name="week_this_week">Diese Woche</string>
     <string name="week_next_days">Nächste 7 Tage</string>
-    <!-- The week's rows: today's row, an empty day, and the additions after an entry's title (D18). -->
+    <!-- The week's rows: today's row, an empty day, the additions after an entry's title (D18), and the time at the right end of the row of an entry over several days (D61). -->
     <string name="week_today">Heute</string>
     <string name="week_free">frei</string>
     <string name="week_holiday">Feiertag</string>
     <string name="week_turns">wird %1$d</string>
+    <string name="week_from">ab %1$s</string>
     <string name="week_until">bis %1$s</string>
+    <!-- A day between the first and the last of a timed entry over several days, by the count of its days. -->
+    <plurals name="week_day_of">
+        <item quantity="one">Tag %1$d von %2$d</item>
+        <item quantity="other">Tag %1$d von %2$d</item>
+    </plurals>
     <!-- The entries a full day leaves out for the bitmap limit (D40). -->
     <plurals name="week_more">
         <item quantity="one">+%1$d weiterer</item>

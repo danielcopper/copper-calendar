@@ -15,8 +15,7 @@ val LocalDate.isWeekend: Boolean get() = dayOfWeek == DayOfWeek.SATURDAY || dayO
 
 /**
  * The day's long German name, "Mittwoch, 11. November", from Java's German
- * locale: a day's description for accessibility, and the last day an entry's
- * "bis" names (D18, D25).
+ * locale: a day's description for accessibility (D25).
  */
 val LocalDate.longName: String get() = format(LONG_NAME)
 
@@ -34,8 +33,8 @@ val DAY_AND_MONTH: DateTimeFormatter = DateTimeFormatter.ofPattern("d. MMM", Loc
 /**
  * The dashboard's rule `calendar_days` as the month and the week share it
  * (the dashboard's file is named in [dev.cupr.calendar.render.PhoneMonth]):
- * which entries a run of days shows, the day each stands on, and their order
- * there.
+ * which entries a run of days shows and the day each stands on; and the
+ * month's order there, the week having its own rows (D61).
  */
 internal object CalendarDays {
     private val collator: Collator = Collator.getInstance(Locale.GERMAN)
@@ -97,7 +96,7 @@ internal object CalendarDays {
     }
 
     /** The entries [place] placed for the same dates, per date, in the order above. */
-    fun byDay(
+    private fun byDay(
         dates: List<LocalDate>,
         placed: List<Placed>,
     ): List<List<Placed>> {

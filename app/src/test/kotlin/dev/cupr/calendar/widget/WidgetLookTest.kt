@@ -473,12 +473,12 @@ class WidgetLookTest {
 
         val list = shadow.getViewFor(id).findViewById<ListView>(R.id.list)
         assertEquals(0, shadowOf(list).smoothScrolledPosition)
-        assertEquals(84, list.paddingBottom)
+        assertEquals(69, list.paddingBottom)
         val log = ShadowLog.getLogsForTag(WeekWidget.TAG).single { it.type == Log.INFO }.msg
         assertTrue(
             log,
             log.endsWith(
-                "; today is row 2, keeps its position: not scrolled to today, bottom padding 84 px; " +
+                "; today is row 2, keeps its position: not scrolled to today, bottom padding 69 px; " +
                     "300 dp (appWidgetMaxHeight, 200 dp least)",
             ),
         )

@@ -30,30 +30,40 @@ internal object TileWeek {
     const val TODAY_FADE = 0.7f
     const val TODAY_RADIUS = 6f
 
-    /** An entry's line: its height, the gap between lines, its text size, and the gap between its parts. */
+    /** A line of text: its height, the gap between entries' rows, its text size, the gap between a row's parts. */
     const val LINE = 20f
-    const val LINE_GAP = 1f
+    const val LINE_GAP = 2f
     const val FONT = 13f
     const val PART_GAP = 6f
 
-    /** The bar in the entry's colour at the left of each line: its width and corner radius. */
+    /** An entry's row around its line: its padding above and below, its padding at its right end, its corner radius. */
+    const val ENTRY_PAD = 1f
+    const val ENTRY_END = 8f
+    const val ENTRY_RADIUS = 6f
+
+    /** An entry's row is tinted in its colour: a timed entry's faintly, an all-day entry's more. */
+    const val TIMED_TINT = 0.06f
+    const val ALL_DAY_TINT = 0.12f
+
+    /**
+     * The bar in the entry's colour at the left of its row: its width, and
+     * a timed row's corner radius; an all-day row's bar is square and as
+     * tall as the row.
+     */
     const val BAR = 3f
     const val BAR_RADIUS = 1.5f
 
-    /** A timed line: the time's column, the mark, the dot drawn without an icon. */
-    const val TIME = 76f
+    /** The mark, and the dot a timed row draws without an icon or drawing. */
     const val MARK = 14f
     const val DOT = 7f
 
-    /** An all-day chip: text size, padding left and right, mark, gap after it, radius, tint. */
-    const val CHIP_FONT = 12f
-    const val CHIP_LEFT = 6f
-    const val CHIP_RIGHT = 8f
-    const val CHIP_MARK = 16f
-    const val CHIP_GAP = 5f
-    const val CHIP_RADIUS = 6f
-    const val CHIP_TINT = 0.22f
+    /** The time at a row's right end: its text size, and its padding at its left, beyond the gap between parts. */
+    const val TIME_FONT = 12f
+    const val TIME_GAP = 8f
 
     /** A day before today is drawn at this opacity. */
     const val PAST = 0.5f
+
+    /** A timed entry of today whose end has passed is drawn at this opacity. */
+    const val OVER = 0.5f
 }

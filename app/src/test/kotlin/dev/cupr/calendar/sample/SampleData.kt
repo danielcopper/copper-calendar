@@ -23,6 +23,9 @@ object SampleData {
     val clock: Clock =
         Clock.fixed(LocalDateTime.of(2026, 11, 11, 9, 0).atZone(zone).toInstant(), zone)
 
+    /** The sample's time of drawing, by its clock. */
+    val now: LocalDateTime = LocalDateTime.now(clock)
+
     val month: YearMonth = YearMonth.of(2026, 11)
 
     // Calendars. The family calendar's id is a neutral one of the form the
@@ -46,7 +49,7 @@ object SampleData {
 
     /** The sample month as a widget draws it, today the sample's, fresh and signed in. */
     fun calendar(entries: List<Entry> = this.entries): Content.Calendar =
-        Content.Calendar(entries, Palettes.BUILT_IN, LocalDate.now(clock))
+        Content.Calendar(entries, Palettes.BUILT_IN, now)
 
     /**
      * Each entry has a UID, except the special days and public holidays,
