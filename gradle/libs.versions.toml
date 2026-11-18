@@ -25,7 +25,7 @@ ktlint-cli = "1.8.0"
 # 1.23.8, the last 1.x, uses Gradle APIs that Gradle 9 deprecates and parses
 # with Kotlin 2.0; the 2.0 line is built against Kotlin 2.4.
 detekt = "2.0.0-alpha.6"
-sonarqube = "7.5.0.8588"
+sonarqube = "7.6.0.18749"
 
 [libraries]
 androidx-core = { module = "androidx.core:core", version.ref = "androidx-core" }
