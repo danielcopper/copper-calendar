@@ -5,7 +5,8 @@ import androidx.annotation.ColorInt
 /**
  * An entry's colour as Home Assistant delivers it: an event's COLOR from
  * Nextcloud, a CSS colour name or `#rrggbb`, or a person's colour of the
- * same form (homelab's `zuhause.jinja`, macro `calendar_entries`). The names are CSS Color Module Level 4's
+ * same form (homelab's `zuhause.jinja`, macro `calendar_entries`), and a
+ * fixed colour in `resolved_color` (macro `calendar_color`). The names are CSS Color Module Level 4's
  * named colours, any case; `#rgb` is read too.
  */
 internal object CssColors {

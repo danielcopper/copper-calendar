@@ -1,12 +1,16 @@
 package dev.cupr.calendar.ha
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
+/** A JSON string's content, or none for any other element. */
+internal fun JsonElement.stringContent(): String? = (this as? JsonPrimitive)?.takeIf { it.isString }?.content
+
 /** A field that is a JSON string, or none. */
-internal fun JsonObject.string(name: String): String? = (this[name] as? JsonPrimitive)?.takeIf { it.isString }?.content
+internal fun JsonObject.string(name: String): String? = this[name]?.stringContent()
 
 /** A field that is a JSON object, or none. */
 internal fun JsonObject.objectField(name: String): JsonObject? = this[name]?.takeIf { it is JsonObject }?.jsonObject
