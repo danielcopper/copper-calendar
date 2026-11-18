@@ -28,6 +28,7 @@ import dev.cupr.calendar.tap.Taps
 import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.week.WeekLayout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -39,6 +40,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowLog
 import java.time.LocalDate
+import java.time.LocalDateTime
 import kotlin.math.roundToInt
 
 @RunWith(RobolectricTestRunner::class)
@@ -204,6 +206,40 @@ class WeekWidgetTest {
             assertEquals("top of $index", area.top.roundToInt(), entries.top + slot.top)
             assertEquals("bottom of $index", area.bottom.roundToInt(), entries.top + slot.bottom)
         }
+    }
+
+    @Test
+    fun `today's row is drawn at the calendar's time, a timed entry already over dimmed`() {
+        val over =
+            Probe
+                .timed(
+                    wednesday,
+                    icon = null,
+                ).copy(start = wednesday.atTime(7, 0), end = wednesday.atTime(8, 0))
+        val calendar = SampleData.calendar(SampleData.entries + over)
+        val views = { context: android.content.Context, width: Int ->
+            WeekWidget.draw(context, width, Look(), 1, Long.MAX_VALUE, calendar).views
+        }
+        val list = WidgetHost.laidOut(application, views = views).findViewById<ListView>(R.id.list)
+        val image = list.getChildAt(2 - list.firstVisiblePosition).findViewById<ImageView>(R.id.day_light)
+        val drawn = (image.drawable as BitmapDrawable).bitmap
+        val assets = RenderAssets.of(application)
+        val rows =
+            DayRowRenderer.forWidth(
+                assets.fonts,
+                assets.icons,
+                assets.drawings,
+                WeekTexts.of(application.resources),
+                WidgetHost.WIDTH_DP,
+            )
+        val scale = Scale(application.resources.displayMetrics.density)
+        val dates = WeekDays.MONDAY_TO_SUNDAY.dates(wednesday)
+        val at = { now: LocalDateTime ->
+            val day = WeekLayout.build(dates, calendar.entries, now)[2]
+            rows.render(day, drawn.width, scale, calendar.palettes.light)
+        }
+        assertTrue(drawn.sameAs(at(SampleData.now)))
+        assertFalse("drawn as at midnight, nothing over", drawn.sameAs(at(wednesday.atStartOfDay())))
     }
 
     @Test

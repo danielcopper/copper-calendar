@@ -453,6 +453,29 @@ class DayRowRenderTest {
     }
 
     @Test
+    fun `a long title on a timed row is cut before its time, and the time still draws`() {
+        val thursday = LocalDate.of(2026, 11, 12)
+        val long = Probe.timed(thursday, icon = null).copy(title = "Ein sehr langer Titel, der nie in die Zeile passt")
+        val day = day(thursday, long)
+        val drawn = rows.render(day, rowPx, scale, SampleData.light)
+        val area = rows.entryAreas(day, rowPx, scale).single()
+        val timePaint =
+            fonts.paint(scale, TileWeek.TIME_FONT, FontWeight.REGULAR, Color.BLACK).apply {
+                fontFeatureSettings = "tnum"
+            }
+        val end = area.right - scale.px(TileWeek.ENTRY_END)
+        val timeX = end - timePaint.measureText("10:00–11:00")
+        val titleEnd = timeX - scale.px(TileWeek.TIME_GAP + TileWeek.PART_GAP)
+        val text = SampleData.light.text
+        assertTrue(
+            "the title reaches its end",
+            drawn.has(text, titleEnd - scale.px(12f), area.top, titleEnd, area.bottom),
+        )
+        assertFalse(drawn.has(text, timeX - scale.px(TileWeek.TIME_GAP), area.top, area.right, area.bottom))
+        assertTrue(drawn.has(SampleData.light.secondaryText, timeX, area.top, end, area.bottom))
+    }
+
+    @Test
     fun `an all-day row without a mark leaves its room free, so its title starts where a timed row's does`() {
         val thursday = LocalDate.of(2026, 11, 12)
         val day = day(thursday, allDayEntry(thursday).copy(title = "Termin"), Probe.timed(thursday, icon = null))
