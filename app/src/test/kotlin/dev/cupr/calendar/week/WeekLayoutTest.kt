@@ -16,7 +16,7 @@ import java.time.LocalDateTime
 /**
  * The week's rows' rules, ported from the dashboard's `calendar_days` as its
  * tile calls it (`empty`, `past`, `runs`) and its `calendar_lines` (the
- * dashboard's file is named in PhoneMonth), and the days a week widget shows.
+ * dashboard's files and commits are named in PhoneMonth), and the days a week widget shows.
  */
 class WeekLayoutTest {
     private val today = LocalDate.of(2026, 11, 11)

@@ -144,8 +144,8 @@ class MonthWidgetTest {
         ShadowLog.clear()
         MonthWidgetProvider().onAppWidgetOptionsChanged(application, manager, id, options)
         val log = ShadowLog.getLogsForTag("MonthWidget").single { it.type == Log.INFO }.msg
-        assertTrue(log, log.contains("; today is row 2, scrolls to row 4, 3 rows, 214 of the list's 241 px, "))
-        assertTrue(log, log.contains(", bottom padding 27 px, at least the 12 px the scroll stops above the bottom; "))
+        assertTrue(log, log.contains("; today is row 2, scrolls to row 4, 3 rows, 213 of the list's 241 px, "))
+        assertTrue(log, log.contains(", bottom padding 28 px, at least the 12 px the scroll stops above the bottom; "))
         assertTrue(log, log.endsWith("; 320 dp (appWidgetMaxHeight, 200 dp least)"))
     }
 

@@ -41,7 +41,7 @@ enum class WeekDays(
 /**
  * A day of the week's rows ("Woche"), as the dashboard's tile shows it
  * (`calendar_days` with `empty`, `past` and `runs`, and `calendar_lines`;
- * the dashboard's file is named in [dev.cupr.calendar.render.PhoneMonth]).
+ * the dashboard's files and commits are named in [dev.cupr.calendar.render.PhoneMonth]).
  * [WeekLayout] makes it.
  */
 @ConsistentCopyVisibility

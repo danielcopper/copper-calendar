@@ -12,10 +12,10 @@ import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.model.Palette
 import dev.cupr.calendar.month.Bar
 import dev.cupr.calendar.month.Day
+import dev.cupr.calendar.month.Line
 import dev.cupr.calendar.month.Week
 import dev.cupr.calendar.render.PhoneMonth.BAR_BAND
 import dev.cupr.calendar.render.PhoneMonth.BAR_FONT
-import dev.cupr.calendar.render.PhoneMonth.BAR_HEIGHT
 import dev.cupr.calendar.render.PhoneMonth.BAR_INSET
 import dev.cupr.calendar.render.PhoneMonth.BAR_OPEN_LEFT
 import dev.cupr.calendar.render.PhoneMonth.BAR_SIDE
@@ -37,9 +37,10 @@ import dev.cupr.calendar.render.PhoneMonth.ENTRY_RADIUS
 import dev.cupr.calendar.render.PhoneMonth.FONT
 import dev.cupr.calendar.render.PhoneMonth.GAP
 import dev.cupr.calendar.render.PhoneMonth.LANE
-import dev.cupr.calendar.render.PhoneMonth.LINE
+import dev.cupr.calendar.render.PhoneMonth.LANE_LINE
 import dev.cupr.calendar.render.PhoneMonth.MARK
 import dev.cupr.calendar.render.PhoneMonth.MORE_LEFT
+import dev.cupr.calendar.render.PhoneMonth.MORE_LINE
 import dev.cupr.calendar.render.PhoneMonth.NUMBER_FONT
 import dev.cupr.calendar.render.PhoneMonth.NUMBER_GAP
 import dev.cupr.calendar.render.PhoneMonth.NUMBER_HEIGHT
@@ -56,9 +57,10 @@ import kotlin.math.min
 
 /**
  * Draws one week of the month as a bitmap (D8), at phone size
- * ([PhoneMonth]): the week's top divider, seven cells and the bars over
- * them; "Woche quer" draws its seven days as one such week. The bitmap is
- * transparent where the card shows.
+ * ([PhoneMonth]): the week's top divider, seven cells, and over them the
+ * bars and the days' entries in the week's lanes (D62); "Woche quer" draws
+ * its seven days as one such week. The bitmap is transparent where the card
+ * shows.
  */
 class WeekRowRenderer(
     private val fonts: Fonts,
@@ -81,7 +83,7 @@ class WeekRowRenderer(
         val canvas = Canvas(bitmap)
         val frame = Frame(canvas, scale, palette, widthPx / DAYS_IN_WEEK.toFloat(), heightPx.toFloat())
         canvas.fill(0f, 0f, widthPx.toFloat(), scale.hairline, palette.divider)
-        week.days.forEachIndexed { column, day -> frame.cell(day, column, week.lanes) }
+        week.days.forEachIndexed { column, day -> frame.cell(day, column, week) }
         week.bars.forEach { frame.bar(it) }
         return bitmap
     }
@@ -163,14 +165,17 @@ class WeekRowRenderer(
         blankDp: Float = 0f,
     ): Int = scale.rowPx(heightDp(week) + blankDp)
 
-    /** The row's height below its divider: its tallest cell, at least [CELL_MIN]. */
-    fun heightDp(week: Week): Float =
-        max(
-            CELL_MIN,
-            week.days.maxOf { day ->
-                CELL_TOP + NUMBER_ROW + GAP + week.lanes * LANE + day.lines * (GAP + LINE) + CELL_BOTTOM
-            },
-        )
+    /**
+     * The row's height below its divider: the number row, the week's lanes
+     * and "+N" when a day counts any, at least [CELL_MIN].
+     */
+    fun heightDp(week: Week): Float {
+        val more = if (week.days.any { it.more > 0 }) GAP + MORE_LINE else 0f
+        return max(CELL_MIN, laneTopDp(week.lanes) + GAP + more + CELL_BOTTOM)
+    }
+
+    /** The top of a lane below the row's divider, in dp. */
+    private fun laneTopDp(lane: Int): Float = CELL_TOP + NUMBER_ROW + lane * LANE
 
     private inner class Frame(
         val canvas: Canvas,
@@ -181,10 +186,11 @@ class WeekRowRenderer(
     ) {
         private val top = scale.hairline
 
+        /** A day's cell, its entries' lines in the week's lanes among it, dimmed with it. */
         fun cell(
             day: Day,
             index: Int,
-            lanes: Int,
+            week: Week,
         ) {
             val cell = Cell(index, column, scale)
             val saved =
@@ -198,20 +204,20 @@ class WeekRowRenderer(
                 canvas.fill(cell.left + cell.border, top, cell.right, bottom, palette.text.withOpacity(WEEKEND_TINT))
             }
             val x = cell.contentLeft
-            val width = cell.contentRight - x
-            var y = top + scale.px(CELL_TOP)
+            val y = top + scale.px(CELL_TOP)
             numberRow(day, x, y, cell.contentRight)
-            y += scale.px(NUMBER_ROW + GAP + lanes * LANE + GAP)
-            for (entry in day.shown) {
-                entryLine(entry, day.past, x, y, width)
-                y += scale.px(LINE + GAP)
-            }
+            for (line in week.lines) if (line.column == index) line(line, cell, day.past)
             if (day.more > 0) {
+                val moreTop = laneTop(week.lanes) + scale.px(2 * GAP)
                 val paint = fonts.paint(scale, FONT, FontWeight.BOLD, palette.text)
-                canvas.drawText("+${day.more}", x + scale.px(MORE_LEFT), paint.baselineIn(y, scale.px(LINE)), paint)
+                val baseline = paint.baselineIn(moreTop, scale.px(MORE_LINE))
+                canvas.drawText("+${day.more}", x + scale.px(MORE_LEFT), baseline, paint)
             }
             canvas.restoreToCount(saved)
         }
+
+        /** The top of a lane. */
+        private fun laneTop(lane: Int): Float = top + scale.px(laneTopDp(lane))
 
         /**
          * The number (today in the accent's pill) and the marked entries'
@@ -243,19 +249,27 @@ class WeekRowRenderer(
         }
 
         /**
-         * An entry's line: an all-day entry as a tinted chip, with its mark if
-         * it names a drawing; a timed one with its mark; then its title.
+         * An entry's line in its lane across its cell, a past day's dimmed:
+         * an all-day entry as a tinted chip, with its mark if it names a
+         * drawing; a timed one with its mark; then its title.
          */
-        private fun entryLine(
-            entry: Entry,
+        private fun line(
+            line: Line,
+            cell: Cell,
             past: Boolean,
-            x: Float,
-            y: Float,
-            width: Float,
         ) {
-            val saved = if (past) canvas.saveLayerAlpha(null, opacityAlpha(PAST_ENTRY)) else canvas.save()
+            val x = cell.contentLeft
+            val width = cell.contentRight - x
+            val y = laneTop(line.lane)
+            val height = scale.px(LANE_LINE)
+            val saved =
+                if (past) {
+                    canvas.saveLayerAlpha(x, y, x + width, y + height, opacityAlpha(PAST_ENTRY))
+                } else {
+                    canvas.save()
+                }
+            val entry = line.entry
             val color = palette.colorOf(entry)
-            val height = scale.px(LINE)
             val shape = roundedPath(RectF(x, y, x + width, y + height), scale.px(ENTRY_RADIUS), scale.px(ENTRY_RADIUS))
             canvas.clipPath(shape)
             val textX: Float
@@ -301,8 +315,8 @@ class WeekRowRenderer(
             val inset = scale.px(BAR_INSET)
             val left = bar.from * column + if (bar.opens) inset else 0f
             val right = (bar.to + 1) * column - if (bar.closes) inset else 0f
-            val barTop = top + scale.px(CELL_TOP + NUMBER_ROW + bar.lane * LANE)
-            val height = scale.px(BAR_HEIGHT)
+            val barTop = laneTop(bar.lane)
+            val height = scale.px(LANE_LINE)
             val round = height / 2
             val shape =
                 roundedPath(

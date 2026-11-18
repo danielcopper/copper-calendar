@@ -128,13 +128,13 @@ object WeekColumnsWidget {
 
     /**
      * The week with one more entry left out, counted in its day's "+N": from
-     * the tallest day by its lines ([Day.lines]) that shows one, the first of
-     * them when several are; none when no day shows one.
+     * the day reaching deepest into the lanes ([Week.depthOf]) of those that
+     * show one, the first of them when several do; none when no day shows one.
      */
     internal fun leaveOutOne(week: Week): Week? {
         val days = week.days
-        val tallest = days.indices.filter { days[it].shown.isNotEmpty() }.maxByOrNull { days[it].lines }
-        return tallest?.let { index ->
+        val deepest = days.indices.filter { days[it].shown.isNotEmpty() }.maxByOrNull { week.depthOf(it) }
+        return deepest?.let { index ->
             week.copy(days = days.mapIndexed { i, day -> if (i == index) day.leaveOutLast() else day })
         }
     }
