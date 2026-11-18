@@ -6,6 +6,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.R
+import dev.cupr.calendar.model.CalendarVariables.FAMILY
+import dev.cupr.calendar.model.DashboardColor.CalendarVariable
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.model.Kinds
 import dev.cupr.calendar.model.Palette
@@ -155,6 +157,20 @@ class DayRowRenderTest {
         val dateTop = scale.hairline + scale.px(TileWeek.ROW_PAD + TileWeek.TODAY_LINE)
         val columnEnd = scale.px(PhoneMonth.CARD_SIDE + DayRowRenderer.STACKED_COLUMN)
         assertTrue(row.has(SampleData.light.text, 0f, dateTop, columnEnd, dateTop + scale.px(TileWeek.TODAY_LINE)))
+    }
+
+    @Test
+    fun `a timed entry's bar takes the dashboard's colour in the mode, not its own`() {
+        val thursday = LocalDate.of(2026, 11, 12)
+        val family = Probe.timed(thursday, icon = null).copy(dashboardColor = CalendarVariable(FAMILY))
+        val barX = scale.px(PhoneMonth.CARD_SIDE + DayRowRenderer.STACKED_COLUMN + TileWeek.COLUMN_GAP + 1f)
+        val y = scale.hairline + scale.px(TileWeek.ROW_PAD + DayRowRenderer.TIME_LINE / 2)
+
+        for (palette in listOf(SampleData.light, SampleData.dark)) {
+            val row = stacked.render(day(thursday, family), rowPx, scale, palette)
+            val bar = row.getPixel(barX.toInt(), y.toInt())
+            assertTrue(Integer.toHexString(bar), Probe.near(bar, palette.calendars.getValue(FAMILY)))
+        }
     }
 
     @Test

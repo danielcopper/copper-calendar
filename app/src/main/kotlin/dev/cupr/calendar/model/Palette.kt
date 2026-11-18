@@ -38,8 +38,23 @@ data class Palette(
         }
     }
 
-    /** An entry's own colour, else its calendar's, else the secondary text colour. */
+    /**
+     * The colour an entry draws in (D49): the dashboard's, in this mode;
+     * without it, the entry's own colour, else its calendar's by
+     * [CalendarVariables], else the secondary text colour.
+     */
     @ColorInt
     fun colorOf(entry: Entry): Int =
-        entry.color ?: CalendarVariables.of(entry.calendar)?.let(calendars::get) ?: secondaryText
+        entry.dashboardColor?.let(::colorOf)
+            ?: entry.color
+            ?: CalendarVariables.of(entry.calendar)?.let(calendars::get)
+            ?: secondaryText
+
+    @ColorInt
+    private fun colorOf(color: DashboardColor): Int =
+        when (color) {
+            is DashboardColor.Fixed -> color.argb
+            is DashboardColor.CalendarVariable -> calendars.getValue(color.name)
+            DashboardColor.SecondaryText -> secondaryText
+        }
 }

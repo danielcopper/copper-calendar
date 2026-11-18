@@ -6,8 +6,9 @@ import java.time.LocalTime
 
 /**
  * One calendar entry as a source delivers it (D4). The widgets depend on this
- * shape only: a source fills it, and nothing about an entry's kind, icon,
- * drawing or colour is worked out in the app.
+ * shape only: a source fills it, and nothing about an entry's kind, icon or
+ * drawing is worked out in the app; its colour is the dashboard's as sent,
+ * and the app works one out only when that is missing (D49).
  *
  * Times are local wall-clock times. An all-day entry starts at the midnight
  * of its first day and ends at the midnight after its last day, as Home
@@ -22,8 +23,14 @@ data class Entry(
     val calendar: String,
     /** Home Assistant's kind (`birthday`, `special`, `holiday`, ...); none for an entry of no kind. */
     val kind: String? = null,
-    /** The entry's resolved colour (ARGB); none when it has no own colour, then its calendar's applies. */
+    /** The entry's own colour or its person's (ARGB); none when it has neither. */
     @param:ColorInt val color: Int? = null,
+    /**
+     * The colour the dashboard shows the entry in (D49); none when Home
+     * Assistant sent none the app reads, then [color] and the calendar's
+     * colour apply ([Palette.colorOf]).
+     */
+    val dashboardColor: DashboardColor? = null,
     /** An MDI icon name (`mdi:swim`); none when the entry has no icon. */
     val icon: String? = null,
     /** A drawing's file name (`lantern.svg`); none when the entry has none. */
