@@ -32,12 +32,12 @@ Each widget has its own tap targets, set in its setup (D63). By default each ele
 |---|---|---|---|
 | Header | `/dashboard-zuhause/kalender` | another app, nothing | the sign-in screen while the header says "Neu anmelden" (D52) |
 | Day (week row, week column, month cell) | `/dashboard-zuhause/kalender?day={day}` | another app, nothing | on the phone, a day with entries opens its list (D15) |
-| Entry ("Woche" only) | `/dashboard-zuhause/kalender?entry={uid}&day={day}` | its day, `/dashboard-zuhause/kalender?day={day}`; nothing | needs the UID in the sensor data (D16); an entry without one opens what its day opens (D37); month cells and the columns of "Woche quer" have no entry areas |
+| Entry ("Woche" only) | `/dashboard-zuhause/kalender?entry={uid}&day={day}` | its day, `/dashboard-zuhause/kalender?day={day}`; a tap on its day | needs the UID in the sensor data (D16); an entry without one opens what its day opens, also another app (D37); month cells and the columns of "Woche quer" have no entry areas |
 | "+" | `/dashboard-zuhause/kalender?new={day}` | another app, nothing | `{day}` is today; set to nothing, "+" is hidden |
 | Plain text without data | the sign-in screen | none | not configurable (D50) |
 | Plain text "zu voll" or "konnte nicht gezeichnet werden" | `/dashboard-zuhause/kalender` | none | not configurable (D40) |
 
-Another app is one with a launcher icon, started as its icon starts it, in its own task, without the day; one no longer installed shows "Ziel lässt sich nicht öffnen" (D25). Nothing means no tap: the launcher gives no feedback there, and an entry without a tap leaves it to its day's area.
+Another app is one with a launcher icon, started as its icon starts it, in its own task, without the day; one no longer installed shows "Ziel lässt sich nicht öffnen" (D25). Nothing means no tap: the launcher gives no feedback there. An entry set to a tap on its day has no tap of its own, and its day's area under it takes the tap.
 
 The calendar page reads `?day=`, `?entry=…&day=` and `?new=`, and all three work through the Home Assistant app (checked on the phone, 2026-11-10); see [ha-additions.md](ha-additions.md).
 
@@ -61,7 +61,7 @@ It fits on a phone without scrolling: each setting is a row with its name and va
 - Below a divider, "Beim Tippen auf …", with a row per element indented below it (D63):
   - "Kopfzeile": "Kalenderseite", "Andere App …" or "Nichts".
   - "Tag": "Der Tag auf der Kalenderseite", "Andere App …" or "Nichts".
-  - "Eintrag" ("Woche"): "Der Eintrag auf der Kalenderseite", "Sein Tag auf der Kalenderseite" or "Nichts".
+  - "Eintrag" ("Woche"): "Der Eintrag auf der Kalenderseite", "Sein Tag auf der Kalenderseite" or "Wie ein Tipp auf seinen Tag".
   - "„+“": "Neuer Eintrag auf der Kalenderseite", "Andere App …" or "Nichts, „+“ ausgeblendet".
   - "Andere App …" opens the list "Andere App" of the apps with a launcher icon, by icon and name, sorted by name; the row then names the app, or says "App nicht gefunden" once it is no longer installed.
 - "Speichern" stores the settings and redraws the widget at once, the month's and "Woche"'s list back at today, whatever "Zurück zu heute" says (D59); back leaves the stored settings as they were.

@@ -1,7 +1,7 @@
 # copper-calendar
 
 Configurable Android home-screen widgets that show calendar entries from Home Assistant as a week or a month, in the look of a Home Assistant dashboard.
-A tap on a day, an entry or "+" opens the matching page in the Home Assistant app; each widget can set another app or nothing instead.
+A tap on a day, an entry or "+" opens the matching page in the Home Assistant app; each widget can set another app or nothing instead for a day and "+", and its day for an entry.
 
 ## Build and run
 
