@@ -7,6 +7,9 @@ import android.appwidget.AppWidgetProvider
 import android.appwidget.AppWidgetProviderInfo
 import android.content.ComponentName
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.ActivityInfo
+import android.content.pm.ApplicationInfo
 import androidx.annotation.StringRes
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -17,6 +20,8 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -29,6 +34,8 @@ import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.store.BackToToday
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.Snapshot
+import dev.cupr.calendar.store.TapTarget
+import dev.cupr.calendar.store.TapTargets
 import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.widget.MonthWidgetProvider
@@ -92,21 +99,21 @@ class SetupScreenTest {
     fun `the month's setup has its calendars, when it returns to today and the corner of plus`() {
         open(MonthWidgetProvider::class.java)
 
-        assertSections(R.string.widget_month_label, days = false, backToToday = true)
+        assertSections(R.string.widget_month_label, days = false, backToToday = true, entryTaps = false)
     }
 
     @Test
     fun `the week's setup has its calendars, its days, when it returns to today and the corner of plus`() {
         open(WeekWidgetProvider::class.java)
 
-        assertSections(R.string.widget_week_label, days = true, backToToday = true)
+        assertSections(R.string.widget_week_label, days = true, backToToday = true, entryTaps = true)
     }
 
     @Test
     fun `the week across's setup has its calendars, its days and the corner of plus`() {
         open(WeekColumnsWidgetProvider::class.java)
 
-        assertSections(R.string.widget_week_columns_label, days = true, backToToday = false)
+        assertSections(R.string.widget_week_columns_label, days = true, backToToday = false, entryTaps = false)
     }
 
     @Test
@@ -207,6 +214,60 @@ class SetupScreenTest {
     }
 
     @Test
+    fun `each element's target is picked in its dialog, another app from a list by name, and saving stores them`() {
+        installLauncherApp(ZEBRA, "Zebra")
+        installLauncherApp(ALPHA, "Alpha")
+        open(WeekWidgetProvider::class.java)
+
+        tap(R.string.setup_tap_new)
+        option(R.string.setup_tap_calendar_new).assertIsSelected()
+        press(R.string.setup_tap_nothing_new)
+        tap(R.string.setup_tap_entry)
+        node(R.string.setup_tap_other_app).assertDoesNotExist()
+        press(R.string.setup_tap_entry_day)
+        tap(R.string.setup_tap_day)
+        press(R.string.setup_tap_other_app)
+        assertTrue(top("Alpha") < top(context.getString(R.string.app_name)))
+        assertTrue(top(context.getString(R.string.app_name)) < top("Zebra"))
+        press("Alpha")
+        tap(R.string.setup_tap_header)
+        press(R.string.setup_tap_nothing)
+
+        // Each row names its target now: no dialog is open.
+        node(R.string.setup_tap_nothing_new).assertExists()
+        node(R.string.setup_tap_entry_day).assertExists()
+        node("Alpha").assertExists()
+        node(R.string.setup_tap_nothing).assertExists()
+        node(R.string.setup_tap_calendar).assertDoesNotExist()
+        tap(R.string.setup_save)
+        assertEquals(
+            TapTargets(TapTarget.None, TapTarget.App(ALPHA), TapTarget.EntryDay, TapTarget.None),
+            Settings.widgets(context).read(ID).taps,
+        )
+    }
+
+    @Test
+    fun `a stored app shows by its name, one no longer there as not found, and cancelling keeps them`() {
+        installLauncherApp(ALPHA, "Alpha")
+        val taps = TapTargets(header = TapTarget.App(ALPHA), new = TapTarget.App("com.example.gone"))
+        Settings.widgets(context).write(ID, WidgetSettings(taps = taps))
+        open(MonthWidgetProvider::class.java)
+
+        node("Alpha").assertExists()
+        node(R.string.setup_tap_app_missing).assertExists()
+        tap(R.string.setup_tap_header)
+        option(R.string.setup_tap_other_app).assertIsSelected()
+        press(R.string.setup_cancel)
+        tap(R.string.setup_tap_new)
+        press(R.string.setup_tap_other_app)
+        press(R.string.setup_cancel)
+
+        node(R.string.setup_cancel).assertDoesNotExist()
+        tap(R.string.setup_save)
+        assertEquals(taps, Settings.widgets(context).read(ID).taps)
+    }
+
+    @Test
     fun `without any calendar known, the setup says so`() {
         open(WeekWidgetProvider::class.java)
 
@@ -244,18 +305,37 @@ class SetupScreenTest {
         assertEquals(dynamicDarkColorScheme(context).surface.toArgb(), background())
     }
 
-    /** The title names the kind; a section shows its heading exactly when the kind has it. */
+    /**
+     * The title names the kind; a section shows its heading exactly when the
+     * kind has it, and "Tippen" a row for the header, a day and "+", and for
+     * an entry exactly when the kind has entry areas, each on its default.
+     */
     private fun assertSections(
         @StringRes kind: Int,
         days: Boolean,
         backToToday: Boolean,
+        entryTaps: Boolean,
     ) {
         compose.onNodeWithText(context.getString(R.string.setup_title, context.getString(kind))).assertExists()
         node(R.string.setup_calendars).assertExists()
         node(R.string.setup_plus_corner).assertExists()
         node(R.string.setup_save).assertExists()
-        for ((heading, shown) in listOf(R.string.setup_days to days, R.string.setup_back_to_today to backToToday)) {
-            if (shown) node(heading).assertExists() else node(heading).assertDoesNotExist()
+        node(R.string.setup_taps).assertExists()
+        val shownWhen =
+            listOf(
+                R.string.setup_days to days,
+                R.string.setup_back_to_today to backToToday,
+                R.string.setup_tap_header to true,
+                R.string.setup_tap_calendar to true,
+                R.string.setup_tap_day to true,
+                R.string.setup_tap_calendar_day to true,
+                R.string.setup_tap_entry to entryTaps,
+                R.string.setup_tap_calendar_entry to entryTaps,
+                R.string.setup_tap_new to true,
+                R.string.setup_tap_calendar_new to true,
+            )
+        for ((text, shown) in shownWhen) {
+            if (shown) node(text).assertExists() else node(text).assertDoesNotExist()
         }
     }
 
@@ -294,6 +374,40 @@ class SetupScreenTest {
         @StringRes text: Int,
     ) = tap(context.getString(text))
 
+    /** Clicks text in a dialog, which does not scroll. */
+    private fun press(text: String) = node(text).performClick()
+
+    private fun press(
+        @StringRes text: Int,
+    ) = press(context.getString(text))
+
+    /** A dialog's option, apart from a row of the screen that names the same target. */
+    private fun option(
+        @StringRes text: Int,
+    ) = compose.onNode(hasText(context.getString(text)) and isSelectable())
+
+    private fun top(text: String) = node(text).fetchSemanticsNode().boundsInRoot.top
+
+    /** Installs an app with a launcher icon named name, as the setup's list of apps sees it. */
+    private fun installLauncherApp(
+        packageName: String,
+        name: String,
+    ) {
+        val activity =
+            ActivityInfo().apply {
+                this.packageName = packageName
+                this.name = "$packageName.Main"
+                nonLocalizedLabel = name
+                applicationInfo = ApplicationInfo().apply { this.packageName = packageName }
+            }
+        val packageManager = shadowOf(context.packageManager)
+        packageManager.addOrUpdateActivity(activity)
+        packageManager.addIntentFilterForActivity(
+            ComponentName(packageName, activity.name),
+            IntentFilter(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) },
+        )
+    }
+
     /** Places a widget of provider under [ID], as the launcher binds it, and opens its setup as the launcher does. */
     private fun open(provider: Class<out AppWidgetProvider>): ActivityController<SetupActivity> {
         val info = AppWidgetProviderInfo()
@@ -314,5 +428,8 @@ class SetupScreenTest {
 
         /** A calendar left out that the sensor no longer lists. */
         const val GONE = "calendar.gone"
+
+        const val ALPHA = "com.example.alpha"
+        const val ZEBRA = "com.example.zebra"
     }
 }

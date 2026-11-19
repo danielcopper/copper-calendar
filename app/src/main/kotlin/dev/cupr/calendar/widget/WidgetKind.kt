@@ -7,18 +7,20 @@ import dev.cupr.calendar.R
 
 /**
  * The app's three widgets: the name the widget picker gives each, and which
- * of the settings each has, beside the calendars and the corner of "+",
- * which all have: the week widgets their days (D20), the month and "Woche"
- * when they return to today (D27).
+ * of the settings each has, beside the calendars, the corner of "+" and the
+ * taps on the header, a day and "+", which all have: the week widgets their
+ * days (D20), the month and "Woche" when they return to today (D27), "Woche"
+ * the tap on an entry, the one widget with entry areas (D37).
  */
 enum class WidgetKind(
     @param:StringRes val label: Int,
     val days: Boolean,
     val backToToday: Boolean,
+    val entryTaps: Boolean,
 ) {
-    MONTH(R.string.widget_month_label, days = false, backToToday = true),
-    WEEK(R.string.widget_week_label, days = true, backToToday = true),
-    WEEK_COLUMNS(R.string.widget_week_columns_label, days = true, backToToday = false),
+    MONTH(R.string.widget_month_label, days = false, backToToday = true, entryTaps = false),
+    WEEK(R.string.widget_week_label, days = true, backToToday = true, entryTaps = true),
+    WEEK_COLUMNS(R.string.widget_week_columns_label, days = true, backToToday = false, entryTaps = false),
     ;
 
     companion object {

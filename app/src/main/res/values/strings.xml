@@ -93,6 +93,23 @@
     <string name="setup_plus_corner">Ecke für „+“</string>
     <string name="setup_plus_bottom_right">Unten rechts</string>
     <string name="setup_plus_bottom_left">Unten links</string>
+    <!-- A widget's taps (D63): the section, its elements, and the targets each can have: its place on the calendar page, an entry's day, another app, or nothing; the list of apps, and a chosen app no longer there. -->
+    <string name="setup_taps">Tippen</string>
+    <string name="setup_tap_header">Kopfzeile</string>
+    <string name="setup_tap_day">Tag</string>
+    <string name="setup_tap_entry">Eintrag</string>
+    <string name="setup_tap_new">„+“</string>
+    <string name="setup_tap_calendar">Kalenderseite</string>
+    <string name="setup_tap_calendar_day">Der Tag auf der Kalenderseite</string>
+    <string name="setup_tap_calendar_entry">Der Eintrag auf der Kalenderseite</string>
+    <string name="setup_tap_entry_day">Sein Tag auf der Kalenderseite</string>
+    <string name="setup_tap_calendar_new">Neuer Eintrag auf der Kalenderseite</string>
+    <string name="setup_tap_other_app">Andere App …</string>
+    <string name="setup_tap_nothing">Nichts</string>
+    <string name="setup_tap_nothing_new">Nichts, „+“ ausgeblendet</string>
+    <string name="setup_tap_apps">Andere App</string>
+    <string name="setup_tap_app_missing">App nicht gefunden</string>
+    <string name="setup_cancel">Abbrechen</string>
     <string name="setup_save">Speichern</string>
     <!-- The month widget's weekday heads, Monday to Sunday. -->
     <string-array name="weekday_heads">

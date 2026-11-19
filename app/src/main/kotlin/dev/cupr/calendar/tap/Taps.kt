@@ -5,11 +5,22 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import dev.cupr.calendar.signin.SignInActivity
+import dev.cupr.calendar.store.TapTarget
+import dev.cupr.calendar.store.TapTargets
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
 
 /** What a tap on a widget hit (design.md, "Taps"). */
 enum class TapElement { HEADER, DAY, ENTRY, NEW }
+
+/** The target a widget's taps on element open (D63). */
+fun TapTargets.of(element: TapElement): TapTarget =
+    when (element) {
+        TapElement.HEADER -> header
+        TapElement.DAY -> day
+        TapElement.ENTRY -> entry
+        TapElement.NEW -> new
+    }
 
 /** A tap on a widget: its element and, where the element has one, its day. */
 sealed interface Tap {

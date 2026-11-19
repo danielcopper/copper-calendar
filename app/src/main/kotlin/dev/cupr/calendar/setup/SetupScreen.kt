@@ -42,8 +42,12 @@ import dev.cupr.calendar.ha.SensorCalendar
 import dev.cupr.calendar.ha.SensorCalendars
 import dev.cupr.calendar.store.BackToToday
 import dev.cupr.calendar.store.PlusCorner
+import dev.cupr.calendar.store.TapTarget
+import dev.cupr.calendar.store.TapTargets
 import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.store.stored
+import dev.cupr.calendar.tap.TapElement
+import dev.cupr.calendar.tap.of
 import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.widget.WidgetKind
 import kotlinx.coroutines.launch
@@ -53,10 +57,10 @@ import java.time.ZoneId
 /**
  * The setup of the widget id, a widget of kind: the calendars it shows
  * (D11), the week widgets' days (D20), when the month and "Woche" return to
- * today (D27), and the corner of "+". Its stored settings and the calendars
- * are read off the main thread; "Speichern" stores the settings shown and
- * redraws the widget with them ([save]), then calls onDone with whether it
- * did.
+ * today (D27), the corner of "+", and what a tap on each element opens
+ * (D63). Its stored settings and the calendars are read off the main
+ * thread; "Speichern" stores the settings shown and redraws the widget with
+ * them ([save]), then calls onDone with whether it did.
  */
 @Composable
 fun SetupScreen(
@@ -113,6 +117,7 @@ fun SetupScreen(
             Choice(R.string.setup_plus_corner, PlusCorner.entries, current.plusCorner, ::cornerLabel) {
                 settings = current.copy(plusCorner = it)
             }
+            TapSection(kind, current.taps) { settings = current.copy(taps = it) }
             Button(
                 enabled = !saving,
                 onClick = {
@@ -193,8 +198,12 @@ internal val SettingsSaver =
     listSaver<WidgetSettings?, String>(
         save = { settings ->
             settings
-                ?.let { listOf(it.days.stored, it.backToToday.stored, it.plusCorner.stored) + it.leftOut }
-                .orEmpty()
+                ?.let {
+                    val taps = it.taps
+                    listOf(it.days.stored, it.backToToday.stored, it.plusCorner.stored) +
+                        TapElement.entries.map { element -> taps.of(element).stored } +
+                        it.leftOut
+                }.orEmpty()
         },
         restore = { saved ->
             val days = WeekDays.entries.firstOrNull { it.stored == saved.getOrNull(0) }
@@ -203,10 +212,19 @@ internal val SettingsSaver =
             if (days == null || back == null || corner == null) {
                 null
             } else {
-                WidgetSettings(saved.drop(SAVED_CHOICES).toSet(), days, back, corner)
+                restoreTaps(saved)?.let { WidgetSettings(saved.drop(SAVED_CHOICES).toSet(), days, back, corner, it) }
             }
         },
     )
 
-/** The choices [SettingsSaver] saves before the calendars left out. */
-private const val SAVED_CHOICES = 3
+/** The tap targets [SettingsSaver] saved after the three choices, by element; none if one is unknown or misplaced. */
+private fun restoreTaps(saved: List<String>): TapTargets? =
+    TapElement.entries.fold<TapElement, TapTargets?>(TapTargets.DEFAULT) { taps, element ->
+        saved.getOrNull(FIRST_TAP + element.ordinal)?.let(TapTarget::of)?.let { taps?.with(element, it) }
+    }
+
+/** Where [SettingsSaver] saves the tap targets, after the days, "Zurück zu heute" and the corner of "+". */
+private const val FIRST_TAP = 3
+
+/** The choices [SettingsSaver] saves before the calendars left out: three, then the four tap targets. */
+private const val SAVED_CHOICES = FIRST_TAP + 4

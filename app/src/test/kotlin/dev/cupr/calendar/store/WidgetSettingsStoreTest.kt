@@ -24,6 +24,13 @@ class WidgetSettingsStoreTest {
             days = WeekDays.FROM_TODAY,
             backToToday = BackToToday.EVERY_30_MINUTES,
             plusCorner = PlusCorner.BOTTOM_LEFT,
+            taps =
+                TapTargets(
+                    header = TapTarget.App("com.example.app"),
+                    day = TapTarget.None,
+                    entry = TapTarget.EntryDay,
+                    new = TapTarget.None,
+                ),
         )
 
     @Test
@@ -33,6 +40,8 @@ class WidgetSettingsStoreTest {
             store.read(7),
         )
         assertEquals(WidgetSettings(), WidgetSettings.DEFAULT)
+        val calendar = TapTarget.CalendarPage
+        assertEquals(TapTargets(calendar, calendar, calendar, calendar), store.read(7).taps)
     }
 
     @Test
@@ -66,6 +75,46 @@ class WidgetSettingsStoreTest {
             BackToToday.entries.map { it.stored },
         )
         assertEquals(listOf("bottom_right", "bottom_left"), PlusCorner.entries.map { it.stored })
+    }
+
+    @Test
+    fun `every element's every target reads back as it was written, under its own fixed name`() {
+        val app = TapTarget.App("com.example.app")
+        val parts = listOf(TapTarget.CalendarPage, app, TapTarget.None)
+        for (target in parts) {
+            val taps = TapTargets(header = target, day = target, new = target)
+            store.write(7, WidgetSettings(taps = taps))
+            assertEquals(taps, store.read(7).taps)
+        }
+        for (target in listOf(TapTarget.CalendarPage, TapTarget.EntryDay, TapTarget.None)) {
+            store.write(7, WidgetSettings(taps = TapTargets(entry = target)))
+            assertEquals(TapTargets(entry = target), store.read(7).taps)
+        }
+        store.write(7, changed)
+        assertEquals(
+            listOf("app:com.example.app", "nothing", "day", "nothing"),
+            listOf("header", "day", "entry", "new").map { prefs.getString("7.tap_$it", null) },
+        )
+        assertEquals(listOf("calendar", "app:com.example.app", "nothing"), parts.map { it.stored })
+        assertEquals("day", TapTarget.EntryDay.stored)
+    }
+
+    @Test
+    fun `a target this app does not know, or that its element cannot have, reads as its default, and is logged`() {
+        prefs.edit {
+            putString("7.tap_header", "day")
+            putString("7.tap_day", "app:")
+            putString("7.tap_entry", "app:com.example.app")
+            putString("7.tap_new", "Nothing")
+        }
+
+        assertEquals(TapTargets.DEFAULT, store.read(7).taps)
+        val logs = ShadowLog.getLogsForTag("WidgetSettings").joinToString { it.msg }
+        val stored = listOf("header" to "day", "day" to "app:", "entry" to "app:com.example.app", "new" to "Nothing")
+        for ((field, name) in stored) {
+            val line = "Widget 7: its stored tap_$field \"$name\" is unknown; it reads as calendar"
+            assertTrue(logs, logs.contains(line))
+        }
     }
 
     @Test
@@ -111,6 +160,18 @@ class WidgetSettingsStoreTest {
 
         assertEquals(WidgetSettings.DEFAULT, store.read(7))
         assertEquals(changed, store.read(8))
-        assertEquals(setOf("8.left_out", "8.days", "8.back_to_today", "8.plus_corner"), prefs.all.keys)
+        assertEquals(
+            setOf(
+                "8.left_out",
+                "8.days",
+                "8.back_to_today",
+                "8.plus_corner",
+                "8.tap_header",
+                "8.tap_day",
+                "8.tap_entry",
+                "8.tap_new",
+            ),
+            prefs.all.keys,
+        )
     }
 }
