@@ -1,6 +1,7 @@
 package dev.cupr.calendar.tap
 
 import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -74,10 +75,10 @@ sealed interface Tap {
 }
 
 /**
- * The tap targets (design.md, "Taps"): a template per element, a Home
- * Assistant path opened through the Home Assistant app, with `{day}` for the
- * tap's day. The defaults open the calendar page of the dashboard "Zuhause";
- * targets become configurable per widget later (D23).
+ * The links into the calendar page of the dashboard "Zuhause" (design.md,
+ * "Taps"): a template per element, a Home Assistant path opened through the
+ * Home Assistant app, with `{day}` for the tap's day. Each element opens its
+ * link unless the widget's setup gives it another target (D63).
  */
 object CalendarLinks {
     /** The scheme of the links the Home Assistant app opens. */
@@ -109,36 +110,65 @@ object CalendarLinks {
 }
 
 /**
- * The intents a widget's taps send to [TapActivity]. The request codes are
- * one per element; once targets are configurable per widget (D23) they have
- * to include the widget's id, or two widgets' intents replace each other.
+ * The intents a widget's taps send to [TapActivity], each with the widget's
+ * id, by which the tap activity reads the widget's targets (D63); an intent
+ * without one opens the element's calendar link whatever any widget's
+ * targets, as the plain texts promise.
  */
 object Taps {
     private const val ELEMENT = "dev.cupr.calendar.tap.ELEMENT"
     private const val DAY = "dev.cupr.calendar.tap.DAY"
     private const val UID = "dev.cupr.calendar.tap.UID"
+    private const val WIDGET = "dev.cupr.calendar.tap.WIDGET"
     private const val TEMPLATE_REQUEST = 100
     private const val SIGN_IN_REQUEST = 101
 
-    /** The extras of a tap: alone, the fill-in of a list row's cell. */
-    fun fillIn(tap: Tap): Intent {
+    /** Where the request codes of the widgets' fixed parts start, past the others. */
+    private const val WIDGET_REQUESTS = 1000
+
+    /** The extras of a tap on the widget [widget], none for no widget's: alone, the fill-in of a list row's cell. */
+    fun fillIn(
+        tap: Tap,
+        widget: Int?,
+    ): Intent {
         val intent = Intent().putExtra(ELEMENT, tap.element.name)
         tap.day?.let { intent.putExtra(DAY, it.toString()) }
         if (tap is Tap.Entry) intent.putExtra(UID, tap.uid)
+        widget?.let { intent.putExtra(WIDGET, it) }
         return intent
     }
 
-    /** A tap on a fixed part of the widget (header, "+"). */
+    /**
+     * A tap on a fixed part (header, "+") of the widget [widget], or, with
+     * none, of a plain text. Its request code is one per widget and element,
+     * so the intents of two widgets do not replace each other.
+     */
     fun pendingIntent(
         context: Context,
         tap: Tap,
+        widget: Int?,
     ): PendingIntent =
         PendingIntent.getActivity(
             context,
-            tap.element.ordinal,
-            fillIn(tap).setClass(context, TapActivity::class.java),
+            requestCode(tap.element, widget),
+            fillIn(tap, widget).setClass(context, TapActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
+
+    /** The request code of a tap on element of the widget [widget], or of a plain text. */
+    internal fun requestCode(
+        element: TapElement,
+        widget: Int?,
+    ): Int =
+        if (widget == null) {
+            element.ordinal
+        } else {
+            WIDGET_REQUESTS + widget * TapElement.entries.size + element.ordinal
+        }
+
+    /** The widget an intent's tap was on; none for a plain text's tap. */
+    fun widget(intent: Intent): Int? =
+        if (intent.hasExtra(WIDGET)) intent.getIntExtra(WIDGET, AppWidgetManager.INVALID_APPWIDGET_ID) else null
 
     /**
      * The app's sign-in screen, for a widget without data or without a

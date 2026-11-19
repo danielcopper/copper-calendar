@@ -24,7 +24,8 @@ import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.store.ListStore
-import dev.cupr.calendar.store.PlusCorner
+import dev.cupr.calendar.store.TapTarget
+import dev.cupr.calendar.store.TapTargets
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
 import java.time.Instant
@@ -161,12 +162,13 @@ internal object DrawnWidget {
     }
 
     /**
-     * The fixed parts of calendar: its header, drawn light and dark by
-     * header with the renderer of the fixed parts and the calendar's notice
-     * at its right, named by description and the notice, and opening the
-     * calendar page, or the sign-in screen while the notice asks to sign in
-     * again (D52); and "+" in corner ([Plus]). Returns the drawn header's
-     * height in px, which the list's height leaves out.
+     * The fixed parts of calendar on the widget id: its header, drawn light
+     * and dark by header with the renderer of the fixed parts and the
+     * calendar's notice at its right, named by description and the notice,
+     * and opening what look's taps say for it (D63), none when they say
+     * nothing, or the sign-in screen while the notice asks to sign in again
+     * (D52); and "+" ([Plus]). Returns the drawn header's height in px, which
+     * the list's height leaves out.
      */
     fun fixedParts(
         context: Context,
@@ -174,24 +176,26 @@ internal object DrawnWidget {
         kept: Kept,
         description: String,
         calendar: Content.Calendar,
-        corner: PlusCorner,
+        look: Look,
+        id: Int,
         header: (ChromeRenderer, Palette, HeaderNote?) -> Bitmap,
     ): Int {
         val chrome = chrome(context)
-        Plus.place(context, views, kept, chrome, corner, calendar)
+        Plus.place(context, views, kept, chrome, look, id, calendar)
         val notice = calendar.notice
-        val (note, headerTap) =
-            when (notice) {
-                null -> null to Taps.pendingIntent(context, Tap.Header)
-                is Notice.Stale -> HeaderNote(notice.text, accent = false) to Taps.pendingIntent(context, Tap.Header)
-                is Notice.SignInAgain -> HeaderNote(notice.text, accent = true) to Taps.signIn(context)
+        val headerTap =
+            if (notice is Notice.SignInAgain) {
+                Taps.signIn(context)
+            } else {
+                Taps.pendingIntent(context, Tap.Header, id).takeIf { look.taps.header != TapTarget.None }
             }
+        val note = notice?.let { HeaderNote(it.text, accent = it is Notice.SignInAgain) }
         val palettes = calendar.palettes
         val light = kept.keep(header(chrome, palettes.light, note))
         views.setImageViewBitmap(R.id.header_light, light)
         views.setImageViewBitmap(R.id.header_dark, kept.keep(header(chrome, palettes.dark, note)))
         views.setContentDescription(R.id.header, notice?.let { "$description, ${it.text}" } ?: description)
-        views.setOnClickPendingIntent(R.id.header, headerTap)
+        headerTap?.let { views.setOnClickPendingIntent(R.id.header, it) }
         return light.height
     }
 
@@ -213,20 +217,25 @@ internal object DrawnWidget {
 
     /**
      * A drawn week row of seven day columns (widget_month_week.xml), the
-     * month's or "Woche quer"'s: the drawing light and dark, and over it a tap
-     * area per day, named by the day and opening it.
+     * month's or "Woche quer"'s, on the widget id: the drawing light and
+     * dark, and over it an area per day, named by the day and opening it, as
+     * taps says, or nothing when they say so (D63).
      */
     fun weekRow(
         context: Context,
         week: Week,
         light: Bitmap,
         dark: Bitmap,
+        id: Int,
+        taps: TapTargets,
     ): RemoteViews {
         val row = RemoteViews(context.packageName, R.layout.widget_month_week)
         row.setImageViewBitmap(R.id.week_light, light)
         row.setImageViewBitmap(R.id.week_dark, dark)
         week.days.forEachIndexed { index, day ->
-            row.setOnClickFillInIntent(dayIds[index], Taps.fillIn(Tap.Day(day.date)))
+            if (taps.day != TapTarget.None) {
+                row.setOnClickFillInIntent(dayIds[index], Taps.fillIn(Tap.Day(day.date), id))
+            }
             row.setContentDescription(dayIds[index], day.date.longName)
         }
         return row
@@ -290,12 +299,13 @@ internal object DrawnWidget {
 
     /**
      * The plain views of a widget that shows a text instead of its drawing:
-     * text on its card, opening tap, by default the calendar page.
+     * text on its card, opening tap, by default the calendar page, whatever
+     * the widget's targets, as its text says.
      */
     fun plainViews(
         context: Context,
         @StringRes text: Int,
-        tap: PendingIntent = Taps.pendingIntent(context, Tap.Header),
+        tap: PendingIntent = Taps.pendingIntent(context, Tap.Header, widget = null),
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_plain)
         views.setTextViewText(R.id.plain_text, context.getString(text))

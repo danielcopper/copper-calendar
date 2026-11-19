@@ -22,6 +22,7 @@ import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.render.TileWeek
 import dev.cupr.calendar.render.WeekTexts
 import dev.cupr.calendar.sample.SampleData
+import dev.cupr.calendar.store.TapTargets
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.TapActivity
 import dev.cupr.calendar.tap.Taps
@@ -261,7 +262,14 @@ class WeekWidgetTest {
         val week = WeekLayout.build(WeekDays.MONDAY_TO_SUNDAY.dates(wednesday), SampleData.entries, SampleData.now)
         val views = { index: Int ->
             val drawn = rows.render(week[index], ROW_PX, scale, SampleData.light)
-            WeekWidget.row(application, rows, week[index], drawn, drawn, scale)
+            WeekWidget.row(
+                application,
+                rows,
+                week[index],
+                WeekWidget.Drawing(drawn, drawn, scale),
+                1,
+                TapTargets.DEFAULT,
+            )
         }
         val height = { view: View ->
             view.measure(

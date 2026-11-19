@@ -12,6 +12,8 @@ import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.render.WeekTexts
+import dev.cupr.calendar.store.TapTarget
+import dev.cupr.calendar.store.TapTargets
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
 import dev.cupr.calendar.week.DayEntry
@@ -53,11 +55,12 @@ object WeekWidget {
      * The widget at widthDp showing look's days of calendar, from its
      * today, and the bytes of its bitmaps, kept within limit: when its rows
      * would pass it, the fullest days leave out their last entries for a
-     * "+N weitere" line until they fit ([leaveOutOne]). The widget's id only
-     * names it in the log. Its list scrolls, when look says it does, so
+     * "+N weitere" line until they fit ([leaveOutOne]). The widget's id
+     * names it in the log and its taps. Its list scrolls, when look says it does, so
      * today stands on top in a widget of height, or to its end when the days
      * from today on fit, and only into view without a height
-     * ([TodayOnTop.scroll], D27); "+" stands in look's corner.
+     * ([TodayOnTop.scroll], D27); "+" stands in look's corner, and its
+     * taps open what look's say ([Look]).
      */
     internal fun draw(
         context: Context,
@@ -84,7 +87,7 @@ object WeekWidget {
         val views = RemoteViews(context.packageName, R.layout.widget_week)
         val description = "$title, $range"
         val headerPx =
-            DrawnWidget.fixedParts(context, views, kept, description, calendar, look.corner) { chrome, palette, note ->
+            DrawnWidget.fixedParts(context, views, kept, description, calendar, look, id) { chrome, palette, note ->
                 chrome.weekHeader(title, range, null, headerWidthPx, scale, palette, note)
             }
         val full = WeekLayout.build(dates, calendar.entries, calendar.now)
@@ -104,7 +107,7 @@ object WeekWidget {
             week.map { day ->
                 val light = kept.keep(rows.render(day, rowPx, scale, calendar.palettes.light))
                 val dark = kept.keep(rows.render(day, rowPx, scale, calendar.palettes.dark))
-                day.date.toEpochDay() to row(context, rows, day, light, dark, scale)
+                day.date.toEpochDay() to row(context, rows, day, Drawing(light, dark, scale), id, look.taps)
             }
         DrawnWidget.list(context, views, items)
         val heightsPx = week.map { rows.heightPx(it, scale) }
@@ -125,24 +128,36 @@ object WeekWidget {
         return fullest?.let { index -> days.mapIndexed { i, day -> if (i == index) day.leaveOutLast() else day } }
     }
 
+    /** A day's row drawn light and dark at scale. */
+    internal class Drawing(
+        val light: Bitmap,
+        val dark: Bitmap,
+        val scale: Scale,
+    )
+
     /**
-     * A day's row: the drawn row as the day's tap area, and over each entry's
-     * line a tap area of its own, which opens the entry by its UID, or its
-     * day when it has none (D37). Internal for the test that applies it again
-     * as a launcher does.
+     * A day's row on the widget id: the drawn row as the day's area, and
+     * over each entry's line an area of its own, which opens the entry by its
+     * UID, or its day when it has none (D37), each as taps says, or nothing
+     * when they say so (D63); an entry's area without a tap is part of its
+     * day's. Internal for the test that applies it again as a launcher does.
      */
     internal fun row(
         context: Context,
         rows: DayRowRenderer,
         day: WeekDay,
-        light: Bitmap,
-        dark: Bitmap,
-        scale: Scale,
+        drawing: Drawing,
+        id: Int,
+        taps: TapTargets,
     ): RemoteViews {
+        val light = drawing.light
+        val scale = drawing.scale
         val row = RemoteViews(context.packageName, R.layout.widget_week_day)
         row.setImageViewBitmap(R.id.day_light, light)
-        row.setImageViewBitmap(R.id.day_dark, dark)
-        row.setOnClickFillInIntent(R.id.day_row, Taps.fillIn(Tap.Day(day.date)))
+        row.setImageViewBitmap(R.id.day_dark, drawing.dark)
+        if (taps.day != TapTarget.None) {
+            row.setOnClickFillInIntent(R.id.day_row, Taps.fillIn(Tap.Day(day.date), id))
+        }
         row.setContentDescription(R.id.day_row, day.date.longName)
         // A launcher applies a row's views again to the views it shows (on each update, and to a row its list
         // recycles); views added before would stay and pile up, growing the row by blank lines below its drawing.
@@ -161,7 +176,9 @@ object WeekWidget {
             // Each slot ends where the area ends, rounded, so rounding never adds up down the row.
             val height = area.bottom.roundToInt() - area.top.roundToInt()
             cell.setViewLayoutHeight(R.id.entry_slot, height.toFloat(), TypedValue.COMPLEX_UNIT_PX)
-            cell.setOnClickFillInIntent(R.id.entry, Taps.fillIn(tap(entry, day.date)))
+            if (taps.entry != TapTarget.None) {
+                cell.setOnClickFillInIntent(R.id.entry, Taps.fillIn(tap(entry, day.date), id))
+            }
             cell.setContentDescription(R.id.entry, rows.describe(entry))
             row.addView(R.id.entries, cell)
         }

@@ -66,9 +66,10 @@ object WeekColumnsWidget {
      * The widget at widthDp × heightDp showing look's days of calendar, from
      * its today, and the bytes of its bitmaps, kept within limit: when its
      * row would pass it, the tallest days leave out their last entries for
-     * the month's "+N" until it fits ([leaveOutOne]). The widget's id only
-     * names it in the log. "+" stands in look's corner; its one row does not
-     * scroll to today (D27).
+     * the month's "+N" until it fits ([leaveOutOne]). The widget's id names
+     * it in the log and its taps. "+" stands in look's corner, and its taps
+     * open what look's say ([Look]); its one row does not scroll to today
+     * (D27).
      */
     internal fun draw(
         context: Context,
@@ -93,7 +94,7 @@ object WeekColumnsWidget {
         val views = RemoteViews(context.packageName, R.layout.widget_week_columns)
         val description = "$title, $range"
         val headerPx =
-            DrawnWidget.fixedParts(context, views, kept, description, calendar, look.corner) { chrome, palette, note ->
+            DrawnWidget.fixedParts(context, views, kept, description, calendar, look, id) { chrome, palette, note ->
                 chrome.weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette, note)
             }
         val full = MonthLayout.week(dates, calendar.entries, today)
@@ -120,7 +121,7 @@ object WeekColumnsWidget {
         DrawnWidget.list(
             context,
             views,
-            listOf(dates.first().toEpochDay() to DrawnWidget.weekRow(context, week, light, dark)),
+            listOf(dates.first().toEpochDay() to DrawnWidget.weekRow(context, week, light, dark, id, look.taps)),
         )
         DrawnWidget.logDrawn(TAG, id, kept, widthPx, limit, if (faded) ", faded" else "")
         return kept.drawn(views, limit)
