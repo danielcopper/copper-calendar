@@ -339,6 +339,18 @@ class SetupScreenTest {
     }
 
     @Test
+    fun `the taps' rows stand indented below their heading`() {
+        open(WeekWidgetProvider::class.java)
+
+        val heading = node(R.string.setup_taps).fetchSemanticsNode().boundsInRoot.left
+        val indent = 16 * context.resources.displayMetrics.density
+        for (element in listOf(R.string.setup_tap_header, R.string.setup_tap_entry, R.string.setup_tap_new)) {
+            assertEquals(heading + indent, node(element).fetchSemanticsNode().boundsInRoot.left, 0.5f)
+        }
+        assertEquals(heading, node(R.string.setup_plus_corner).fetchSemanticsNode().boundsInRoot.left, 0.5f)
+    }
+
+    @Test
     // A phone's height without its status and navigation bars, as on a 6.1" phone.
     @Config(qualifiers = "w393dp-h780dp")
     fun `on a phone, the whole setup of the week fits without scrolling`() {
@@ -369,7 +381,7 @@ class SetupScreenTest {
 
     /**
      * The title names the kind; a setting's row shows, on its default,
-     * exactly when the kind has it, and "Tippen" a row for the header, a day
+     * exactly when the kind has it, and the taps a row for the header, a day
      * and "+", and for an entry exactly when the kind has entry areas, each on
      * its default.
      */

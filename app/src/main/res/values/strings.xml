@@ -100,7 +100,7 @@
     <string name="setup_plus_bottom_right">Unten rechts</string>
     <string name="setup_plus_bottom_left">Unten links</string>
     <!-- A widget's taps (D63): the section, its elements, and the targets each can have: its place on the calendar page, an entry's day, another app, or nothing; the list of apps, and a chosen app no longer there. -->
-    <string name="setup_taps">Tippen</string>
+    <string name="setup_taps">Beim Tippen auf …</string>
     <string name="setup_tap_header">Kopfzeile</string>
     <string name="setup_tap_day">Tag</string>
     <string name="setup_tap_entry">Eintrag</string>

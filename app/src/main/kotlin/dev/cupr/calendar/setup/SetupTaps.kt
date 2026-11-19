@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -49,7 +50,11 @@ import kotlinx.coroutines.withContext
 internal val WidgetKind.tapElements: List<TapElement>
     get() = TapElement.entries.filter { it != TapElement.ENTRY || entryTaps }
 
-/** What a widget's taps open (D63): a row per element of kind, naming its target; a row opens the choice of targets. */
+/**
+ * What a widget's taps open (D63), a group of its own below a divider: a
+ * row per element of kind, indented below the heading, naming its target; a
+ * row opens the choice of targets.
+ */
 @Composable
 internal fun TapSection(
     kind: WidgetKind,
@@ -59,9 +64,12 @@ internal fun TapSection(
     var choosing by rememberSaveable { mutableStateOf<TapElement?>(null) }
     var pickingApp by rememberSaveable { mutableStateOf<TapElement?>(null) }
     Column {
+        HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
         Heading(R.string.setup_taps)
-        for (element in kind.tapElements) {
-            SettingRow(stringResource(element.label), targetName(element, taps.of(element))) { choosing = element }
+        Column(modifier = Modifier.padding(start = TAP_ROWS_INDENT)) {
+            for (element in kind.tapElements) {
+                SettingRow(stringResource(element.label), targetName(element, taps.of(element))) { choosing = element }
+            }
         }
     }
     choosing?.let { element ->
@@ -157,6 +165,9 @@ private fun AppRow(
 }
 
 private val ICON_SIZE = 40.dp
+
+/** How far the rows of the taps stand in from their heading. */
+private val TAP_ROWS_INDENT = 16.dp
 
 @get:StringRes
 private val TapElement.label: Int
