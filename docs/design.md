@@ -26,15 +26,18 @@ A calendar sheet with two binder rings and a grid of days, today marked, in one 
 
 ## Taps
 
-Each widget has its own tap targets. A target is a Home Assistant path opened through `homeassistant://navigate/…` (with `{day}` replaced by the tapped day), another app, or nothing.
+Each widget has its own tap targets, set in its setup (D63). By default each element opens its place on the dashboard's calendar page, a Home Assistant path opened through `homeassistant://navigate/…` (with `{day}` replaced by the tapped day).
 
-| Element | Default target | Notes |
-|---|---|---|
-| Header | `/dashboard-zuhause/kalender` | the sign-in screen while the header says "Neu anmelden" (D52) |
-| Day (week row, week column, month cell) | `/dashboard-zuhause/kalender?day={day}` | on the phone, a day with entries opens its list (D15) |
-| Entry ("Woche" only) | `/dashboard-zuhause/kalender?entry={uid}&day={day}` | needs the UID in the sensor data (D16); an entry without one opens its day (D37); month cells and the columns of "Woche quer" have no entry areas |
-| "+" | `/dashboard-zuhause/kalender?new={day}` | `{day}` is today |
-| Plain text without data | the sign-in screen | not configurable (D50) |
+| Element | Default target | Other targets | Notes |
+|---|---|---|---|
+| Header | `/dashboard-zuhause/kalender` | another app, nothing | the sign-in screen while the header says "Neu anmelden" (D52) |
+| Day (week row, week column, month cell) | `/dashboard-zuhause/kalender?day={day}` | another app, nothing | on the phone, a day with entries opens its list (D15) |
+| Entry ("Woche" only) | `/dashboard-zuhause/kalender?entry={uid}&day={day}` | its day, `/dashboard-zuhause/kalender?day={day}`; nothing | needs the UID in the sensor data (D16); an entry without one opens what its day opens (D37); month cells and the columns of "Woche quer" have no entry areas |
+| "+" | `/dashboard-zuhause/kalender?new={day}` | another app, nothing | `{day}` is today; set to nothing, "+" is hidden |
+| Plain text without data | the sign-in screen | none | not configurable (D50) |
+| Plain text "zu voll" or "konnte nicht gezeichnet werden" | `/dashboard-zuhause/kalender` | none | not configurable (D40) |
+
+Another app is one with a launcher icon, started as its icon starts it, in its own task, without the day; one no longer installed shows "Ziel lässt sich nicht öffnen" (D25). Nothing means no tap: the launcher gives no feedback there, and an entry without a tap leaves it to its day's area.
 
 The calendar page reads `?day=`, `?entry=…&day=` and `?new=`, and all three work through the Home Assistant app (checked on the phone, 2026-11-10); see [ha-additions.md](ha-additions.md).
 
@@ -42,17 +45,25 @@ A tap on a Home Assistant target first starts the Home Assistant app as its icon
 
 ## Setup app
 
-Per widget: which calendars it shows (D11), the tap targets above, the corner of "+", for the week widgets their days, Monday to Sunday or from today (D20), and when it returns to today (D27). The week's layout is not a setting: rows and columns are two widgets (D19). Once for the app: sign-in with Home Assistant (D9, D10) and how often it fetches (D60).
+Per widget: which calendars it shows (D11), the tap targets above (D63), the corner of "+", for the week widgets their days, Monday to Sunday or from today (D20), and when it returns to today (D27). The week's layout is not a setting: rows and columns are two widgets (D19). Once for the app: sign-in with Home Assistant (D9, D10) and how often it fetches (D60).
 
 ## Setup screen
 
 A widget's own screen, opened from the launcher's long-press menu; placing a widget opens nothing (D56). In the phone's own colours, light or dark with the system, as the sign-in screen. Without stored settings a widget has the defaults (D57).
 
+It fits on a phone without scrolling: each setting is a row with its name and value, which opens a dialog; a choice is taken on its pick, and "Abbrechen" closes a dialog unchanged (D56).
+
 - Title "Widget „Monat“", "Widget „Woche“" or "Widget „Woche quer“".
-- "Kalender": a box per calendar, ticked unless the widget leaves it out; by name in the dashboard's order as the sensor lists its calendars, by id while it does not (D57); with none known, "Keine Kalender bekannt".
+- "Kalender": "Alle", or how many of those listed it shows, "2 von 3"; its dialog has a box per calendar, ticked unless the widget leaves it out, taken with "OK"; by name in the dashboard's order as the sensor lists its calendars, by id while it does not (D57); with none known, the row says "Keine Kalender bekannt" and opens nothing.
 - "Tage" ("Woche", "Woche quer"): "Montag bis Sonntag" or "Heute und die sechs Tage danach" (D20).
 - "Zurück zu heute" ("Monat", "Woche"): "Bei jeder Aktualisierung", "Nur um Mitternacht", "Nie", "Alle 15 Minuten", "Alle 30 Minuten", "Alle 60 Minuten" (D27, D59).
 - "Ecke für „+“": "Unten rechts" or "Unten links" (D58).
+- Below a divider, "Beim Tippen auf …", with a row per element indented below it (D63):
+  - "Kopfzeile": "Kalenderseite", "Andere App …" or "Nichts".
+  - "Tag": "Der Tag auf der Kalenderseite", "Andere App …" or "Nichts".
+  - "Eintrag" ("Woche"): "Der Eintrag auf der Kalenderseite", "Sein Tag auf der Kalenderseite" or "Nichts".
+  - "„+“": "Neuer Eintrag auf der Kalenderseite", "Andere App …" or "Nichts, „+“ ausgeblendet".
+  - "Andere App …" opens the list "Andere App" of the apps with a launcher icon, by icon and name, sorted by name; the row then names the app, or says "App nicht gefunden" once it is no longer installed.
 - "Speichern" stores the settings and redraws the widget at once, the month's and "Woche"'s list back at today, whatever "Zurück zu heute" says (D59); back leaves the stored settings as they were.
 
 ## Sign-in screen
