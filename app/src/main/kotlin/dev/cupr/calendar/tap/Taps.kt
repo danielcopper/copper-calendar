@@ -68,7 +68,7 @@ sealed interface Tap {
  * tap's day. The defaults open the calendar page of the dashboard "Zuhause";
  * targets become configurable per widget later (D23).
  */
-object TapTargets {
+object CalendarLinks {
     /** The scheme of the links the Home Assistant app opens. */
     const val HOME_ASSISTANT_SCHEME = "homeassistant"
 

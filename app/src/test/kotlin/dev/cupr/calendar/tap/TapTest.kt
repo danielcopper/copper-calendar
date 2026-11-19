@@ -36,29 +36,29 @@ class TapTest {
 
     @Test
     fun `the header opens the calendar page`() {
-        assertEquals(calendar, TapTargets.uri(Tap.Header))
+        assertEquals(calendar, CalendarLinks.uri(Tap.Header))
     }
 
     @Test
     fun `a day opens the calendar page on that day`() {
-        assertEquals("$calendar?day=2026-11-12", TapTargets.uri(Tap.Day(day)))
+        assertEquals("$calendar?day=2026-11-12", CalendarLinks.uri(Tap.Day(day)))
     }
 
     @Test
     fun `plus opens the form for a new entry on the day it is given`() {
-        assertEquals("$calendar?new=2026-11-12", TapTargets.uri(Tap.New(day)))
+        assertEquals("$calendar?new=2026-11-12", CalendarLinks.uri(Tap.New(day)))
     }
 
     @Test
     fun `an entry opens the calendar page on that entry and its day`() {
-        assertEquals("$calendar?entry=abc-123&day=2026-11-12", TapTargets.uri(Tap.Entry("abc-123", day)))
+        assertEquals("$calendar?entry=abc-123&day=2026-11-12", CalendarLinks.uri(Tap.Entry("abc-123", day)))
     }
 
     @Test
     fun `an entry's UID is encoded for the link`() {
         assertEquals(
             "$calendar?entry=a%2Fb%26day%3D1%40x%20y&day=2026-11-12",
-            TapTargets.uri(Tap.Entry("a/b&day=1@x y", day)),
+            CalendarLinks.uri(Tap.Entry("a/b&day=1@x y", day)),
         )
     }
 
@@ -96,8 +96,8 @@ class TapTest {
 
     @Test
     fun `a target is its element's template with the day filled in`() {
-        assertEquals("$calendar?day={day}", TapTargets.defaults[TapElement.DAY])
-        assertEquals("other://x/2026-11-12/y", TapTargets.uri(Tap.New(day), "other://x/{day}/y"))
+        assertEquals("$calendar?day={day}", CalendarLinks.defaults[TapElement.DAY])
+        assertEquals("other://x/2026-11-12/y", CalendarLinks.uri(Tap.New(day), "other://x/{day}/y"))
     }
 
     @Test
@@ -382,7 +382,7 @@ class TapTest {
         IntentFilter(Intent.ACTION_VIEW).apply {
             addCategory(Intent.CATEGORY_DEFAULT)
             addCategory(Intent.CATEGORY_BROWSABLE)
-            addDataScheme(TapTargets.HOME_ASSISTANT_SCHEME)
+            addDataScheme(CalendarLinks.HOME_ASSISTANT_SCHEME)
             addDataAuthority("navigate", null)
         }
 

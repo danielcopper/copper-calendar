@@ -25,7 +25,7 @@ class TapActivity : Activity() {
         if (tap == null) {
             Log.w(TAG, "An intent without a complete tap: ${Taps.describe(intent)}")
         } else {
-            openTarget(this, TapTargets.uri(tap), ::startActivity)
+            openTarget(this, CalendarLinks.uri(tap), ::startActivity)
         }
         finish()
     }
@@ -67,8 +67,8 @@ internal fun openTarget(
     }
 }
 
-/** A link the Home Assistant app opens: its scheme, [TapTargets.HOME_ASSISTANT_SCHEME]. */
-private val Intent.forHomeAssistant: Boolean get() = data?.scheme == TapTargets.HOME_ASSISTANT_SCHEME
+/** A link the Home Assistant app opens: its scheme, [CalendarLinks.HOME_ASSISTANT_SCHEME]. */
+private val Intent.forHomeAssistant: Boolean get() = data?.scheme == CalendarLinks.HOME_ASSISTANT_SCHEME
 
 /**
  * The app that handles link started the way its icon starts it, in a cleared
