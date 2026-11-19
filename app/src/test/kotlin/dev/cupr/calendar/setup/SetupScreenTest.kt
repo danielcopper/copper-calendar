@@ -15,6 +15,8 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.test.assertHasNoClickAction
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
@@ -22,6 +24,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
+import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -122,12 +125,17 @@ class SetupScreenTest {
         val activity = open(WeekWidgetProvider::class.java).get()
         ShadowLog.clear()
 
-        tap("Ferien").assertIsOff()
-        tap(R.string.setup_days_from_today).assertIsSelected()
-        tap(R.string.setup_back_midnight).assertIsSelected()
-        tap(R.string.setup_plus_bottom_left).assertIsSelected()
-        node(R.string.setup_plus_bottom_right).assertIsNotSelected()
-        node("Arbeit").assertIsOn()
+        tap(R.string.setup_calendars)
+        box("Ferien").performClick().assertIsOff()
+        box("Arbeit").assertIsOn()
+        press(R.string.setup_ok)
+        choose(R.string.setup_days, R.string.setup_days_from_today)
+        choose(R.string.setup_back_to_today, R.string.setup_back_midnight)
+        choose(R.string.setup_plus_corner, R.string.setup_plus_bottom_left)
+        assertRow(R.string.setup_calendars, "2 von 3")
+        assertRow(R.string.setup_days, R.string.setup_days_from_today)
+        assertRow(R.string.setup_back_to_today, R.string.setup_back_midnight)
+        assertRow(R.string.setup_plus_corner, R.string.setup_plus_bottom_left)
         tap(R.string.setup_save)
 
         val saved = WidgetSettings(setOf(HOLIDAYS), WeekDays.FROM_TODAY, BackToToday.MIDNIGHT, PlusCorner.BOTTOM_LEFT)
@@ -148,15 +156,23 @@ class SetupScreenTest {
         Settings.widgets(context).write(ID, stored)
         val activity = open(WeekWidgetProvider::class.java).get()
 
-        node("Ferien").assertIsOff()
-        node("Arbeit").assertIsOn()
+        assertRow(R.string.setup_calendars, "2 von 4")
+        assertRow(R.string.setup_days, R.string.setup_days_from_today)
+        assertRow(R.string.setup_back_to_today, R.string.setup_back_never)
+        assertRow(R.string.setup_plus_corner, R.string.setup_plus_bottom_left)
+        tap(R.string.setup_days)
+        option(R.string.setup_days_from_today).assertIsSelected()
+        option(R.string.setup_days_monday_to_sunday).assertIsNotSelected()
+        press(R.string.setup_cancel)
+        tap(R.string.setup_calendars)
+        box("Ferien").assertIsOff()
+        box("Arbeit").assertIsOn()
         // Left out, but no calendar of the sensor: listed by its id, so it can be ticked again.
-        node(GONE).assertIsOff()
-        node(R.string.setup_days_from_today).assertIsSelected()
-        node(R.string.setup_back_never).assertIsSelected()
-        node(R.string.setup_plus_bottom_left).assertIsSelected()
-        tap("Ferien")
-        tap(GONE)
+        box(GONE).assertIsOff()
+        box("Ferien").performClick()
+        box(GONE).performClick()
+        press(R.string.setup_ok)
+        assertRow(R.string.setup_calendars, R.string.setup_calendars_all)
         tap(R.string.setup_save)
 
         assertEquals(stored.copy(leftOut = emptySet()), Settings.widgets(context).read(ID))
@@ -164,17 +180,47 @@ class SetupScreenTest {
     }
 
     @Test
+    fun `the calendars' boxes take effect with OK only, and a choice's dialog closes on a pick or Abbrechen`() {
+        writeSnapshot()
+        open(WeekWidgetProvider::class.java)
+        assertRow(R.string.setup_calendars, R.string.setup_calendars_all)
+
+        tap(R.string.setup_calendars)
+        box("Ferien").performClick()
+        press(R.string.setup_cancel)
+        assertRow(R.string.setup_calendars, R.string.setup_calendars_all)
+        tap(R.string.setup_calendars)
+        box("Ferien").assertIsOn().performClick()
+        press(R.string.setup_ok)
+        assertRow(R.string.setup_calendars, "2 von 3")
+        box("Ferien").assertDoesNotExist()
+        tap(R.string.setup_back_to_today)
+        press(R.string.setup_cancel)
+        option(R.string.setup_back_each_update).assertDoesNotExist()
+        choose(R.string.setup_back_to_today, R.string.setup_back_never)
+        option(R.string.setup_back_each_update).assertDoesNotExist()
+        tap(R.string.setup_save)
+
+        assertEquals(
+            WidgetSettings(setOf(HOLIDAYS), backToToday = BackToToday.NEVER),
+            Settings.widgets(context).read(ID),
+        )
+    }
+
+    @Test
     fun `the settings shown outlive a configuration change, and saving after it stores them`() {
         writeSnapshot()
         val controller = open(WeekWidgetProvider::class.java)
-        tap(R.string.setup_days_from_today)
-        tap("Ferien")
+        choose(R.string.setup_days, R.string.setup_days_from_today)
+        tap(R.string.setup_calendars)
+        box("Ferien").performClick()
+        press(R.string.setup_ok)
 
         controller.recreate()
         compose.waitForIdle()
 
-        node(R.string.setup_days_from_today).assertIsSelected()
-        node("Ferien").assertIsOff()
+        assertRow(R.string.setup_days, R.string.setup_days_from_today)
+        assertRow(R.string.setup_calendars, "2 von 3")
         tap(R.string.setup_save)
         assertEquals(
             WidgetSettings(setOf(HOLIDAYS), WeekDays.FROM_TODAY),
@@ -200,9 +246,11 @@ class SetupScreenTest {
         Settings.widgets(context).write(ID, stored)
         val activity = open(WeekWidgetProvider::class.java).get()
         ShadowLog.clear()
-        tap("Ferien")
-        tap(R.string.setup_days_from_today)
-        tap(R.string.setup_plus_bottom_right)
+        tap(R.string.setup_calendars)
+        box("Ferien").performClick()
+        press(R.string.setup_ok)
+        choose(R.string.setup_days, R.string.setup_days_from_today)
+        choose(R.string.setup_plus_corner, R.string.setup_plus_bottom_right)
 
         activity.onBackPressedDispatcher.onBackPressed()
         compose.waitForIdle()
@@ -268,10 +316,10 @@ class SetupScreenTest {
     }
 
     @Test
-    fun `without any calendar known, the setup says so`() {
+    fun `without any calendar known, the setup says so, and its row opens nothing`() {
         open(WeekWidgetProvider::class.java)
 
-        node(R.string.setup_no_calendars).assertExists()
+        row(R.string.setup_calendars, context.getString(R.string.setup_no_calendars)).assertHasNoClickAction()
     }
 
     @Test
@@ -279,13 +327,27 @@ class SetupScreenTest {
         writeSnapshot()
 
         open(MonthWidgetProvider::class.java)
+        assertRow(R.string.setup_calendars, R.string.setup_calendars_all)
+        tap(R.string.setup_calendars)
 
-        node("Arbeit").assertIsOn()
-        node("Ferien").assertIsOn()
-        node(SCHOOL).assertIsOn()
+        box("Arbeit").assertIsOn()
+        box("Ferien").assertIsOn()
+        box(SCHOOL).assertIsOn()
         compose.onNodeWithText(WORK).assertDoesNotExist()
         compose.onNodeWithText(HOLIDAYS).assertDoesNotExist()
         node(R.string.setup_no_calendars).assertDoesNotExist()
+    }
+
+    @Test
+    // A phone's height without its status and navigation bars, as on a 6.1" phone.
+    @Config(qualifiers = "w393dp-h780dp")
+    fun `on a phone, the whole setup of the week fits without scrolling`() {
+        writeSnapshot()
+
+        open(WeekWidgetProvider::class.java)
+
+        node(R.string.setup_tap_new).assertIsDisplayed()
+        node(R.string.setup_save).assertIsDisplayed()
     }
 
     @Test
@@ -306,9 +368,10 @@ class SetupScreenTest {
     }
 
     /**
-     * The title names the kind; a section shows its heading exactly when the
-     * kind has it, and "Tippen" a row for the header, a day and "+", and for
-     * an entry exactly when the kind has entry areas, each on its default.
+     * The title names the kind; a setting's row shows, on its default,
+     * exactly when the kind has it, and "Tippen" a row for the header, a day
+     * and "+", and for an entry exactly when the kind has entry areas, each on
+     * its default.
      */
     private fun assertSections(
         @StringRes kind: Int,
@@ -317,14 +380,16 @@ class SetupScreenTest {
         entryTaps: Boolean,
     ) {
         compose.onNodeWithText(context.getString(R.string.setup_title, context.getString(kind))).assertExists()
-        node(R.string.setup_calendars).assertExists()
-        node(R.string.setup_plus_corner).assertExists()
+        assertRow(R.string.setup_calendars, R.string.setup_no_calendars)
+        assertRow(R.string.setup_plus_corner, R.string.setup_plus_bottom_right)
         node(R.string.setup_save).assertExists()
         node(R.string.setup_taps).assertExists()
         val shownWhen =
             listOf(
                 R.string.setup_days to days,
+                R.string.setup_days_monday_to_sunday to days,
                 R.string.setup_back_to_today to backToToday,
+                R.string.setup_back_each_update to backToToday,
                 R.string.setup_tap_header to true,
                 R.string.setup_tap_calendar to true,
                 R.string.setup_tap_day to true,
@@ -373,6 +438,34 @@ class SetupScreenTest {
     private fun tap(
         @StringRes text: Int,
     ) = tap(context.getString(text))
+
+    /** Opens the row named row and picks option in its dialog. */
+    private fun choose(
+        @StringRes row: Int,
+        @StringRes option: Int,
+    ) {
+        tap(row)
+        option(option).performClick()
+    }
+
+    /** The row named name, showing value. */
+    private fun row(
+        @StringRes name: Int,
+        value: String,
+    ) = compose.onNode(hasText(context.getString(name)) and hasText(value))
+
+    private fun assertRow(
+        @StringRes name: Int,
+        value: String,
+    ) = row(name, value).assertExists()
+
+    private fun assertRow(
+        @StringRes name: Int,
+        @StringRes value: Int,
+    ) = assertRow(name, context.getString(value))
+
+    /** A calendar's box in the calendars' dialog. */
+    private fun box(name: String) = compose.onNode(hasText(name) and isToggleable())
 
     /** Clicks text in a dialog, which does not scroll. */
     private fun press(text: String) = node(text).performClick()

@@ -3,17 +3,12 @@ package dev.cupr.calendar.setup
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -26,16 +21,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import dev.cupr.calendar.R
-import dev.cupr.calendar.app.Choice
-import dev.cupr.calendar.app.Heading
-import dev.cupr.calendar.app.ROW_HEIGHT
 import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.ha.SensorCalendar
@@ -96,27 +86,15 @@ fun SetupScreen(
                     .safeDrawingPadding()
                     .verticalScroll(rememberScrollState())
                     .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
                 stringResource(R.string.setup_title, stringResource(kind.label)),
                 style = MaterialTheme.typography.headlineSmall,
             )
             val current = settings ?: return@Column
-            Calendars(calendars ?: return@Column, current.leftOut) { settings = current.copy(leftOut = it) }
-            if (kind.days) {
-                Choice(R.string.setup_days, WeekDays.entries, current.days, ::daysLabel) {
-                    settings = current.copy(days = it)
-                }
-            }
-            if (kind.backToToday) {
-                Choice(R.string.setup_back_to_today, BackToToday.entries, current.backToToday, ::backLabel) {
-                    settings = current.copy(backToToday = it)
-                }
-            }
-            Choice(R.string.setup_plus_corner, PlusCorner.entries, current.plusCorner, ::cornerLabel) {
-                settings = current.copy(plusCorner = it)
-            }
+            val listed = calendars ?: return@Column
+            SettingRows(kind, listed, current) { settings = it }
             TapSection(kind, current.taps) { settings = current.copy(taps = it) }
             Button(
                 enabled = !saving,
@@ -129,37 +107,28 @@ fun SetupScreen(
     }
 }
 
-/**
- * A box per calendar, named by its name, else its id, ticked unless it is in
- * leftOut; a change hands the new calendars left out to onChange.
- */
+/** A row per setting of kind besides the taps, each with its value, opening its dialog; a change goes to onChange. */
 @Composable
-private fun Calendars(
+private fun SettingRows(
+    kind: WidgetKind,
     calendars: List<SensorCalendar>,
-    leftOut: Set<String>,
-    onChange: (Set<String>) -> Unit,
+    current: WidgetSettings,
+    onChange: (WidgetSettings) -> Unit,
 ) {
     Column {
-        Heading(R.string.setup_calendars)
-        if (calendars.isEmpty()) Text(stringResource(R.string.setup_no_calendars))
-        for (listed in calendars) {
-            val calendar = listed.id
-            val ticked = calendar !in leftOut
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = ROW_HEIGHT)
-                        .toggleable(
-                            value = ticked,
-                            role = Role.Checkbox,
-                            onValueChange = { onChange(if (it) leftOut - calendar else leftOut + calendar) },
-                        ),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Checkbox(checked = ticked, onCheckedChange = null)
-                Text(listed.shown, modifier = Modifier.padding(start = 16.dp))
+        CalendarsRow(calendars, current.leftOut) { onChange(current.copy(leftOut = it)) }
+        if (kind.days) {
+            ChoiceRow(R.string.setup_days, WeekDays.entries, current.days, ::daysLabel) {
+                onChange(current.copy(days = it))
             }
+        }
+        if (kind.backToToday) {
+            ChoiceRow(R.string.setup_back_to_today, BackToToday.entries, current.backToToday, ::backLabel) {
+                onChange(current.copy(backToToday = it))
+            }
+        }
+        ChoiceRow(R.string.setup_plus_corner, PlusCorner.entries, current.plusCorner, ::cornerLabel) {
+            onChange(current.copy(plusCorner = it))
         }
     }
 }

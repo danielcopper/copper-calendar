@@ -3,7 +3,6 @@ package dev.cupr.calendar.setup
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,14 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,13 +61,15 @@ internal fun TapSection(
     Column {
         Heading(R.string.setup_taps)
         for (element in kind.tapElements) {
-            TapRow(element, taps.of(element)) { choosing = element }
+            SettingRow(stringResource(element.label), targetName(element, taps.of(element))) { choosing = element }
         }
     }
     choosing?.let { element ->
-        TargetDialog(
-            element = element,
+        ChoiceDialog(
+            title = element.label,
+            options = Pick.options(element),
             selected = Pick.of(taps.of(element)),
+            label = { it.label(element) },
             onDismiss = { choosing = null },
         ) { pick ->
             choosing = null
@@ -86,31 +82,6 @@ internal fun TapSection(
             pickingApp = null
             taps.with(element, TapTarget.App(app))?.let(onChange)
         }
-    }
-}
-
-/** An element's row: its name and what a tap on it opens. */
-@Composable
-private fun TapRow(
-    element: TapElement,
-    target: TapTarget,
-    onClick: () -> Unit,
-) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = ROW_HEIGHT)
-                .clickable(role = Role.Button, onClick = onClick)
-                .padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(stringResource(element.label), style = MaterialTheme.typography.bodyLarge)
-        Text(
-            targetName(element, target),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 
@@ -128,39 +99,6 @@ private fun targetName(
     return name ?: stringResource(R.string.setup_tap_app_missing)
 }
 
-/** The targets element can have, the one selected marked; picking one hands it to onPick. */
-@Composable
-private fun TargetDialog(
-    element: TapElement,
-    selected: Pick,
-    onDismiss: () -> Unit,
-    onPick: (Pick) -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.setup_cancel)) } },
-        title = { Text(stringResource(element.label)) },
-        text = {
-            Column(modifier = Modifier.selectableGroup()) {
-                for (pick in Pick.options(element)) {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = ROW_HEIGHT)
-                                .selectable(selected = pick == selected, role = Role.RadioButton) { onPick(pick) },
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected = pick == selected, onClick = null)
-                        Text(stringResource(pick.label(element)), modifier = Modifier.padding(start = 16.dp))
-                    }
-                }
-            }
-        },
-    )
-}
-
 /** The apps with a launcher icon, by icon and name; picking one hands its package to onPick. */
 @Composable
 private fun AppDialog(
@@ -174,7 +112,7 @@ private fun AppDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.setup_cancel)) } },
+        dismissButton = { Cancel(onDismiss) },
         title = { Text(stringResource(R.string.setup_tap_apps)) },
         text = {
             val listed = apps
