@@ -66,6 +66,7 @@ import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowLog
+import kotlin.coroutines.CoroutineContext
 
 /**
  * A widget's setup as the person sees and uses it: its sections for the
@@ -272,6 +273,8 @@ class SetupScreenTest {
         press(R.string.setup_tap_nothing_new)
         tap(R.string.setup_tap_entry)
         node(R.string.setup_tap_other_app).assertDoesNotExist()
+        node(R.string.setup_tap_nothing).assertDoesNotExist()
+        option(R.string.setup_tap_as_day).assertExists()
         press(R.string.setup_tap_entry_day)
         tap(R.string.setup_tap_day)
         press(R.string.setup_tap_other_app)
@@ -313,6 +316,27 @@ class SetupScreenTest {
         node(R.string.setup_cancel).assertDoesNotExist()
         tap(R.string.setup_save)
         assertEquals(taps, Settings.widgets(context).read(ID).taps)
+    }
+
+    @Test
+    fun `a stored app's row shows nothing while its name is looked up, and then its name`() {
+        installLauncherApp(ALPHA, "Alpha")
+        Settings.widgets(context).write(ID, WidgetSettings(taps = TapTargets(header = TapTarget.App(ALPHA))))
+        val held = HeldDispatcher()
+        Services.io = held
+        open(MonthWidgetProvider::class.java)
+        // The stored settings and calendars.
+        held.runHeld()
+        compose.waitForIdle()
+
+        node(R.string.setup_tap_header).assertExists()
+        node(R.string.setup_tap_app_missing).assertDoesNotExist()
+        node("Alpha").assertDoesNotExist()
+        // The app's name.
+        held.runHeld()
+        compose.waitForIdle()
+        node("Alpha").assertExists()
+        node(R.string.setup_tap_app_missing).assertDoesNotExist()
     }
 
     @Test
@@ -523,6 +547,22 @@ class SetupScreenTest {
         opened += controller
         compose.waitForIdle()
         return controller
+    }
+
+    /** Holds what is dispatched to it until [runHeld] runs it, so a test sees the screen before its reads end. */
+    private class HeldDispatcher : CoroutineDispatcher() {
+        private val held = ArrayDeque<Runnable>()
+
+        override fun dispatch(
+            context: CoroutineContext,
+            block: Runnable,
+        ) {
+            held += block
+        }
+
+        fun runHeld() {
+            while (held.isNotEmpty()) held.removeFirst().run()
+        }
     }
 
     private companion object {

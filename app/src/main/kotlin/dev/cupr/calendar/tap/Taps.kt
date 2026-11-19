@@ -6,22 +6,10 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import dev.cupr.calendar.signin.SignInActivity
-import dev.cupr.calendar.store.TapTarget
+import dev.cupr.calendar.store.TapElement
 import dev.cupr.calendar.store.TapTargets
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
-
-/** What a tap on a widget hit (design.md, "Taps"). */
-enum class TapElement { HEADER, DAY, ENTRY, NEW }
-
-/** The target a widget's taps on element open (D63). */
-fun TapTargets.of(element: TapElement): TapTarget =
-    when (element) {
-        TapElement.HEADER -> header
-        TapElement.DAY -> day
-        TapElement.ENTRY -> entry
-        TapElement.NEW -> new
-    }
 
 /** A tap on a widget: its element and, where the element has one, its day. */
 sealed interface Tap {
@@ -231,4 +219,25 @@ object Taps {
         } catch (_: DateTimeParseException) {
             null
         }
+}
+
+/**
+ * The taps of the widget id as its targets say (D63), for its drawing: a
+ * tap where its element has one of its own, none where it opens nothing or,
+ * for an entry, leaves the tap to its day's area. A widget's views are
+ * applied again onto the views the launcher shows, so a tap the drawing
+ * leaves out has to be cleared, with the none these give.
+ */
+class WidgetTaps(
+    val id: Int,
+    val targets: TapTargets,
+) {
+    /** The tap on a fixed part (header, "+"), none when its element has none. */
+    fun pendingIntent(
+        context: Context,
+        tap: Tap,
+    ): PendingIntent? = if (targets.opens(tap.element)) Taps.pendingIntent(context, tap, id) else null
+
+    /** The fill-in of a list row's cell, none when its tap's element has no tap. */
+    fun fillIn(tap: Tap): Intent? = if (targets.opens(tap.element)) Taps.fillIn(tap, id) else null
 }

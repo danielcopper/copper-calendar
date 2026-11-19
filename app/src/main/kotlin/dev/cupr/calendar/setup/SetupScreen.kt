@@ -32,12 +32,11 @@ import dev.cupr.calendar.ha.SensorCalendar
 import dev.cupr.calendar.ha.SensorCalendars
 import dev.cupr.calendar.store.BackToToday
 import dev.cupr.calendar.store.PlusCorner
+import dev.cupr.calendar.store.TapElement
 import dev.cupr.calendar.store.TapTarget
 import dev.cupr.calendar.store.TapTargets
 import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.store.stored
-import dev.cupr.calendar.tap.TapElement
-import dev.cupr.calendar.tap.of
 import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.widget.WidgetKind
 import kotlinx.coroutines.launch
@@ -189,11 +188,12 @@ internal val SettingsSaver =
 /** The tap targets [SettingsSaver] saved after the three choices, by element; none if one is unknown or misplaced. */
 private fun restoreTaps(saved: List<String>): TapTargets? =
     TapElement.entries.fold<TapElement, TapTargets?>(TapTargets.DEFAULT) { taps, element ->
-        saved.getOrNull(FIRST_TAP + element.ordinal)?.let(TapTarget::of)?.let { taps?.with(element, it) }
+        val target = saved.getOrNull(FIRST_TAP + element.ordinal)?.let(TapTarget::of)
+        target?.takeIf { it.kind in element.kinds }?.let { taps?.with(element, it) }
     }
 
 /** Where [SettingsSaver] saves the tap targets, after the days, "Zurück zu heute" and the corner of "+". */
 private const val FIRST_TAP = 3
 
 /** The choices [SettingsSaver] saves before the calendars left out: three, then the four tap targets. */
-private const val SAVED_CHOICES = FIRST_TAP + 4
+private val SAVED_CHOICES = FIRST_TAP + TapElement.entries.size

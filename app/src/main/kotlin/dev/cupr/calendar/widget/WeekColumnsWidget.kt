@@ -11,6 +11,7 @@ import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.render.WeekRowRenderer
+import dev.cupr.calendar.tap.WidgetTaps
 import dev.cupr.calendar.week.WeekLayout
 import kotlin.math.roundToInt
 
@@ -93,8 +94,17 @@ object WeekColumnsWidget {
         val range = WeekLayout.range(dates.first(), dates.last())
         val views = RemoteViews(context.packageName, R.layout.widget_week_columns)
         val description = "$title, $range"
+        val taps = WidgetTaps(id, look.taps)
         val headerPx =
-            DrawnWidget.fixedParts(context, views, kept, description, calendar, look, id) { chrome, palette, note ->
+            DrawnWidget.fixedParts(
+                context,
+                views,
+                kept,
+                description,
+                calendar,
+                look.corner,
+                taps,
+            ) { chrome, palette, note ->
                 chrome.weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette, note)
             }
         val full = MonthLayout.week(dates, calendar.entries, today)
@@ -121,7 +131,7 @@ object WeekColumnsWidget {
         DrawnWidget.list(
             context,
             views,
-            listOf(dates.first().toEpochDay() to DrawnWidget.weekRow(context, week, light, dark, id, look.taps)),
+            listOf(dates.first().toEpochDay() to DrawnWidget.weekRow(context, week, light, dark, taps)),
         )
         DrawnWidget.logDrawn(TAG, id, kept, widthPx, limit, if (faded) ", faded" else "")
         return kept.drawn(views, limit)

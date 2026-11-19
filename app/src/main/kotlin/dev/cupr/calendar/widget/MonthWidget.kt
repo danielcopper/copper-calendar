@@ -10,6 +10,7 @@ import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.render.WeekRowRenderer
+import dev.cupr.calendar.tap.WidgetTaps
 import java.time.YearMonth
 import kotlin.math.roundToInt
 
@@ -73,8 +74,9 @@ object MonthWidget {
         val kept = Kept()
         val views = RemoteViews(context.packageName, R.layout.widget_month)
         val title = ChromeRenderer.title(view.month)
+        val taps = WidgetTaps(id, look.taps)
         val headerPx =
-            DrawnWidget.fixedParts(context, views, kept, title, calendar, look, id) { chrome, palette, note ->
+            DrawnWidget.fixedParts(context, views, kept, title, calendar, look.corner, taps) { chrome, palette, note ->
                 chrome.header(view.month, widthPx, scale, palette, note)
             }
         val heightsPx = view.weeks.map { rows.heightPx(it, scale) }
@@ -92,7 +94,7 @@ object MonthWidget {
                 week.days
                     .first()
                     .date
-                    .toEpochDay() to DrawnWidget.weekRow(context, week, light, dark, id, look.taps)
+                    .toEpochDay() to DrawnWidget.weekRow(context, week, light, dark, taps)
             }
         DrawnWidget.list(context, views, items)
         val measured = TodayOnTop.Measured(scale, heightsPx, today = view.todayWeek, headerPx = headerPx)

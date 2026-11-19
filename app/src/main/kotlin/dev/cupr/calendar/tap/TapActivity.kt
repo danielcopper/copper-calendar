@@ -40,9 +40,10 @@ class TapActivity : Activity() {
  * Opens what tap's element has as its target in targets (D63) with start,
  * an Activity's startActivity: a calendar link through [openTarget], for an
  * entry's day the link a tap on that day has, another app as its icon
- * starts it ([openApp]). An element set to open nothing has no tap on the
- * widget; an intent of it from before it was set opens nothing either, and
- * the log says so.
+ * starts it ([openApp]). An element without a tap of its own has none on
+ * the widget; an intent of it from before it was set opens what the
+ * element's setting says all the same: for an entry, what a tap on its day
+ * opens; for nothing, nothing, and the log says so.
  */
 internal fun open(
     context: Context,
@@ -54,6 +55,7 @@ internal fun open(
         TapTarget.CalendarPage -> openTarget(context, CalendarLinks.uri(tap), start)
         TapTarget.EntryDay -> openTarget(context, CalendarLinks.uri(tap.day?.let(Tap::Day) ?: tap), start)
         is TapTarget.App -> openApp(context, target.packageName, start)
+        TapTarget.AsDay -> tap.day?.let { open(context, Tap.Day(it), targets, start) }
         TapTarget.None -> Log.w(TAG, "A tap on ${tap.element}, which its widget has set to open nothing")
     }
 }

@@ -86,7 +86,7 @@ class WidgetSettingsStoreTest {
             store.write(7, WidgetSettings(taps = taps))
             assertEquals(taps, store.read(7).taps)
         }
-        for (target in listOf(TapTarget.CalendarPage, TapTarget.EntryDay, TapTarget.None)) {
+        for (target in listOf(TapTarget.CalendarPage, TapTarget.EntryDay, TapTarget.AsDay)) {
             store.write(7, WidgetSettings(taps = TapTargets(entry = target)))
             assertEquals(TapTargets(entry = target), store.read(7).taps)
         }
@@ -96,7 +96,7 @@ class WidgetSettingsStoreTest {
             listOf("header", "day", "entry", "new").map { prefs.getString("7.tap_$it", null) },
         )
         assertEquals(listOf("calendar", "app:com.example.app", "nothing"), parts.map { it.stored })
-        assertEquals("day", TapTarget.EntryDay.stored)
+        assertEquals(listOf("day", "as_day"), listOf(TapTarget.EntryDay, TapTarget.AsDay).map { it.stored })
     }
 
     @Test
@@ -104,15 +104,17 @@ class WidgetSettingsStoreTest {
         prefs.edit {
             putString("7.tap_header", "day")
             putString("7.tap_day", "app:")
-            putString("7.tap_entry", "app:com.example.app")
+            putString("7.tap_entry", "nothing")
             putString("7.tap_new", "Nothing")
         }
 
         assertEquals(TapTargets.DEFAULT, store.read(7).taps)
         val logs = ShadowLog.getLogsForTag("WidgetSettings").joinToString { it.msg }
-        val stored = listOf("header" to "day", "day" to "app:", "entry" to "app:com.example.app", "new" to "Nothing")
+        val stored = listOf("header" to "day", "day" to "app:", "entry" to "nothing", "new" to "Nothing")
         for ((field, name) in stored) {
-            val line = "Widget 7: its stored tap_$field \"$name\" is unknown; it reads as calendar"
+            val line =
+                "Widget 7: its stored tap_$field \"$name\" is unknown or not one this element can have; " +
+                    "it reads as calendar"
             assertTrue(logs, logs.contains(line))
         }
     }

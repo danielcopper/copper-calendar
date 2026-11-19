@@ -187,7 +187,7 @@ class SetupTest {
         val app = TapTarget.App("com.example.app")
         val taps =
             listOf(TapTarget.CalendarPage, app, TapTarget.None).map { TapTargets(it, it, TapTarget.CalendarPage, it) } +
-                listOf(TapTarget.EntryDay, TapTarget.None).map { TapTargets(entry = it) }
+                listOf(TapTarget.EntryDay, TapTarget.AsDay).map { TapTargets(entry = it) }
         for (settings in all + taps.map { WidgetSettings(taps = it) }) {
             assertEquals(settings, SettingsSaver.restore(checkNotNull(save(settings))))
         }

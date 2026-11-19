@@ -47,6 +47,6 @@ internal fun launcherIcon(
     try {
         packageManager.getActivityIcon(app.activity)
     } catch (e: PackageManager.NameNotFoundException) {
-        Log.w("Setup", "No icon for ${app.activity.flattenToShortString()}", e)
+        Log.w(TAG, "No icon for ${app.activity.flattenToShortString()}", e)
         null
     }

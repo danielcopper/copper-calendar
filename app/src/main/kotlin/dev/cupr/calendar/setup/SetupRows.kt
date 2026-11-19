@@ -9,14 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,6 +30,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.cupr.calendar.R
 import dev.cupr.calendar.app.ROW_HEIGHT
+import dev.cupr.calendar.app.RadioOptions
 import dev.cupr.calendar.ha.SensorCalendar
 
 /** A setting's row: its name and its value; onClick, when given, opens its dialog. */
@@ -93,23 +91,7 @@ internal fun <T> ChoiceDialog(
         confirmButton = {},
         dismissButton = { Cancel(onDismiss) },
         title = { Text(stringResource(title)) },
-        text = {
-            Column(modifier = Modifier.selectableGroup()) {
-                for (option in options) {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = ROW_HEIGHT)
-                                .selectable(selected = option == selected, role = Role.RadioButton) { onPick(option) },
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected = option == selected, onClick = null)
-                        Text(stringResource(label(option)), modifier = Modifier.padding(start = 16.dp))
-                    }
-                }
-            }
-        },
+        text = { RadioOptions(options, selected, label, onPick) },
     )
 }
 

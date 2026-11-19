@@ -29,9 +29,26 @@ internal fun <T> SharedPreferences.choice(
     tag: String,
     what: String,
     stored: (T) -> String,
+): T = choice(key, default, tag, what, stored, UNKNOWN) { name -> entries.firstOrNull { stored(it) == name } }
+
+/**
+ * The choice stored under key as parse reads its name, default when none is
+ * stored; a name parse reads as none reads as default, and the log says so
+ * under tag: what names it, then why, by default that it is unknown.
+ */
+internal fun <T> SharedPreferences.choice(
+    key: String,
+    default: T,
+    tag: String,
+    what: String,
+    stored: (T) -> String,
+    why: String = UNKNOWN,
+    parse: (String) -> T?,
 ): T {
     val name = getString(key, null) ?: return default
-    return entries.firstOrNull { stored(it) == name } ?: default.also {
-        Log.w(tag, "$what \"$name\" is unknown; it reads as ${stored(it)}")
+    return parse(name) ?: default.also {
+        Log.w(tag, "$what \"$name\" $why; it reads as ${stored(it)}")
     }
 }
+
+private const val UNKNOWN = "is unknown"

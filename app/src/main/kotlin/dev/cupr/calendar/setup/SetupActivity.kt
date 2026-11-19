@@ -43,8 +43,4 @@ class SetupActivity : ComponentActivity() {
 
     /** The result for the launcher, which names the widget set up. */
     private fun result() = Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
-
-    private companion object {
-        const val TAG = "Setup"
-    }
 }

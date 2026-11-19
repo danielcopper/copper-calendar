@@ -37,12 +37,9 @@ import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Heading
 import dev.cupr.calendar.app.ROW_HEIGHT
 import dev.cupr.calendar.app.Services
-import dev.cupr.calendar.store.EntryTarget
-import dev.cupr.calendar.store.PartTarget
+import dev.cupr.calendar.store.TapElement
 import dev.cupr.calendar.store.TapTarget
 import dev.cupr.calendar.store.TapTargets
-import dev.cupr.calendar.tap.TapElement
-import dev.cupr.calendar.tap.of
 import dev.cupr.calendar.widget.WidgetKind
 import kotlinx.coroutines.withContext
 
@@ -75,37 +72,45 @@ internal fun TapSection(
     choosing?.let { element ->
         ChoiceDialog(
             title = element.label,
-            options = Pick.options(element),
-            selected = Pick.of(taps.of(element)),
-            label = { it.label(element) },
+            options = element.kinds,
+            selected = taps.of(element).kind,
+            label = { kindLabel(element, it) },
             onDismiss = { choosing = null },
-        ) { pick ->
+        ) { kind ->
             choosing = null
-            val target = pick.target
-            if (target == null) pickingApp = element else taps.with(element, target)?.let(onChange)
+            if (kind == TapTarget.Kind.APP) pickingApp = element else onChange(taps.with(element, TapTarget.of(kind)))
         }
     }
     pickingApp?.let { element ->
         AppDialog(onDismiss = { pickingApp = null }) { app ->
             pickingApp = null
-            taps.with(element, TapTarget.App(app))?.let(onChange)
+            onChange(taps.with(element, TapTarget.App(app)))
         }
     }
 }
 
-/** The name of target as element's row shows it: another app by its name, or that it is gone. */
+/**
+ * The name of target as element's row shows it: another app by its name,
+ * or that it is gone, and nothing while its name is being looked up.
+ */
 @Composable
 private fun targetName(
     element: TapElement,
     target: TapTarget,
 ): String {
-    if (target !is TapTarget.App) return stringResource(Pick.of(target).label(element))
+    if (target !is TapTarget.App) return stringResource(kindLabel(element, target.kind))
     val packageManager = LocalContext.current.packageManager
-    val name by produceState<String?>(null, target) {
-        value = withContext(Services.io) { launcherName(packageManager, target.packageName) }
+    val name by produceState<AppName?>(null, target) {
+        value = withContext(Services.io) { AppName(launcherName(packageManager, target.packageName)) }
     }
-    return name ?: stringResource(R.string.setup_tap_app_missing)
+    val missing = stringResource(R.string.setup_tap_app_missing)
+    return name?.let { it.name ?: missing }.orEmpty()
 }
+
+/** The name an app was found by, none when it was not found. */
+private class AppName(
+    val name: String?,
+)
 
 /** The apps with a launcher icon, by icon and name; picking one hands its package to onPick. */
 @Composable
@@ -179,34 +184,39 @@ private val TapElement.label: Int
             TapElement.NEW -> R.string.setup_tap_new
         }
 
-/** A choice in an element's dialog, its [target]; another app has none until its own list picks one. */
-private enum class Pick(
-    val target: TapTarget?,
-) {
-    CALENDAR(TapTarget.CalendarPage),
-    ENTRY_DAY(TapTarget.EntryDay),
-    OTHER_APP(null),
-    NOTHING(TapTarget.None),
-    ;
-
-    @StringRes
-    fun label(element: TapElement): Int =
-        when (this) {
-            CALENDAR -> calendarLabel(element)
-            ENTRY_DAY -> R.string.setup_tap_entry_day
-            OTHER_APP -> R.string.setup_tap_other_app
-            NOTHING -> if (element == TapElement.NEW) R.string.setup_tap_nothing_new else R.string.setup_tap_nothing
+/** How element's dialog and row name a target of kind; another app's row names the app instead. */
+@StringRes
+private fun kindLabel(
+    element: TapElement,
+    kind: TapTarget.Kind,
+): Int =
+    when (kind) {
+        TapTarget.Kind.CALENDAR_PAGE -> {
+            calendarLabel(element)
         }
 
-    companion object {
-        /** What element's dialog offers: an entry its day instead of another app (D63). */
-        fun options(element: TapElement): List<Pick> =
-            listOf(CALENDAR, if (element == TapElement.ENTRY) ENTRY_DAY else OTHER_APP, NOTHING)
+        TapTarget.Kind.ENTRY_DAY -> {
+            R.string.setup_tap_entry_day
+        }
 
-        fun of(target: TapTarget): Pick =
-            if (target is TapTarget.App) OTHER_APP else entries.first { it.target == target }
+        TapTarget.Kind.APP -> {
+            R.string.setup_tap_other_app
+        }
+
+        TapTarget.Kind.NONE -> {
+            if (element ==
+                TapElement.NEW
+            ) {
+                R.string.setup_tap_nothing_new
+            } else {
+                R.string.setup_tap_nothing
+            }
+        }
+
+        TapTarget.Kind.AS_DAY -> {
+            R.string.setup_tap_as_day
+        }
     }
-}
 
 /** What a tap on element opens on the calendar page, as a dialog and a row name it. */
 @StringRes
@@ -216,16 +226,4 @@ private fun calendarLabel(element: TapElement): Int =
         TapElement.DAY -> R.string.setup_tap_calendar_day
         TapElement.ENTRY -> R.string.setup_tap_calendar_entry
         TapElement.NEW -> R.string.setup_tap_calendar_new
-    }
-
-/** taps with element's target set to target; none when element cannot have it (D63). */
-internal fun TapTargets.with(
-    element: TapElement,
-    target: TapTarget,
-): TapTargets? =
-    when (element) {
-        TapElement.ENTRY -> (target as? EntryTarget)?.let { copy(entry = it) }
-        TapElement.HEADER -> (target as? PartTarget)?.let { copy(header = it) }
-        TapElement.DAY -> (target as? PartTarget)?.let { copy(day = it) }
-        TapElement.NEW -> (target as? PartTarget)?.let { copy(new = it) }
     }

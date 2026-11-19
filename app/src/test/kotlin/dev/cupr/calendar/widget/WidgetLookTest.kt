@@ -26,6 +26,8 @@ import dev.cupr.calendar.sample.SampleData
 import dev.cupr.calendar.store.BackToToday
 import dev.cupr.calendar.store.ListState
 import dev.cupr.calendar.store.PlusCorner
+import dev.cupr.calendar.store.TapTarget
+import dev.cupr.calendar.store.TapTargets
 import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
@@ -289,14 +291,16 @@ class WidgetLookTest {
     }
 
     @Test
-    fun `a widget draws without the calendars it leaves out, with its days and its corner of plus`() {
+    fun `a widget draws without the calendars it leaves out, with its days, its corner of plus and its taps`() {
         val provider = Recording(WidgetKind.WEEK)
+        val taps = TapTargets(day = TapTarget.None, new = TapTarget.None)
         settings.write(
             4,
             WidgetSettings(
                 leftOut = setOf("calendar.model", "calendar.contact_birthdays"),
                 days = WeekDays.FROM_TODAY,
                 plusCorner = PlusCorner.BOTTOM_LEFT,
+                taps = taps,
             ),
         )
 
@@ -311,7 +315,7 @@ class WidgetLookTest {
             left.entries,
         )
         assertTrue(left.entries.size < all.size)
-        assertEquals(Look(WeekDays.FROM_TODAY, PlusCorner.BOTTOM_LEFT, scroll = true), look)
+        assertEquals(Look(WeekDays.FROM_TODAY, PlusCorner.BOTTOM_LEFT, scroll = true, taps = taps), look)
         assertEquals(SampleData.calendar() to Look(), provider.drawn[1])
     }
 

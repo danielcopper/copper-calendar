@@ -24,10 +24,10 @@ import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.store.ListStore
-import dev.cupr.calendar.store.TapTarget
-import dev.cupr.calendar.store.TapTargets
+import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
+import dev.cupr.calendar.tap.WidgetTaps
 import java.time.Instant
 import java.time.LocalDate
 
@@ -162,13 +162,13 @@ internal object DrawnWidget {
     }
 
     /**
-     * The fixed parts of calendar on the widget id: its header, drawn light
-     * and dark by header with the renderer of the fixed parts and the
-     * calendar's notice at its right, named by description and the notice,
-     * and opening what look's taps say for it (D63), none when they say
-     * nothing, or the sign-in screen while the notice asks to sign in again
-     * (D52); and "+" ([Plus]). Returns the drawn header's height in px, which
-     * the list's height leaves out.
+     * The fixed parts of calendar: its header, drawn light and dark by
+     * header with the renderer of the fixed parts and the calendar's notice
+     * at its right, named by description and the notice, and opening what
+     * taps say for it (D63), or the sign-in screen while the notice asks to
+     * sign in again (D52); and "+" in corner ([Plus]). Without a tap, the
+     * header's earlier one is cleared. Returns the drawn header's height in
+     * px, which the list's height leaves out.
      */
     fun fixedParts(
         context: Context,
@@ -176,18 +176,20 @@ internal object DrawnWidget {
         kept: Kept,
         description: String,
         calendar: Content.Calendar,
-        look: Look,
-        id: Int,
+        corner: PlusCorner,
+        taps: WidgetTaps,
         header: (ChromeRenderer, Palette, HeaderNote?) -> Bitmap,
     ): Int {
         val chrome = chrome(context)
-        Plus.place(context, views, kept, chrome, look, id, calendar)
+        Plus.place(context, views, kept, chrome, corner, taps, calendar)
         val notice = calendar.notice
         val headerTap =
             if (notice is Notice.SignInAgain) {
-                Taps.signIn(context)
+                Taps.signIn(
+                    context,
+                )
             } else {
-                Taps.pendingIntent(context, Tap.Header, id).takeIf { look.taps.header != TapTarget.None }
+                taps.pendingIntent(context, Tap.Header)
             }
         val note = notice?.let { HeaderNote(it.text, accent = it is Notice.SignInAgain) }
         val palettes = calendar.palettes
@@ -195,7 +197,7 @@ internal object DrawnWidget {
         views.setImageViewBitmap(R.id.header_light, light)
         views.setImageViewBitmap(R.id.header_dark, kept.keep(header(chrome, palettes.dark, note)))
         views.setContentDescription(R.id.header, notice?.let { "$description, ${it.text}" } ?: description)
-        headerTap?.let { views.setOnClickPendingIntent(R.id.header, it) }
+        views.setOnClickPendingIntent(R.id.header, headerTap)
         return light.height
     }
 
@@ -217,25 +219,22 @@ internal object DrawnWidget {
 
     /**
      * A drawn week row of seven day columns (widget_month_week.xml), the
-     * month's or "Woche quer"'s, on the widget id: the drawing light and
-     * dark, and over it an area per day, named by the day and opening it, as
-     * taps says, or nothing when they say so (D63).
+     * month's or "Woche quer"'s: the drawing light and dark, and over it an
+     * area per day, named by the day and opening it as taps say, its tap
+     * cleared when they give none (D63).
      */
     fun weekRow(
         context: Context,
         week: Week,
         light: Bitmap,
         dark: Bitmap,
-        id: Int,
-        taps: TapTargets,
+        taps: WidgetTaps,
     ): RemoteViews {
         val row = RemoteViews(context.packageName, R.layout.widget_month_week)
         row.setImageViewBitmap(R.id.week_light, light)
         row.setImageViewBitmap(R.id.week_dark, dark)
         week.days.forEachIndexed { index, day ->
-            if (taps.day != TapTarget.None) {
-                row.setOnClickFillInIntent(dayIds[index], Taps.fillIn(Tap.Day(day.date), id))
-            }
+            row.setOnClickFillInIntent(dayIds[index], taps.fillIn(Tap.Day(day.date)))
             row.setContentDescription(dayIds[index], day.date.longName)
         }
         return row

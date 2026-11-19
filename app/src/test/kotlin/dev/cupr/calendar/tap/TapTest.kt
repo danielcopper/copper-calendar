@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.app.Settings
+import dev.cupr.calendar.store.TapElement
 import dev.cupr.calendar.store.TapTarget
 import dev.cupr.calendar.store.TapTargets
 import dev.cupr.calendar.store.WidgetSettings
@@ -425,16 +426,51 @@ class TapTest {
 
     @Test
     fun `an element set to open nothing opens nothing, and its tap from before is logged`() {
-        val targets = TapTargets(TapTarget.None, TapTarget.None, TapTarget.None, TapTarget.None)
+        val targets = TapTargets(TapTarget.None, TapTarget.None, TapTarget.AsDay, TapTarget.None)
 
         for (tap in listOf(Tap.Header, Tap.Day(day), Tap.Entry("abc", day), Tap.New(day))) {
             open(application, tap, targets) { throw AssertionError("started $it") }
         }
 
         assertEquals(0, ShadowToast.shownToastCount())
+        // The entry's tap is its day's, which opens nothing.
         assertEquals(
-            listOf("HEADER", "DAY", "ENTRY", "NEW").map { "A tap on $it, which its widget has set to open nothing" },
+            listOf("HEADER", "DAY", "DAY", "NEW").map { "A tap on $it, which its widget has set to open nothing" },
             ShadowLog.getLogsForTag("TapActivity").map { it.msg },
+        )
+    }
+
+    @Test
+    fun `an entry's tap from before it was set to its day's tap opens what its day opens`() {
+        installApp(OTHER_APP)
+        val opened = mutableListOf<Intent>()
+
+        open(application, Tap.Entry("abc", day), TapTargets(entry = TapTarget.AsDay)) { opened += it }
+        val toApp = TapTargets(day = TapTarget.App(OTHER_APP), entry = TapTarget.AsDay)
+        open(application, Tap.Entry("abc", day), toApp) { opened += it }
+
+        assertEquals("$calendar?day=2026-11-12", opened[0].dataString)
+        assertEquals(ComponentName(OTHER_APP, "$OTHER_APP.Main"), opened[1].component)
+    }
+
+    @Test
+    fun `an element takes only the kinds of target it can have, and has a tap of its own unless it opens none`() {
+        val entryKinds = listOf(TapTarget.Kind.CALENDAR_PAGE, TapTarget.Kind.ENTRY_DAY, TapTarget.Kind.AS_DAY)
+        val otherKinds = listOf(TapTarget.Kind.CALENDAR_PAGE, TapTarget.Kind.APP, TapTarget.Kind.NONE)
+        assertEquals(listOf(otherKinds, otherKinds, entryKinds, otherKinds), TapElement.entries.map { it.kinds })
+        assertThrows(IllegalArgumentException::class.java) { TapTargets(entry = TapTarget.None) }
+        assertThrows(
+            IllegalArgumentException::class.java,
+        ) { TapTargets.DEFAULT.with(TapElement.HEADER, TapTarget.AsDay) }
+        val app = TapTarget.App(OTHER_APP)
+        val set = TapTargets(TapTarget.None, app, TapTarget.AsDay, TapTarget.CalendarPage)
+        assertEquals(listOf(false, true, false, true), TapElement.entries.map { set.opens(it) })
+        assertEquals(
+            set,
+            TapTargets.DEFAULT
+                .with(TapElement.HEADER, TapTarget.None)
+                .with(TapElement.DAY, app)
+                .with(TapElement.ENTRY, TapTarget.AsDay),
         )
     }
 

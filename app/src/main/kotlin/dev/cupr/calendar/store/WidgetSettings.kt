@@ -1,7 +1,6 @@
 package dev.cupr.calendar.store
 
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.core.content.edit
 import dev.cupr.calendar.week.WeekDays
 
@@ -69,12 +68,9 @@ class WidgetSettingsStore(
             backToToday = choice(id, BACK_TO_TODAY, BackToToday.entries, default.backToToday),
             plusCorner = choice(id, PLUS_CORNER, PlusCorner.entries, default.plusCorner),
             taps =
-                TapTargets(
-                    header = target(id, TAP_HEADER, default.taps.header),
-                    day = target(id, TAP_DAY, default.taps.day),
-                    entry = target(id, TAP_ENTRY, default.taps.entry),
-                    new = target(id, TAP_NEW, default.taps.new),
-                ),
+                TapElement.entries.fold(default.taps) { taps, element ->
+                    taps.with(element, target(id, element, default.taps.of(element)))
+                },
         )
     }
 
@@ -86,10 +82,7 @@ class WidgetSettingsStore(
         putString(key(id, DAYS), settings.days.stored)
         putString(key(id, BACK_TO_TODAY), settings.backToToday.stored)
         putString(key(id, PLUS_CORNER), settings.plusCorner.stored)
-        putString(key(id, TAP_HEADER), settings.taps.header.stored)
-        putString(key(id, TAP_DAY), settings.taps.day.stored)
-        putString(key(id, TAP_ENTRY), settings.taps.entry.stored)
-        putString(key(id, TAP_NEW), settings.taps.new.stored)
+        for ((element, field) in TAP_FIELDS) putString(key(id, field), settings.taps.of(element).stored)
     }
 
     /** Forgets the settings of the widgets ids, removed from the home screen. */
@@ -108,18 +101,18 @@ class WidgetSettingsStore(
     ): T = prefs.choice(key(id, field), entries, default, TAG, what(id, field))
 
     /**
-     * The target stored under field, default when none is; one stored under a
-     * name this app does not know, or that the element cannot have (an entry
-     * another app, the header an entry's day), reads as default, logged.
+     * The target of element, default when none is stored; one stored under a
+     * name this app does not know, or of a kind the element cannot have (an
+     * entry another app, the header an entry's day), reads as default, logged.
      */
-    private inline fun <reified T : TapTarget> target(
+    private fun target(
         id: Int,
-        field: String,
-        default: T,
-    ): T {
-        val name = prefs.getString(key(id, field), null) ?: return default
-        return TapTarget.of(name) as? T ?: default.also {
-            Log.w(TAG, "${what(id, field)} \"$name\" is unknown; it reads as ${it.stored}")
+        element: TapElement,
+        default: TapTarget,
+    ): TapTarget {
+        val field = TAP_FIELDS.getValue(element)
+        return prefs.choice(key(id, field), default, TAG, what(id, field), TapTarget::stored, MISPLACED) { name ->
+            TapTarget.of(name)?.takeIf { it.kind in element.kinds }
         }
     }
 
@@ -129,11 +122,17 @@ class WidgetSettingsStore(
         const val DAYS = "days"
         const val BACK_TO_TODAY = "back_to_today"
         const val PLUS_CORNER = "plus_corner"
-        const val TAP_HEADER = "tap_header"
-        const val TAP_DAY = "tap_day"
-        const val TAP_ENTRY = "tap_entry"
-        const val TAP_NEW = "tap_new"
-        val FIELDS = listOf(LEFT_OUT, DAYS, BACK_TO_TODAY, PLUS_CORNER, TAP_HEADER, TAP_DAY, TAP_ENTRY, TAP_NEW)
+        const val MISPLACED = "is unknown or not one this element can have"
+
+        /** The fields of the elements' targets, by element. */
+        val TAP_FIELDS =
+            mapOf(
+                TapElement.HEADER to "tap_header",
+                TapElement.DAY to "tap_day",
+                TapElement.ENTRY to "tap_entry",
+                TapElement.NEW to "tap_new",
+            )
+        val FIELDS = listOf(LEFT_OUT, DAYS, BACK_TO_TODAY, PLUS_CORNER) + TAP_FIELDS.values
 
         fun key(
             id: Int,
