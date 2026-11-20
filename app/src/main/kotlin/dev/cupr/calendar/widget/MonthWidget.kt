@@ -76,7 +76,14 @@ object MonthWidget {
         val title = ChromeRenderer.title(view.month)
         val taps = WidgetTaps(id, look.taps)
         val headerPx =
-            DrawnWidget.fixedParts(context, views, kept, title, calendar, look.corner, taps) { chrome, palette, note ->
+            DrawnWidget.fixedParts(
+                context,
+                views,
+                kept,
+                title,
+                calendar,
+                FixedParts(look.corner, taps),
+            ) { chrome, palette, note ->
                 chrome.header(view.month, widthPx, scale, palette, note)
             }
         val heightsPx = view.weeks.map { rows.heightPx(it, scale) }

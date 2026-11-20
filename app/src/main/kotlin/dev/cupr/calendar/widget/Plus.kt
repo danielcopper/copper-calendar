@@ -8,7 +8,6 @@ import dev.cupr.calendar.render.ChromeRenderer
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.tap.Tap
-import dev.cupr.calendar.tap.WidgetTaps
 
 /**
  * A widget's "+", at the bottom right or the bottom left of its card, as its
@@ -17,9 +16,9 @@ import dev.cupr.calendar.tap.WidgetTaps
  */
 internal object Plus {
     /**
-     * Puts "+" of calendar in views in corner, drawn light and dark by
-     * chrome at the display's scale and kept, opening what taps say for a
-     * new entry on today. Each bottom corner has its own "+" in the layout
+     * Puts "+" of calendar in views in set's corner, drawn light and dark by
+     * chrome at the display's scale and kept, opening what set's taps say
+     * for a new entry on today. Each bottom corner has its own "+" in the layout
      * (widget_fab.xml); the other one is hidden, so a corner set back takes
      * effect too, and both are when "+" has no tap.
      */
@@ -28,12 +27,11 @@ internal object Plus {
         views: RemoteViews,
         kept: Kept,
         chrome: ChromeRenderer,
-        corner: PlusCorner,
-        taps: WidgetTaps,
+        set: FixedParts,
         calendar: Content.Calendar,
     ) {
-        val tap = taps.pendingIntent(context, Tap.New(calendar.today))
-        val right = corner == PlusCorner.BOTTOM_RIGHT
+        val tap = set.taps.pendingIntent(context, Tap.New(calendar.today))
+        val right = set.corner == PlusCorner.BOTTOM_RIGHT
         views.setViewVisibility(R.id.plus_right, if (tap != null && right) View.VISIBLE else View.GONE)
         views.setViewVisibility(R.id.plus_left, if (tap != null && !right) View.VISIBLE else View.GONE)
         if (tap == null) return

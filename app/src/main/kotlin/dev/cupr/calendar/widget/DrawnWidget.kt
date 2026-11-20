@@ -90,6 +90,12 @@ internal class WidgetHeight(
     }
 }
 
+/** What a widget sets for its fixed parts: the corner of "+" (D58), and its taps, the header's and "+"'s (D63). */
+internal class FixedParts(
+    val corner: PlusCorner,
+    val taps: WidgetTaps,
+)
+
 /** A widget's views, the bytes of the bitmaps they hold as the app counts them, and the limit it drew them for. */
 internal class Drawn(
     val views: RemoteViews,
@@ -164,8 +170,8 @@ internal object DrawnWidget {
      * The fixed parts of calendar: its header, drawn light and dark by
      * header with the renderer of the fixed parts and the calendar's notice
      * at its right, named by description and the notice, and opening what
-     * taps say for it (D63), or the sign-in screen while the notice asks to
-     * sign in again (D52); and "+" in corner ([Plus]). Without a tap, the
+     * set's taps say for it (D63), or the sign-in screen while the notice
+     * asks to sign in again (D52); and "+" ([Plus]). Without a tap, the
      * header's earlier one is cleared. Returns the drawn header's height in
      * px, which the list's height leaves out.
      */
@@ -175,12 +181,12 @@ internal object DrawnWidget {
         kept: Kept,
         description: String,
         calendar: Content.Calendar,
-        corner: PlusCorner,
-        taps: WidgetTaps,
+        set: FixedParts,
         header: (ChromeRenderer, Palette, HeaderNote?) -> Bitmap,
     ): Int {
         val chrome = chrome(context)
-        Plus.place(context, views, kept, chrome, corner, taps, calendar)
+        Plus.place(context, views, kept, chrome, set, calendar)
+        val taps = set.taps
         val notice = calendar.notice
         val headerTap =
             if (notice is Notice.SignInAgain) {
