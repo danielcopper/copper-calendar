@@ -12,7 +12,6 @@ import android.widget.RemoteViews
 import androidx.annotation.StringRes
 import androidx.annotation.VisibleForTesting
 import dev.cupr.calendar.R
-import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.days.DAYS_IN_WEEK
 import dev.cupr.calendar.days.longName
