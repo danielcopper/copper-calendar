@@ -140,8 +140,8 @@ object WeekWidget {
      * area, and over each entry's line an area of its own, which opens the
      * entry by its UID, or what its day opens when it has none (D37), each
      * as taps say (D63): the day's tap cleared when they give it none, an
-     * entry's area without a tap not even clickable, so its day's takes the
-     * tap. Internal for the test that applies it again as a launcher does.
+     * entry's area without a tap gets none. Internal for the test that
+     * applies it again as a launcher does.
      */
     internal fun row(
         context: Context,

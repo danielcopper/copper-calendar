@@ -297,8 +297,8 @@ internal object DrawnWidget {
 
     /**
      * The plain views of a widget that shows a text instead of its drawing:
-     * text on its card, opening tap, by default the calendar page, whatever
-     * the widget's targets, as its text says.
+     * text on its card, opening tap, by default the calendar page
+     * ([Taps.calendarPage]).
      */
     fun plainViews(
         context: Context,

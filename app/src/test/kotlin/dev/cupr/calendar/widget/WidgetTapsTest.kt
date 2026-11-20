@@ -69,7 +69,6 @@ class WidgetTapsTest {
         val row = row(widget, TUESDAY)
 
         assertTrue(entries(row).isNotEmpty())
-        // Not even clickable, or an entry's area would take the tap from its day's, under it, and open nothing.
         assertTrue(entries(row).none { it.isClickable })
         assertEquals(Tap.Day(tuesday), Taps.read(tapped(row.findViewById(R.id.day_row))))
         assertEquals(View.VISIBLE, widget.findViewById<View>(R.id.plus_right).visibility)

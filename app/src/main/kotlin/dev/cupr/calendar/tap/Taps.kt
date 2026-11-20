@@ -112,7 +112,7 @@ object Taps {
 
     /**
      * The tap of a plain text that opens the calendar page (D40): the
-     * header's calendar link, without a widget, so whatever any widget sets.
+     * header's calendar link, without a widget's id.
      */
     fun calendarPage(context: Context): PendingIntent = pendingIntent(context, Tap.Header, widget = null)
 
@@ -198,8 +198,10 @@ object Taps {
  * The taps of the widget id as its targets say (D63), for its drawing: a
  * tap where its element has one of its own, none where it opens nothing or,
  * for an entry, leaves the tap to its day's area. A widget's views are
- * applied again onto the views the launcher shows, so a tap the drawing
- * leaves out has to be cleared, with the none these give.
+ * applied again onto the views the launcher keeps, so on those (the header,
+ * "+", a day's area) a tap the drawing leaves out has to be cleared, with
+ * the none these give; a list row's new cell gets no fill-in at all, as
+ * clearing would make it clickable.
  */
 class WidgetTaps(
     val id: Int,

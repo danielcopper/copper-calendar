@@ -561,13 +561,13 @@ class TapTest {
         day: String,
     ) = Intent().putExtra("dev.cupr.calendar.tap.ELEMENT", element).putExtra("dev.cupr.calendar.tap.DAY", day)
 
-    /** The fill-in of a tap on the widget [widget], whose targets are the default ones. */
+    /** The fill-in of a tap on the widget [widget], as its default targets make it. */
     private fun fillIn(
         tap: Tap,
         widget: Int = WIDGET,
     ): Intent = checkNotNull(WidgetTaps(widget, TapTargets.DEFAULT).fillIn(tap))
 
-    /** The pending intent of a tap on a fixed part of the widget [widget], whose targets are the default ones. */
+    /** The pending intent of a tap on a fixed part of the widget [widget], as its default targets make it. */
     private fun pendingIntent(
         tap: Tap,
         widget: Int,
