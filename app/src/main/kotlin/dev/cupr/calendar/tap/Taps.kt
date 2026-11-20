@@ -199,9 +199,9 @@ object Taps {
  * tap where its element has one of its own, none where it opens nothing or,
  * for an entry, leaves the tap to its day's area. A widget's views are
  * applied again onto the views the launcher keeps, so on those (the header,
- * "+", a day's area) a tap the drawing leaves out has to be cleared, with
- * the none these give; a list row's new cell gets no fill-in at all, as
- * clearing would make it clickable.
+ * a day's area) a tap the drawing leaves out has to be cleared, with the
+ * none these give; "+" is hidden instead, and a list row's new cell gets no
+ * fill-in ([dev.cupr.calendar.widget.WeekWidget.row]).
  */
 class WidgetTaps(
     val id: Int,
