@@ -304,7 +304,7 @@ internal object DrawnWidget {
     fun plainViews(
         context: Context,
         @StringRes text: Int,
-        tap: PendingIntent = Taps.pendingIntent(context, Tap.Header, widget = null),
+        tap: PendingIntent = Taps.calendarPage(context),
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_plain)
         views.setTextViewText(R.id.plain_text, context.getString(text))

@@ -104,44 +104,17 @@ object CalendarLinks {
  * targets, as the plain texts promise.
  */
 object Taps {
-    private const val ELEMENT = "dev.cupr.calendar.tap.ELEMENT"
-    private const val DAY = "dev.cupr.calendar.tap.DAY"
-    private const val UID = "dev.cupr.calendar.tap.UID"
-    private const val WIDGET = "dev.cupr.calendar.tap.WIDGET"
     private const val TEMPLATE_REQUEST = 100
     private const val SIGN_IN_REQUEST = 101
 
     /** Where the request codes of the widgets' fixed parts start, past the others. */
     private const val WIDGET_REQUESTS = 1000
 
-    /** The extras of a tap on the widget [widget], none for no widget's: alone, the fill-in of a list row's cell. */
-    fun fillIn(
-        tap: Tap,
-        widget: Int?,
-    ): Intent {
-        val intent = Intent().putExtra(ELEMENT, tap.element.name)
-        tap.day?.let { intent.putExtra(DAY, it.toString()) }
-        if (tap is Tap.Entry) intent.putExtra(UID, tap.uid)
-        widget?.let { intent.putExtra(WIDGET, it) }
-        return intent
-    }
-
     /**
-     * A tap on a fixed part (header, "+") of the widget [widget], or, with
-     * none, of a plain text. Its request code is one per widget and element,
-     * so the intents of two widgets do not replace each other.
+     * The tap of a plain text that opens the calendar page (D40): the
+     * header's calendar link, without a widget, so whatever any widget sets.
      */
-    fun pendingIntent(
-        context: Context,
-        tap: Tap,
-        widget: Int?,
-    ): PendingIntent =
-        PendingIntent.getActivity(
-            context,
-            requestCode(tap.element, widget),
-            fillIn(tap, widget).setClass(context, TapActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
+    fun calendarPage(context: Context): PendingIntent = pendingIntent(context, Tap.Header, widget = null)
 
     /** The request code of a tap on element of the widget [widget], or of a plain text. */
     internal fun requestCode(
@@ -236,8 +209,42 @@ class WidgetTaps(
     fun pendingIntent(
         context: Context,
         tap: Tap,
-    ): PendingIntent? = if (targets.opens(tap.element)) Taps.pendingIntent(context, tap, id) else null
+    ): PendingIntent? = if (targets.opens(tap.element)) pendingIntent(context, tap, id) else null
 
     /** The fill-in of a list row's cell, none when its tap's element has no tap. */
-    fun fillIn(tap: Tap): Intent? = if (targets.opens(tap.element)) Taps.fillIn(tap, id) else null
+    fun fillIn(tap: Tap): Intent? = if (targets.opens(tap.element)) extras(tap, id) else null
+}
+
+private const val ELEMENT = "dev.cupr.calendar.tap.ELEMENT"
+private const val DAY = "dev.cupr.calendar.tap.DAY"
+private const val UID = "dev.cupr.calendar.tap.UID"
+private const val WIDGET = "dev.cupr.calendar.tap.WIDGET"
+
+/**
+ * A tap on a fixed part (header, "+") of the widget [widget], or, with none,
+ * of a plain text. Its request code is one per widget and element, so the
+ * intents of two widgets do not replace each other.
+ */
+private fun pendingIntent(
+    context: Context,
+    tap: Tap,
+    widget: Int?,
+): PendingIntent =
+    PendingIntent.getActivity(
+        context,
+        Taps.requestCode(tap.element, widget),
+        extras(tap, widget).setClass(context, TapActivity::class.java),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
+
+/** The extras of a tap on the widget [widget], none for a plain text's: alone, the fill-in of a list row's cell. */
+private fun extras(
+    tap: Tap,
+    widget: Int?,
+): Intent {
+    val intent = Intent().putExtra(ELEMENT, tap.element.name)
+    tap.day?.let { intent.putExtra(DAY, it.toString()) }
+    if (tap is Tap.Entry) intent.putExtra(UID, tap.uid)
+    widget?.let { intent.putExtra(WIDGET, it) }
+    return intent
 }

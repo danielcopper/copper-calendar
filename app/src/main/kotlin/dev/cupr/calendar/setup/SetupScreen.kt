@@ -33,7 +33,6 @@ import dev.cupr.calendar.ha.SensorCalendars
 import dev.cupr.calendar.store.BackToToday
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.TapElement
-import dev.cupr.calendar.store.TapTarget
 import dev.cupr.calendar.store.TapTargets
 import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.store.stored
@@ -188,8 +187,7 @@ internal val SettingsSaver =
 /** The tap targets [SettingsSaver] saved after the three choices, by element; none if one is unknown or misplaced. */
 private fun restoreTaps(saved: List<String>): TapTargets? =
     TapElement.entries.fold<TapElement, TapTargets?>(TapTargets.DEFAULT) { taps, element ->
-        val target = saved.getOrNull(FIRST_TAP + element.ordinal)?.let(TapTarget::of)
-        target?.takeIf { it.kind in element.kinds }?.let { taps?.with(element, it) }
+        saved.getOrNull(FIRST_TAP + element.ordinal)?.let(element::target)?.let { taps?.with(element, it) }
     }
 
 /** Where [SettingsSaver] saves the tap targets, after the days, "Zurück zu heute" and the corner of "+". */

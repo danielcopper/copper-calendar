@@ -111,9 +111,15 @@ class WidgetSettingsStore(
         default: TapTarget,
     ): TapTarget {
         val field = TAP_FIELDS.getValue(element)
-        return prefs.choice(key(id, field), default, TAG, what(id, field), TapTarget::stored, MISPLACED) { name ->
-            TapTarget.of(name)?.takeIf { it.kind in element.kinds }
-        }
+        return prefs.choice(
+            key(id, field),
+            default,
+            TAG,
+            what(id, field),
+            TapTarget::stored,
+            MISPLACED,
+            element::target,
+        )
     }
 
     private companion object {

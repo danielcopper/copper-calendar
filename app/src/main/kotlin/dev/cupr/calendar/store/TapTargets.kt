@@ -21,6 +21,12 @@ enum class TapElement {
             } else {
                 listOf(TapTarget.Kind.CALENDAR_PAGE, TapTarget.Kind.APP, TapTarget.Kind.NONE)
             }
+
+    /** Whether the element can have target, one of its [kinds]. */
+    fun can(target: TapTarget): Boolean = target.kind in kinds
+
+    /** The target stored under name, none for a name this app does not know or a target the element cannot have. */
+    fun target(name: String): TapTarget? = TapTarget.of(name)?.takeIf(::can)
 }
 
 /** What a tap on one of a widget's elements opens (D63), kept under [stored]; [TapElement.kinds] says which. */
@@ -95,7 +101,7 @@ data class TapTargets(
     init {
         for (element in TapElement.entries) {
             val target = of(element)
-            require(target.kind in element.kinds) { "$element cannot have $target" }
+            require(element.can(target)) { "$element cannot have $target" }
         }
     }
 

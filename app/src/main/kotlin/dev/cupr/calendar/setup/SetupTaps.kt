@@ -49,12 +49,12 @@ internal val WidgetKind.tapElements: List<TapElement>
 
 /**
  * What a widget's taps open (D63), a group of its own below a divider: a
- * row per element of kind, indented below the heading, naming its target; a
+ * row per element of widget, indented below the heading, naming its target; a
  * row opens the choice of targets.
  */
 @Composable
 internal fun TapSection(
-    kind: WidgetKind,
+    widget: WidgetKind,
     taps: TapTargets,
     onChange: (TapTargets) -> Unit,
 ) {
@@ -64,7 +64,7 @@ internal fun TapSection(
         HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
         Heading(R.string.setup_taps)
         Column(modifier = Modifier.padding(start = TAP_ROWS_INDENT)) {
-            for (element in kind.tapElements) {
+            for (element in widget.tapElements) {
                 SettingRow(stringResource(element.label), targetName(element, taps.of(element))) { choosing = element }
             }
         }
@@ -100,17 +100,12 @@ private fun targetName(
 ): String {
     if (target !is TapTarget.App) return stringResource(kindLabel(element, target.kind))
     val packageManager = LocalContext.current.packageManager
-    val name by produceState<AppName?>(null, target) {
-        value = withContext(Services.io) { AppName(launcherName(packageManager, target.packageName)) }
-    }
     val missing = stringResource(R.string.setup_tap_app_missing)
-    return name?.let { it.name ?: missing }.orEmpty()
+    val name by produceState<String?>(null, target, missing) {
+        value = withContext(Services.io) { launcherName(packageManager, target.packageName) } ?: missing
+    }
+    return name.orEmpty()
 }
-
-/** The name an app was found by, none when it was not found. */
-private class AppName(
-    val name: String?,
-)
 
 /** The apps with a launcher icon, by icon and name; picking one hands its package to onPick. */
 @Composable

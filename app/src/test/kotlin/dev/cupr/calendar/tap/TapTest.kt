@@ -1,6 +1,7 @@
 package dev.cupr.calendar.tap
 
 import android.app.Application
+import android.app.PendingIntent
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
@@ -70,8 +71,8 @@ class TapTest {
     @Test
     fun `an entry's tap carries its UID and day to the tap activity`() {
         val tap = Tap.Entry("abc-123", day)
-        assertEquals(tap, Taps.read(Taps.fillIn(tap, WIDGET)))
-        val activity = launch(Taps.fillIn(tap, WIDGET))
+        assertEquals(tap, Taps.read(fillIn(tap)))
+        val activity = launch(fillIn(tap))
         assertEquals("$calendar?entry=abc-123&day=2026-11-12", started().last().dataString)
         assertTrue(activity.isFinishing)
     }
@@ -107,7 +108,7 @@ class TapTest {
 
     @Test
     fun `the tap activity opens the tapped day's target and finishes`() {
-        val activity = launch(Taps.fillIn(Tap.Day(day), WIDGET))
+        val activity = launch(fillIn(Tap.Day(day)))
         val opened = started().last()
         assertEquals(Intent.ACTION_VIEW, opened.action)
         assertEquals("$calendar?day=2026-11-12", opened.dataString)
@@ -118,7 +119,7 @@ class TapTest {
     @Test
     fun `a Home Assistant target opens on top of that app started as its icon starts it, in a cleared task`() {
         installLinkApp()
-        launch(Taps.fillIn(Tap.Day(day), WIDGET))
+        launch(fillIn(Tap.Day(day)))
         val opened = started()
         assertEquals(2, opened.size)
         val (app, target) = opened
@@ -133,7 +134,7 @@ class TapTest {
 
     @Test
     fun `without an app for Home Assistant links, the target is started alone in a new task and the log says so`() {
-        launch(Taps.fillIn(Tap.Day(day), WIDGET))
+        launch(fillIn(Tap.Day(day)))
         val opened = started().single()
         assertEquals("$calendar?day=2026-11-12", opened.dataString)
         assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, opened.flags)
@@ -148,7 +149,7 @@ class TapTest {
         installLinkApp()
         installLinkApp(app = "io.homeassistant.companion.android")
         shadowOf(application.packageManager).setShouldShowActivityChooser(true)
-        launch(Taps.fillIn(Tap.Header, WIDGET))
+        launch(fillIn(Tap.Header))
         val opened = started().single()
         assertEquals(calendar, opened.dataString)
         assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, opened.flags)
@@ -161,7 +162,7 @@ class TapTest {
     @Test
     fun `when the app for Home Assistant links has no launcher entry, the target opens alone and the log says so`() {
         installLinkApp(launcher = false)
-        launch(Taps.fillIn(Tap.Header, WIDGET))
+        launch(fillIn(Tap.Header))
         val opened = started().single()
         assertEquals(calendar, opened.dataString)
         assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, opened.flags)
@@ -259,8 +260,8 @@ class TapTest {
     @Test
     fun `the fixed parts' pending intents carry their tap to the tap activity`() {
         // Both made before either is read, so the test sees it if the second overwrites the first.
-        val header = Taps.pendingIntent(application, Tap.Header, WIDGET)
-        val plus = Taps.pendingIntent(application, Tap.New(day), WIDGET)
+        val header = pendingIntent(Tap.Header, WIDGET)
+        val plus = pendingIntent(Tap.New(day), WIDGET)
         val headerIntent = shadowOf(header).savedIntent
         assertEquals(TapActivity::class.java.name, headerIntent.component?.className)
         assertEquals(Tap.Header, Taps.read(headerIntent))
@@ -270,7 +271,7 @@ class TapTest {
     @Test
     fun `nothing crashes when no app handles the target`() {
         shadowOf(application).checkActivities(true)
-        val activity = launch(Taps.fillIn(Tap.New(day), WIDGET))
+        val activity = launch(fillIn(Tap.New(day)))
         assertNull(shadowOf(application).nextStartedActivity)
         assertTrue(activity.isFinishing)
     }
@@ -482,19 +483,19 @@ class TapTest {
                 application,
             ).write(WIDGET, WidgetSettings(taps = TapTargets(header = TapTarget.App(OTHER_APP))))
 
-        launch(Taps.fillIn(Tap.Header, WIDGET))
+        launch(fillIn(Tap.Header))
         assertEquals(ComponentName(OTHER_APP, "$OTHER_APP.Main"), started().single().component)
-        launch(Taps.fillIn(Tap.Header, OTHER_WIDGET))
+        launch(fillIn(Tap.Header, OTHER_WIDGET))
         assertEquals(calendar, started().last().dataString)
-        launch(Taps.fillIn(Tap.Header, widget = null))
+        launch(shadowOf(Taps.calendarPage(application)).savedIntent)
         assertEquals(calendar, started().last().dataString)
     }
 
     @Test
     fun `the fixed parts' request codes differ per widget, so two widgets' intents do not replace each other`() {
         // Both made before either is read, so the test sees it if the second overwrites the first.
-        val first = Taps.pendingIntent(application, Tap.Header, WIDGET)
-        val second = Taps.pendingIntent(application, Tap.Header, OTHER_WIDGET)
+        val first = pendingIntent(Tap.Header, WIDGET)
+        val second = pendingIntent(Tap.Header, OTHER_WIDGET)
 
         assertEquals(WIDGET, Taps.widget(shadowOf(first).savedIntent))
         assertEquals(OTHER_WIDGET, Taps.widget(shadowOf(second).savedIntent))
@@ -559,6 +560,18 @@ class TapTest {
         element: String,
         day: String,
     ) = Intent().putExtra("dev.cupr.calendar.tap.ELEMENT", element).putExtra("dev.cupr.calendar.tap.DAY", day)
+
+    /** The fill-in of a tap on the widget [widget], whose targets are the default ones. */
+    private fun fillIn(
+        tap: Tap,
+        widget: Int = WIDGET,
+    ): Intent = checkNotNull(WidgetTaps(widget, TapTargets.DEFAULT).fillIn(tap))
+
+    /** The pending intent of a tap on a fixed part of the widget [widget], whose targets are the default ones. */
+    private fun pendingIntent(
+        tap: Tap,
+        widget: Int,
+    ): PendingIntent = checkNotNull(WidgetTaps(widget, TapTargets.DEFAULT).pendingIntent(application, tap))
 
     private companion object {
         /** A widget without stored settings, so with the default targets. */
