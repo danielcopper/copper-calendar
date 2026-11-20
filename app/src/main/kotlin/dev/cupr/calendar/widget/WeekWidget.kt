@@ -139,9 +139,9 @@ object WeekWidget {
      * A day's row drawn light and dark at scale: the drawn row as the day's
      * area, and over each entry's line an area of its own, which opens the
      * entry by its UID, or what its day opens when it has none (D37), each
-     * as taps say, its tap cleared when they give none (D63); an entry's area
-     * without a tap leaves it to its day's. Internal for the test that
-     * applies it again as a launcher does.
+     * as taps say (D63): the day's tap cleared when they give it none, an
+     * entry's area without a tap not even clickable, so its day's takes the
+     * tap. Internal for the test that applies it again as a launcher does.
      */
     internal fun row(
         context: Context,
@@ -174,7 +174,9 @@ object WeekWidget {
             // Each slot ends where the area ends, rounded, so rounding never adds up down the row.
             val height = area.bottom.roundToInt() - area.top.roundToInt()
             cell.setViewLayoutHeight(R.id.entry_slot, height.toFloat(), TypedValue.COMPLEX_UNIT_PX)
-            cell.setOnClickFillInIntent(R.id.entry, taps.fillIn(tap(entry, day.date)))
+            // A cell is new on each draw, so it has no tap to clear; clearing one would make it clickable, and it
+            // would then take the tap from its day's area under it.
+            taps.fillIn(tap(entry, day.date))?.let { cell.setOnClickFillInIntent(R.id.entry, it) }
             cell.setContentDescription(R.id.entry, rows.describe(entry))
             row.addView(R.id.entries, cell)
         }

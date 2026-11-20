@@ -57,7 +57,7 @@ class WidgetTapsTest {
         assertTrue(rows.isNotEmpty())
         for (row in rows) {
             assertFalse(row.findViewById<View>(R.id.day_row).hasOnClickListeners())
-            assertTrue(entries(row).none { it.hasOnClickListeners() })
+            assertTrue(entries(row).none { it.isClickable })
         }
         assertTrue("no entry areas", rows.any { entries(it).isNotEmpty() })
         assertPlusHidden(widget)
@@ -69,7 +69,8 @@ class WidgetTapsTest {
         val row = row(widget, TUESDAY)
 
         assertTrue(entries(row).isNotEmpty())
-        assertTrue(entries(row).none { it.hasOnClickListeners() })
+        // Not even clickable, or an entry's area would take the tap from its day's, under it, and open nothing.
+        assertTrue(entries(row).none { it.isClickable })
         assertEquals(Tap.Day(tuesday), Taps.read(tapped(row.findViewById(R.id.day_row))))
         assertEquals(View.VISIBLE, widget.findViewById<View>(R.id.plus_right).visibility)
     }
@@ -79,7 +80,7 @@ class WidgetTapsTest {
         val rows = rows(week(TapTargets(day = TapTarget.None)))
         val cells = rows.flatMap(::entries)
 
-        val (tapped, untapped) = cells.partition { it.hasOnClickListeners() }
+        val (tapped, untapped) = cells.partition { it.isClickable }
 
         assertTrue("no entry with a uid", tapped.isNotEmpty())
         assertTrue("no entry without a uid", untapped.isNotEmpty())
