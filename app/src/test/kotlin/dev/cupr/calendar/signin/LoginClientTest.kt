@@ -29,7 +29,7 @@ import java.security.cert.X509Certificate
 @RunWith(RobolectricTestRunner::class)
 class LoginClientTest {
     private val view = WebView(ApplicationProvider.getApplicationContext<Application>())
-    private val signIn = SignInRequest(checkNotNull(HaAddress.stored("https://home.example/")), "verifier-1", "state-1")
+    private val signIn = SignInRequest(HaAddress.parse("https://home.example")!!, "verifier-1", "state-1")
     private val callbacks = mutableListOf<SignInRequest.Callback>()
     private var unreachable = 0
     private val client = LoginClient(signIn, { callbacks += it }, { unreachable++ })

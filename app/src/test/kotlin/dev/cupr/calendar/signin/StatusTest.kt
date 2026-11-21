@@ -126,7 +126,7 @@ class StatusTest {
 
     @Test
     fun `the status reads the address without its slash, the snapshot, the last failure and the theme`() {
-        Services.account(context).rememberAddress(checkNotNull(HaAddress.stored("https://home.example/")))
+        Services.account(context).rememberAddress(HaAddress.parse("https://home.example")!!)
         Services.snapshots(context).write(Snapshot(1_000, "Daniel", emptyList()))
         Services
             .failures(
