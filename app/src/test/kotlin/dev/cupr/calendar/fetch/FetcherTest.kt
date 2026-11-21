@@ -95,7 +95,7 @@ class FetcherTest {
     private val logs: String
         get() = ShadowLog.getLogsForTag("Fetch").joinToString("\n") { it.msg }
 
-    /** The level of the sign-out's log line: info when the token ended at Home Assistant or none was stored. */
+    /** The level of the sign-out's log line. */
     private fun signedOutLevel() = ShadowLog.getLogsForTag("Fetch").single { it.msg.startsWith("Signed out") }.type
 
     @Test

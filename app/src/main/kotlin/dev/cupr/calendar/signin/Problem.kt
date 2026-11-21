@@ -3,7 +3,7 @@ package dev.cupr.calendar.signin
 import androidx.annotation.StringRes
 import dev.cupr.calendar.R
 
-/** Why the last sign-in did not come about, as the screen says it (D43). */
+/** Why the last sign-in or sign-out did not come about, as the screen says it (D43). */
 enum class Problem(
     @param:StringRes val text: Int,
 ) {

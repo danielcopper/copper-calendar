@@ -18,10 +18,11 @@ import kotlinx.coroutines.launch
 internal const val SIGN_IN_TAG = "SignIn"
 
 /**
- * A sign-in or sign-out under way, and why the last sign-in did not come
- * about (D43, D47). Held for the app's process, not the screen, so a screen
- * rebuilt meanwhile (a rotation, the dark mode) shows the work still
- * running and its result once done; only one runs at a time.
+ * A sign-in or sign-out under way, and why the last sign-in or sign-out
+ * did not come about (D43, D47). Held for the app's process, not the
+ * screen, so a screen rebuilt meanwhile (a rotation, the dark mode) shows
+ * the work still running and its result once done; only one runs at a
+ * time.
  */
 object SignInFlow {
     data class State(
