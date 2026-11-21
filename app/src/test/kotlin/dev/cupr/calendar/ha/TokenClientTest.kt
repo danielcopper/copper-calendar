@@ -7,6 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.util.concurrent.TimeUnit
 
 /** Under Robolectric, since OkHttp's Android build reaches for android.util.Log. */
 @RunWith(RobolectricTestRunner::class)
@@ -173,5 +174,23 @@ class TokenClientTest {
             assertEquals(TokenClient.Revoke.Failed("HTTP 307"), client.revoke(refresh))
             assertEquals(0, elsewhere.requests.size)
         }
+    }
+
+    @Test
+    fun `a refresh Home Assistant does not answer in time is a timeout`() {
+        home.token = {
+            FakeHomeAssistant
+                .json("""{"access_token":"access-1"}""")
+                .newBuilder()
+                .headersDelay(2, TimeUnit.SECONDS)
+                .build()
+        }
+        val http = OkHttpClient.Builder().readTimeout(200, TimeUnit.MILLISECONDS).build()
+        val impatient = TokenClient(http, home.address)
+
+        assertEquals(
+            TokenClient.Refresh.Failed("SocketTimeoutException", FailureKind.TIMEOUT),
+            impatient.refresh(refresh, "client"),
+        )
     }
 }
