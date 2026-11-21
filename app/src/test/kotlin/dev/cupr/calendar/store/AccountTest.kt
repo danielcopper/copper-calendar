@@ -14,6 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.security.ProviderException
+import java.util.Base64
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 
@@ -45,6 +46,11 @@ class AccountTest {
         assertEquals("http://127.0.0.1:47123/", session.clientId)
         assertEquals(token, session.refreshToken)
         assertFalse(prefs.all.values.any { it.toString().contains("refresh-1") })
+        // Stored as the 12-byte IV, the token's bytes sealed and the 16-byte tag, and opened only with the key.
+        val sealed = Base64.getDecoder().decode(prefs.getString("refresh_token", null))
+        assertEquals(12 + "refresh-1".length + 16, sealed.size)
+        assertFalse(sealed.toList().windowed("refresh-1".length).any { it == "refresh-1".toByteArray().toList() })
+        assertEquals("refresh-1", String(AesGcmCipher { key }.open(sealed), Charsets.UTF_8))
         assertEquals("Session(…)", session.toString())
     }
 
