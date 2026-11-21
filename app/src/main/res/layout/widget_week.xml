@@ -5,8 +5,9 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/widget_card">
+    android:layout_height="match_parent">
+
+    <include layout="@layout/widget_card_layer" />
 
     <!-- Inside the card's 1 dp border and its padding of 10 dp at the top and
          bottom. The header stands inside the 12 dp padding at the sides; the

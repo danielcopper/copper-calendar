@@ -1,0 +1,235 @@
+package dev.cupr.calendar.widget
+
+import android.app.Application
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.RemoteViews
+import androidx.test.core.app.ApplicationProvider
+import dev.cupr.calendar.R
+import dev.cupr.calendar.app.Settings
+import dev.cupr.calendar.render.Scale
+import dev.cupr.calendar.sample.SampleData
+import dev.cupr.calendar.store.WidgetSettings
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import kotlin.math.roundToInt
+
+/**
+ * The card's opacity per widget (D64): only the card, its fill and border
+ * together, in every layout, the colours unchanged, and no card at 0 %.
+ * The views are applied as a launcher applies them, so the calls they carry
+ * are ones a widget's views may make.
+ */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class CardOpacityTest {
+    @get:Rule
+    val sampleContent = SampleContent()
+
+    private val context = ApplicationProvider.getApplicationContext<Application>()
+    private val manager = AppWidgetManager.getInstance(context)
+
+    /** Each layout with a card, drawn at an opacity: the three widgets and the plain text. */
+    private val layouts: Map<String, (Int) -> (Context, Int) -> RemoteViews> =
+        mapOf(
+            "month" to { opacity -> { c, width -> MonthWidget.views(c, width, opacity = opacity) } },
+            "week" to { opacity -> { c, width -> WeekWidget.views(c, width, opacity = opacity) } },
+            "week across" to { opacity -> { c, width -> WeekColumnsWidget.views(c, width, opacity = opacity) } },
+            "plain" to { opacity ->
+                { c, _ -> DrawnWidget.plainViews(c, R.string.widget_failed, opacity = opacity) }
+            },
+        )
+
+    @Test
+    fun `each layout's card takes the opacity, at 0 percent none, its colours unchanged`() {
+        for ((name, views) in layouts) {
+            for ((opacity, alpha) in listOf(0 to 0, 50 to 128, 100 to 255)) {
+                val widget = WidgetHost.applied(context, views = views(opacity))
+                assertCard("$name at $opacity %", widget, alpha)
+            }
+        }
+    }
+
+    @Test
+    fun `the card lies below everything else, and nothing but it takes the opacity`() {
+        for ((name, views) in layouts) {
+            val root = WidgetHost.applied(context, views = views(50)) as ViewGroup
+            assertSame(name, root.findViewById<View>(R.id.card), root.getChildAt(0))
+            assertNull(name, root.background)
+            for (image in listOf(R.id.header_light, R.id.header_dark, R.id.fab_light, R.id.fab_dark)) {
+                root.findViewById<ImageView>(image)?.let { assertEquals("$name ${it.id}", 255, it.imageAlpha) }
+            }
+            assertEquals(name, 1f, root.alpha)
+        }
+    }
+
+    @Test
+    fun `drawn at 50 percent, the card's fill and border are their colours at half their alpha`() {
+        assertDrawnCard(SampleData.light.card, SampleData.light.cardBorder)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun `in night mode, drawn at 50 percent, the card's fill and border are the dark ones at half their alpha`() {
+        assertDrawnCard(SampleData.dark.card, SampleData.dark.cardBorder)
+    }
+
+    @Test
+    fun `a redraw sets the opacity again, so the launcher keeps no earlier one`() {
+        for ((name, views) in layouts) {
+            for ((before, after) in listOf(50 to 100, 0 to 50, 100 to 0, 30 to 30)) {
+                val widget = WidgetHost.applied(context, views = views(before))
+                WidgetHost.reapplied(context, widget, views = views(after))
+                assertCard("$name from $before to $after %", widget, (after * 255 / 100f).roundToInt())
+            }
+        }
+    }
+
+    @Test
+    fun `the fade of the week across takes the card's opacity, and is gone without a card`() {
+        val columns = { opacity: Int ->
+            { c: Context, width: Int -> WeekColumnsWidget.views(c, width, WidgetHost.LOW_HEIGHT_DP, opacity = opacity) }
+        }
+        for ((opacity, alpha) in listOf(0 to 0, 50 to 128, 100 to 255)) {
+            val fade = WidgetHost.applied(context, views = columns(opacity)).findViewById<ImageView>(R.id.fade)
+            assertEquals("$opacity %", if (opacity == 0) View.GONE else View.VISIBLE, fade.visibility)
+            assertEquals("$opacity %", alpha, fade.imageAlpha)
+            val gradient = fade.drawable as GradientDrawable
+            val card = context.getColor(R.color.widget_card)
+            assertEquals(listOf(card and 0x00FFFFFF, card), gradient.colors?.toList())
+            assertEquals(GradientDrawable.Orientation.TOP_BOTTOM, gradient.orientation)
+        }
+        // Where the list holds the whole row, no fade at any opacity.
+        val tall = { c: Context, width: Int -> WeekColumnsWidget.views(c, width, WidgetHost.HEIGHT_DP, opacity = 50) }
+        assertEquals(View.GONE, WidgetHost.applied(context, views = tall).findViewById<View>(R.id.fade).visibility)
+    }
+
+    @Test
+    fun `each provider draws its widget's card at the opacity stored for it`() {
+        val providers =
+            listOf(
+                MonthWidgetProvider() to R.layout.widget_month,
+                WeekWidgetProvider() to R.layout.widget_week,
+                WeekColumnsWidgetProvider() to R.layout.widget_week_columns,
+            )
+        for ((provider, layout) in providers) {
+            val id = shadowOf(manager).createWidget(provider.javaClass, layout)
+            Settings.widgets(context).write(id, WidgetSettings(opacity = 40))
+            val other = shadowOf(manager).createWidget(provider.javaClass, layout)
+
+            provider.onUpdate(context, manager, intArrayOf(id, other))
+
+            assertCard("${provider.kind}", shadowOf(manager).getViewFor(id), 102)
+            assertCard("${provider.kind}, without settings", shadowOf(manager).getViewFor(other), 255)
+        }
+    }
+
+    @Test
+    fun `the plain texts without data, failed or too full, stand on the card at the widget's opacity`() {
+        val id = shadowOf(manager).createWidget(AppWidgetProvider::class.java, R.layout.widget_plain)
+        Settings.widgets(context).write(id, WidgetSettings(opacity = 20))
+
+        DrawnWidgetProvider.content = { Content.NoData(R.string.widget_signed_out) }
+        MonthWidgetProvider().onUpdate(context, manager, intArrayOf(id))
+        assertCard("no data", shadowOf(manager).getViewFor(id), 51)
+
+        DrawnWidgetProvider.content = { SampleData.calendar() }
+        val failing =
+            object : DrawnWidgetProvider() {
+                override val kind = WidgetKind.MONTH
+                override val tag = "Failing"
+
+                override fun update(
+                    context: Context,
+                    manager: AppWidgetManager,
+                    id: Int,
+                    calendar: Content.Calendar,
+                    look: Look,
+                ): Boolean = error("failed")
+            }
+        failing.onUpdate(context, manager, intArrayOf(id))
+        assertCard("failed", shadowOf(manager).getViewFor(id), 51)
+
+        val pushed = mutableListOf<RemoteViews>()
+        val drawn = Drawn(RemoteViews(context.packageName, R.layout.widget_week), 42, 41)
+        DrawnWidget.push(context, id, drawn, R.string.widget_week_too_full, 20, "Test") {
+            pushed += it
+            if (pushed.size == 1) throw IllegalArgumentException("RemoteViews for widget update exceeds")
+        }
+        assertCard("too full", WidgetHost.applied(context, views = { _, _ -> pushed[1] }), 51)
+    }
+
+    /** The widget's card shows at alpha, its colours its own; at 0 it shows not at all. */
+    private fun assertCard(
+        what: String,
+        widget: View,
+        alpha: Int,
+    ) {
+        val card = widget.findViewById<ImageView>(R.id.card)
+        assertEquals(what, if (alpha == 0) View.GONE else View.VISIBLE, card.visibility)
+        if (alpha == 0) return
+        assertEquals(what, alpha, card.imageAlpha)
+        assertEquals(what, ImageView.ScaleType.FIT_XY, card.scaleType)
+        val shape = card.drawable as GradientDrawable
+        assertEquals(what, context.getColor(R.color.widget_card), shape.color?.defaultColor)
+    }
+
+    /**
+     * The month widget drawn at 50 %: the card's fill, in the padding at its
+     * left, and its border, at its left edge, are their colours at half
+     * alpha; and at 0 % there is nothing there.
+     */
+    private fun assertDrawnCard(
+        fill: Int,
+        border: Int,
+    ) {
+        val scale = Scale(context.resources.displayMetrics.density)
+        val half = drawn(50)
+        val middle = half.height / 2
+        assertArgb("fill", fill, 128, half.getPixel(scale.px(6f).roundToInt(), middle))
+        assertArgb("border", border, 128, half.getPixel(0, middle))
+        val full = drawn(100)
+        assertArgb("full fill", fill, 255, full.getPixel(scale.px(6f).roundToInt(), middle))
+        assertArgb("full border", border, 255, full.getPixel(0, middle))
+        val none = drawn(0)
+        assertEquals(0, Color.alpha(none.getPixel(scale.px(6f).roundToInt(), middle)))
+        assertEquals(0, Color.alpha(none.getPixel(0, middle)))
+    }
+
+    private fun drawn(opacity: Int): Bitmap {
+        val widget =
+            WidgetHost.laidOut(context, views = { c, width -> MonthWidget.views(c, width, opacity = opacity) })
+        val bitmap = Bitmap.createBitmap(widget.width, widget.height, Bitmap.Config.ARGB_8888)
+        widget.draw(Canvas(bitmap))
+        return bitmap
+    }
+
+    /** pixel is colour at alpha, give or take one step of rounding in the blend. */
+    private fun assertArgb(
+        what: String,
+        colour: Int,
+        alpha: Int,
+        pixel: Int,
+    ) {
+        assertEquals(what, alpha.toFloat(), Color.alpha(pixel).toFloat(), 1f)
+        for (channel in listOf(Color::red, Color::green, Color::blue)) {
+            assertEquals(what, channel(colour).toFloat(), channel(pixel).toFloat(), 2f)
+        }
+    }
+}

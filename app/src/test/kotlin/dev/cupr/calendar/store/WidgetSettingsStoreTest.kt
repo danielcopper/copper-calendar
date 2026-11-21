@@ -6,6 +6,7 @@ import androidx.core.content.edit
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.week.WeekDays
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,6 +32,7 @@ class WidgetSettingsStoreTest {
                     entry = TapTarget.EntryDay,
                     new = TapTarget.None,
                 ),
+            opacity = 30,
         )
 
     @Test
@@ -42,6 +44,37 @@ class WidgetSettingsStoreTest {
         assertEquals(WidgetSettings(), WidgetSettings.DEFAULT)
         val calendar = TapTarget.CalendarPage
         assertEquals(TapTargets(calendar, calendar, calendar, calendar), store.read(7).taps)
+        assertEquals(100, store.read(7).opacity)
+    }
+
+    @Test
+    fun `every opacity from 0 to 100 in steps of 10 reads back as it was written, in percent`() {
+        assertEquals(listOf(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100), CardOpacity.steps)
+        for (opacity in CardOpacity.steps) {
+            store.write(7, WidgetSettings(opacity = opacity))
+            assertEquals(opacity, store.read(7).opacity)
+            assertEquals(opacity.toString(), prefs.getString("7.opacity", null))
+        }
+    }
+
+    @Test
+    fun `an opacity that is no number or no step of 10 from 0 to 100 reads as full, and is logged`() {
+        for (stored in listOf("55", "110", "-10", "halb", "", "50 %")) {
+            prefs.edit { putString("7.opacity", stored) }
+            ShadowLog.clear()
+
+            assertEquals(stored, WidgetSettings.DEFAULT, store.read(7))
+            val line =
+                "Widget 7: its stored opacity \"$stored\" is no opacity from 0 to 100 in steps of 10; it reads as 100"
+            assertEquals(listOf(line), ShadowLog.getLogsForTag("WidgetSettings").map { it.msg })
+        }
+    }
+
+    @Test
+    fun `settings hold only an opacity from 0 to 100 in steps of 10`() {
+        for (opacity in listOf(-10, 5, 110)) {
+            assertThrows(IllegalArgumentException::class.java) { WidgetSettings(opacity = opacity) }
+        }
     }
 
     @Test
@@ -168,6 +201,7 @@ class WidgetSettingsStoreTest {
                 "8.days",
                 "8.back_to_today",
                 "8.plus_corner",
+                "8.opacity",
                 "8.tap_header",
                 "8.tap_day",
                 "8.tap_entry",

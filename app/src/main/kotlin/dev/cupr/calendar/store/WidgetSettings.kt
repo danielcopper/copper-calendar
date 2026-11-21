@@ -34,11 +34,26 @@ enum class PlusCorner(
 }
 
 /**
+ * The card's opacity in percent (D64): from 0, no card, to 100, the card as
+ * it always was, in steps of 10.
+ */
+object CardOpacity {
+    const val FULL = 100
+    const val STEP = 10
+
+    /** Every opacity the setup offers, from none to full. */
+    val steps: List<Int> = (0..FULL step STEP).toList()
+
+    fun isStep(percent: Int): Boolean = percent in 0..FULL && percent % STEP == 0
+}
+
+/**
  * One widget's settings from its setup: the calendars it leaves out, so a
  * calendar that comes later shows (D11), its days (D20, the week widgets),
  * when it returns to today (D27, the month and "Woche"), the corner of
- * "+", and what a tap on each element opens (D63). Each defaults to what a
- * widget without settings shows.
+ * "+", the card's opacity in percent ([CardOpacity], D64), and what a tap on
+ * each element opens (D63). Each defaults to what a widget without settings
+ * shows.
  */
 data class WidgetSettings(
     val leftOut: Set<String> = emptySet(),
@@ -46,7 +61,12 @@ data class WidgetSettings(
     val backToToday: BackToToday = BackToToday.EACH_UPDATE,
     val plusCorner: PlusCorner = PlusCorner.BOTTOM_RIGHT,
     val taps: TapTargets = TapTargets.DEFAULT,
+    val opacity: Int = CardOpacity.FULL,
 ) {
+    init {
+        require(CardOpacity.isStep(opacity)) { "A card's opacity runs from 0 to 100 % in steps of 10, not $opacity" }
+    }
+
     companion object {
         val DEFAULT = WidgetSettings()
     }
@@ -59,7 +79,11 @@ data class WidgetSettings(
 class WidgetSettingsStore(
     private val prefs: SharedPreferences,
 ) {
-    /** The widget's settings; a choice stored under a name this app does not know reads as its default, logged. */
+    /**
+     * The widget's settings; a choice stored under a name this app does not
+     * know, or an opacity that is no number or no step of [CardOpacity],
+     * reads as its default, logged.
+     */
     fun read(id: Int): WidgetSettings {
         val default = WidgetSettings.DEFAULT
         return WidgetSettings(
@@ -70,6 +94,10 @@ class WidgetSettingsStore(
             taps =
                 TapElement.entries.fold(default.taps) { taps, element ->
                     taps.with(element, target(id, element, default.taps.of(element)))
+                },
+            opacity =
+                prefs.choice(key(id, OPACITY), default.opacity, TAG, what(id, OPACITY), Int::toString, NO_STEP) {
+                    it.toIntOrNull()?.takeIf(CardOpacity::isStep)
                 },
         )
     }
@@ -83,6 +111,7 @@ class WidgetSettingsStore(
         putString(key(id, BACK_TO_TODAY), settings.backToToday.stored)
         putString(key(id, PLUS_CORNER), settings.plusCorner.stored)
         for ((element, field) in TAP_FIELDS) putString(key(id, field), settings.taps.of(element).stored)
+        putString(key(id, OPACITY), settings.opacity.toString())
     }
 
     /** Forgets the settings of the widgets ids, removed from the home screen. */
@@ -128,7 +157,9 @@ class WidgetSettingsStore(
         const val DAYS = "days"
         const val BACK_TO_TODAY = "back_to_today"
         const val PLUS_CORNER = "plus_corner"
+        const val OPACITY = "opacity"
         const val MISPLACED = "is unknown or not one this element can have"
+        const val NO_STEP = "is no opacity from 0 to 100 in steps of 10"
 
         /** The fields of the elements' targets, by element. */
         val TAP_FIELDS =
@@ -138,7 +169,7 @@ class WidgetSettingsStore(
                 TapElement.ENTRY to "tap_entry",
                 TapElement.NEW to "tap_new",
             )
-        val FIELDS = listOf(LEFT_OUT, DAYS, BACK_TO_TODAY, PLUS_CORNER) + TAP_FIELDS.values
+        val FIELDS = listOf(LEFT_OUT, DAYS, BACK_TO_TODAY, PLUS_CORNER, OPACITY) + TAP_FIELDS.values
 
         fun key(
             id: Int,

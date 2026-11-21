@@ -2,7 +2,6 @@ package dev.cupr.calendar.widget
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
-import android.view.View
 import android.widget.RemoteViews
 import dev.cupr.calendar.R
 import dev.cupr.calendar.month.MonthLayout
@@ -60,7 +59,9 @@ object WeekColumnsWidget {
             )
         val limit = BitmapLimit.limitBytes(context, TAG, id)
         val drawn = draw(context, width, height, look, id, limit, calendar)
-        return DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
+        return DrawnWidget.push(context, id, drawn, TOO_FULL, look.opacity, TAG) {
+            manager.updateAppWidget(id, it)
+        }
     }
 
     /**
@@ -102,7 +103,7 @@ object WeekColumnsWidget {
                 kept,
                 description,
                 calendar,
-                FixedParts(look.corner, taps),
+                FixedParts(look.corner, taps, look.opacity),
             ) { chrome, palette, note ->
                 chrome.weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette, note)
             }
@@ -124,7 +125,8 @@ object WeekColumnsWidget {
         DrawnWidget.warnMarks(TAG, id, rows.marksWithoutRoom(week, widthPx, scale))
         val faded = overflows(rows, week, scale, heightDp, headerPx)
         val blank = if (faded) fadeDp else 0f
-        views.setViewVisibility(R.id.fade, if (faded) View.VISIBLE else View.GONE)
+        // In the card's colour at the card's opacity, so it fades into the card; none without a card (D64).
+        Card.layer(views, R.id.fade, look.opacity, shown = faded)
         val light = kept.keep(rows.render(week, widthPx, scale, calendar.palettes.light, blank))
         val dark = kept.keep(rows.render(week, widthPx, scale, calendar.palettes.dark, blank))
         DrawnWidget.list(

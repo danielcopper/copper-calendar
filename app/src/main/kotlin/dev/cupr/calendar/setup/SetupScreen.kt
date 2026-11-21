@@ -31,6 +31,7 @@ import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.ha.SensorCalendar
 import dev.cupr.calendar.ha.SensorCalendars
 import dev.cupr.calendar.store.BackToToday
+import dev.cupr.calendar.store.CardOpacity
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.TapElement
 import dev.cupr.calendar.store.TapTargets
@@ -45,8 +46,8 @@ import java.time.ZoneId
 /**
  * The setup of the widget id, a widget of kind: the calendars it shows
  * (D11), the week widgets' days (D20), when the month and "Woche" return to
- * today (D27), the corner of "+", and what a tap on each element opens
- * (D63). Its stored settings and the calendars are read off the main
+ * today (D27), the corner of "+", the card's opacity (D64), and what a tap
+ * on each element opens (D63). Its stored settings and the calendars are read off the main
  * thread; "Speichern" stores the settings shown and redraws the widget with
  * them ([save]), then calls onDone with whether it did.
  */
@@ -128,6 +129,7 @@ private fun SettingRows(
         ChoiceRow(R.string.setup_plus_corner, PlusCorner.entries, current.plusCorner, ::cornerLabel) {
             onChange(current.copy(plusCorner = it))
         }
+        OpacityRow(current.opacity) { onChange(current.copy(opacity = it)) }
     }
 }
 
@@ -167,7 +169,7 @@ internal val SettingsSaver =
             settings
                 ?.let {
                     val taps = it.taps
-                    listOf(it.days.stored, it.backToToday.stored, it.plusCorner.stored) +
+                    listOf(it.days.stored, it.backToToday.stored, it.plusCorner.stored, it.opacity.toString()) +
                         TapElement.entries.map { element -> taps.of(element).stored } +
                         it.leftOut
                 }.orEmpty()
@@ -176,22 +178,30 @@ internal val SettingsSaver =
             val days = WeekDays.entries.firstOrNull { it.stored == saved.getOrNull(0) }
             val back = BackToToday.entries.firstOrNull { it.stored == saved.getOrNull(1) }
             val corner = PlusCorner.entries.firstOrNull { it.stored == saved.getOrNull(2) }
+            val opacity = saved.getOrNull(OPACITY)?.toIntOrNull()?.takeIf(CardOpacity::isStep)
             if (days == null || back == null || corner == null) {
                 null
             } else {
-                restoreTaps(saved)?.let { WidgetSettings(saved.drop(SAVED_CHOICES).toSet(), days, back, corner, it) }
+                opacity?.let { shown ->
+                    restoreTaps(saved)?.let {
+                        WidgetSettings(saved.drop(SAVED_CHOICES).toSet(), days, back, corner, it, shown)
+                    }
+                }
             }
         },
     )
 
-/** The tap targets [SettingsSaver] saved after the three choices, by element; none if one is unknown or misplaced. */
+/** The tap targets [SettingsSaver] saved after the four choices, by element; none if one is unknown or misplaced. */
 private fun restoreTaps(saved: List<String>): TapTargets? =
     TapElement.entries.fold<TapElement, TapTargets?>(TapTargets.DEFAULT) { taps, element ->
         saved.getOrNull(FIRST_TAP + element.ordinal)?.let(element::target)?.let { taps?.with(element, it) }
     }
 
-/** Where [SettingsSaver] saves the tap targets, after the days, "Zurück zu heute" and the corner of "+". */
-private const val FIRST_TAP = 3
+/** Where [SettingsSaver] saves the card's opacity, after the days, "Zurück zu heute" and the corner of "+". */
+private const val OPACITY = 3
 
-/** The choices [SettingsSaver] saves before the calendars left out: three, then the four tap targets. */
+/** Where [SettingsSaver] saves the tap targets, after the opacity. */
+private const val FIRST_TAP = OPACITY + 1
+
+/** The choices [SettingsSaver] saves before the calendars left out: four, then the four tap targets. */
 private val SAVED_CHOICES = FIRST_TAP + TapElement.entries.size

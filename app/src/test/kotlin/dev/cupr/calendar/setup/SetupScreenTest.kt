@@ -15,25 +15,34 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertRangeInfoEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.app.Settings
+import dev.cupr.calendar.render.Probe
 import dev.cupr.calendar.store.BackToToday
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.Snapshot
@@ -66,6 +75,7 @@ import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowLog
+import java.io.File
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -216,15 +226,19 @@ class SetupScreenTest {
         tap(R.string.setup_calendars)
         box("Ferien").performClick()
         press(R.string.setup_ok)
+        tap(R.string.setup_opacity)
+        slider().performSemanticsAction(SemanticsActions.SetProgress) { it(60f) }
+        press(R.string.setup_ok)
 
         controller.recreate()
         compose.waitForIdle()
 
         assertRow(R.string.setup_days, R.string.setup_days_from_today)
         assertRow(R.string.setup_calendars, "2 von 3")
+        assertRow(R.string.setup_opacity, percent(60))
         tap(R.string.setup_save)
         assertEquals(
-            WidgetSettings(setOf(HOLIDAYS), WeekDays.FROM_TODAY),
+            WidgetSettings(setOf(HOLIDAYS), WeekDays.FROM_TODAY, opacity = 60),
             Settings.widgets(context).read(ID),
         )
     }
@@ -363,6 +377,49 @@ class SetupScreenTest {
     }
 
     @Test
+    fun `the background's slider takes effect with OK only, Abbrechen keeps it, and saving stores it`() {
+        open(MonthWidgetProvider::class.java)
+
+        tap(R.string.setup_opacity)
+        // The row's value, and the slider's beside it.
+        compose.onAllNodesWithText(percent(100)).assertCountEquals(2)
+        slider().performSemanticsAction(SemanticsActions.SetProgress) { it(30f) }
+        // Beside the slider the value it shows; the row behind the dialog still has the one before.
+        assertRow(R.string.setup_opacity, percent(100))
+        node(percent(30)).assertExists()
+        press(R.string.setup_cancel)
+        slider().assertDoesNotExist()
+        assertRow(R.string.setup_opacity, percent(100))
+        tap(R.string.setup_opacity)
+        // Opened again, the slider starts from the value set, not from the one cancelled.
+        node(percent(30)).assertDoesNotExist()
+        slider().performSemanticsAction(SemanticsActions.SetProgress) { it(52f) }
+        node(percent(50)).assertExists()
+        press(R.string.setup_ok)
+        slider().assertDoesNotExist()
+        assertRow(R.string.setup_opacity, percent(50))
+        tap(R.string.setup_opacity)
+        slider().assertRangeInfoEquals(ProgressBarRangeInfo(50f, 0f..100f, steps = 9))
+        slider().performSemanticsAction(SemanticsActions.SetProgress) { it(0f) }
+        press(R.string.setup_ok)
+        assertRow(R.string.setup_opacity, percent(0))
+        tap(R.string.setup_save)
+
+        assertEquals(WidgetSettings(opacity = 0), Settings.widgets(context).read(ID))
+    }
+
+    @Test
+    fun `the background's row stands after the corner of plus and before the taps, and shows the stored value`() {
+        Settings.widgets(context).write(ID, WidgetSettings(opacity = 70))
+        open(WeekWidgetProvider::class.java)
+
+        assertRow(R.string.setup_opacity, percent(70))
+        assertTrue(top(context.getString(R.string.setup_plus_corner)) < top(context.getString(R.string.setup_opacity)))
+        assertTrue(top(context.getString(R.string.setup_opacity)) < top(context.getString(R.string.setup_taps)))
+        assertEquals("70\u00A0%", percent(70))
+    }
+
+    @Test
     fun `the taps' rows stand indented below their heading`() {
         open(WeekWidgetProvider::class.java)
 
@@ -382,8 +439,17 @@ class SetupScreenTest {
 
         open(WeekWidgetProvider::class.java)
 
+        node(R.string.setup_opacity).assertIsDisplayed()
         node(R.string.setup_tap_new).assertIsDisplayed()
         node(R.string.setup_save).assertIsDisplayed()
+        // Whole, not cut at the screen's bottom edge.
+        val root = compose.onRoot()
+        val screen = root.fetchSemanticsNode().size.height
+        val save = node(R.string.setup_save).fetchSemanticsNode().boundsInRoot
+        assertTrue("Speichern ends at ${save.bottom} px of $screen", save.bottom <= screen)
+        val image = root.captureToImage()
+        Probe.renderDir.mkdirs()
+        File(Probe.renderDir, "setup-week-phone.png").writeBytes(Probe.png(image.asAndroidBitmap()))
     }
 
     @Test
@@ -418,6 +484,7 @@ class SetupScreenTest {
         compose.onNodeWithText(context.getString(R.string.setup_title, context.getString(kind))).assertExists()
         assertRow(R.string.setup_calendars, R.string.setup_no_calendars)
         assertRow(R.string.setup_plus_corner, R.string.setup_plus_bottom_right)
+        assertRow(R.string.setup_opacity, percent(100))
         node(R.string.setup_save).assertExists()
         node(R.string.setup_taps).assertExists()
         val shownWhen =
@@ -499,6 +566,12 @@ class SetupScreenTest {
         @StringRes name: Int,
         @StringRes value: Int,
     ) = assertRow(name, context.getString(value))
+
+    /** An opacity as the setup shows it. */
+    private fun percent(opacity: Int) = context.getString(R.string.setup_opacity_percent, opacity)
+
+    /** The background's slider in its dialog. */
+    private fun slider() = compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo))
 
     /** A calendar's box in the calendars' dialog. */
     private fun box(name: String) = compose.onNode(hasText(name) and isToggleable())

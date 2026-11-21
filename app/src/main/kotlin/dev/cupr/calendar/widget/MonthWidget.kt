@@ -39,7 +39,9 @@ object MonthWidget {
         val width = DrawnWidget.widthDp(options, TAG, id)
         val height = WidgetHeight.of(options, TAG, id)
         val drawn = draw(context, width, id, BitmapLimit.limitBytes(context, TAG, id), calendar, height, look)
-        return DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
+        return DrawnWidget.push(context, id, drawn, TOO_FULL, look.opacity, TAG) {
+            manager.updateAppWidget(id, it)
+        }
     }
 
     /**
@@ -82,7 +84,7 @@ object MonthWidget {
                 kept,
                 title,
                 calendar,
-                FixedParts(look.corner, taps),
+                FixedParts(look.corner, taps, look.opacity),
             ) { chrome, palette, note ->
                 chrome.header(view.month, widthPx, scale, palette, note)
             }
