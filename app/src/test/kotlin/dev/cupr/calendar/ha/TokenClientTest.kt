@@ -139,4 +139,15 @@ class TokenClientTest {
         )
         assertEquals("Signed(refreshToken=RefreshToken(…))", TokenClient.Exchange.Signed(refresh).toString())
     }
+
+    @Test
+    fun `the code goes to the address of the sign-in's login page, whatever address the client has`() {
+        FakeHomeAssistant().use { other ->
+            val exchange = TokenClient(OkHttpClient(), other.address).exchange(code, request)
+
+            assertEquals(TokenClient.Exchange.Signed(refresh), exchange)
+            assertEquals("verifier-1", home.requests.single().second["code_verifier"])
+            assertEquals(0, other.requests.size)
+        }
+    }
 }

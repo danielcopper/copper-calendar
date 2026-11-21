@@ -63,13 +63,18 @@ class TokenClient(
         ) : Revoke
     }
 
-    /** Trades the code [request]'s redirect carried for tokens, with its verifier. */
+    /**
+     * Trades the code [request]'s redirect carried for tokens, with its
+     * verifier, at the address of [request]'s login page, so the verifier
+     * goes only to the instance that issued the code.
+     */
     fun exchange(
         code: AuthorizationCode,
         request: SignInRequest,
     ): Exchange =
         try {
             post(
+                request.address,
                 "auth/token",
                 "grant_type" to "authorization_code",
                 "code" to code.value,
@@ -95,6 +100,7 @@ class TokenClient(
     ): Refresh =
         try {
             post(
+                address,
                 "auth/token",
                 "grant_type" to "refresh_token",
                 "refresh_token" to refreshToken.value,
@@ -117,7 +123,7 @@ class TokenClient(
     /** Asks Home Assistant to end [refreshToken] and every access token issued with it. */
     fun revoke(refreshToken: RefreshToken): Revoke =
         try {
-            post("auth/revoke", "token" to refreshToken.value).use { response ->
+            post(address, "auth/revoke", "token" to refreshToken.value).use { response ->
                 if (response.isSuccessful) Revoke.Ended else Revoke.Failed("HTTP ${response.code}")
             }
         } catch (e: IOException) {
@@ -125,6 +131,7 @@ class TokenClient(
         }
 
     private fun post(
+        at: HaAddress,
         path: String,
         vararg fields: Pair<String, String>,
     ): Response {
@@ -133,7 +140,7 @@ class TokenClient(
         val request =
             Request
                 .Builder()
-                .url(address.resolve(path))
+                .url(at.resolve(path))
                 .post(form.build())
                 .build()
         return http.newCall(request).execute()
