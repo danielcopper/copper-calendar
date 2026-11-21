@@ -10,6 +10,9 @@ enum class Problem(
     /** The login page did not load. */
     UNREACHABLE(R.string.sign_in_unreachable),
 
-    /** Anything else: a redirect this sign-in cannot use, no tokens, or a token that cannot be sealed. */
+    /**
+     * Anything else: a redirect this sign-in cannot use, no tokens, a token
+     * that cannot be sealed, or a sign-in or sign-out that threw.
+     */
     FAILED(R.string.sign_in_failed),
 }

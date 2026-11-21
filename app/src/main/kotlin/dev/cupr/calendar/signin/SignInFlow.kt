@@ -5,6 +5,7 @@ import android.util.Log
 import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.SignInRequest
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +31,14 @@ object SignInFlow {
         val finished: Int = 0,
     )
 
-    private val scope = CoroutineScope(SupervisorJob())
+    /** An exception a run did not expect is logged by its class alone, which names no secret; the app goes on. */
+    private val scope =
+        CoroutineScope(
+            SupervisorJob() +
+                CoroutineExceptionHandler { _, e ->
+                    Log.e(SIGN_IN_TAG, "A sign-in or sign-out failed: ${e.javaClass.simpleName}")
+                },
+        )
     private val mutable = MutableStateFlow(State())
     val state: StateFlow<State> = mutable.asStateFlow()
 
@@ -58,7 +66,11 @@ object SignInFlow {
 
     fun clearProblem() = mutable.update { it.copy(problem = null) }
 
-    /** Starts [work] unless a run is under way; a refused start is logged, and the screen keeps showing the run. */
+    /**
+     * Starts [work] unless a run is under way; a refused start is logged, and
+     * the screen keeps showing the run. A run that throws ends too, its
+     * problem [Problem.FAILED].
+     */
     private fun run(work: () -> Problem?): Boolean {
         var started = false
         mutable.update {
@@ -68,8 +80,12 @@ object SignInFlow {
         if (!started) Log.w(SIGN_IN_TAG, "A sign-in or sign-out is under way; another was not started")
         if (started) {
             scope.launch(Services.io) {
-                val problem = work()
-                mutable.update { State(busy = false, problem = problem, finished = it.finished + 1) }
+                var problem: Problem? = Problem.FAILED
+                try {
+                    problem = work()
+                } finally {
+                    mutable.update { State(busy = false, problem = problem, finished = it.finished + 1) }
+                }
             }
         }
         return started
