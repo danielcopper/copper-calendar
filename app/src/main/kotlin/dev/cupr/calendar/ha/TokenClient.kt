@@ -11,16 +11,19 @@ import java.io.IOException
  * Home Assistant's token endpoints (`components/auth/__init__.py` at Core
  * 2026.11.1): `/auth/token` for the authorization code and for a refresh,
  * `/auth/revoke` to end a refresh token. Requests are form-encoded, as
- * Home Assistant reads them.
+ * Home Assistant reads them. Redirects are not followed, so a form with a
+ * token or the verifier goes to no other address.
  *
  * Nothing secret leaves this class in a result's text: a failure names the
  * HTTP status, Home Assistant's error code or the exception's class, never
  * a token, the code or the address.
  */
 class TokenClient(
-    private val http: OkHttpClient,
+    http: OkHttpClient,
     private val address: HaAddress,
 ) {
+    private val http = http.newBuilder().followRedirects(false).build()
+
     sealed interface Exchange {
         /**
          * The refresh token of the new sign-in and the `client_id` it was

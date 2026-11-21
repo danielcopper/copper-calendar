@@ -1,5 +1,6 @@
 package dev.cupr.calendar.ha
 
+import mockwebserver3.MockResponse
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -151,6 +152,26 @@ class TokenClientTest {
             assertEquals(TokenClient.Exchange.Signed(refresh, SignInRequest.CLIENT_ID), exchange)
             assertEquals("verifier-1", home.requests.single().second["code_verifier"])
             assertEquals(0, other.requests.size)
+        }
+    }
+
+    @Test
+    fun `a redirect from the token endpoints is not followed`() {
+        FakeHomeAssistant().use { elsewhere ->
+            val moved = {
+                MockResponse
+                    .Builder()
+                    .code(307)
+                    .setHeader("Location", elsewhere.url.resolve("auth/token").toString())
+                    .build()
+            }
+            home.token = { moved() }
+            home.revoke = moved
+
+            assertEquals(TokenClient.Exchange.Failed("HTTP 307"), client.exchange(code, request))
+            assertEquals(failed("HTTP 307", FailureKind.UNEXPECTED), client.refresh(refresh, "client"))
+            assertEquals(TokenClient.Revoke.Failed("HTTP 307"), client.revoke(refresh))
+            assertEquals(0, elsewhere.requests.size)
         }
     }
 }
