@@ -47,9 +47,10 @@ import java.time.ZoneId
  * The setup of the widget id, a widget of kind: the calendars it shows
  * (D11), the week widgets' days (D20), when the month and "Woche" return to
  * today (D27), the corner of "+", the card's opacity (D64), and what a tap
- * on each element opens (D63). Its stored settings and the calendars are read off the main
- * thread; "Speichern" stores the settings shown and redraws the widget with
- * them ([save]), then calls onDone with whether it did.
+ * on each element opens (D63). Its stored settings and the calendars are
+ * read off the main thread; "Speichern" stores the settings shown and
+ * redraws the widget with them ([save]), then calls onDone with whether it
+ * did.
  */
 @Composable
 fun SetupScreen(

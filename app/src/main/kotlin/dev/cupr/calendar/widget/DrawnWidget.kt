@@ -175,9 +175,9 @@ internal object DrawnWidget {
 
     /**
      * The fixed parts of calendar: the card at set's opacity ([Card]); its
-     * header, drawn light and dark by
-     * header with the renderer of the fixed parts and the calendar's notice
-     * at its right, named by description and the notice, and opening what
+     * header, drawn light and dark by header with the renderer of the fixed
+     * parts and the calendar's notice at its right, named by description
+     * and the notice, and opening what
      * set's taps say for it (D63), or the sign-in screen while the notice
      * asks to sign in again (D52); and "+" ([Plus]). Without a tap, the
      * header's earlier one is cleared. Returns the drawn header's height in
@@ -284,9 +284,8 @@ internal object DrawnWidget {
      * throwing an IllegalArgumentException (see [BitmapLimit.limitBytes]),
      * the log says so and the widget shows the plain tooFull text instead,
      * on its card at opacity, which opens the calendar page; false then.
-     * Only that exception, and
-     * only from update, is caught here; when the system refuses the plain
-     * text too, that exception propagates.
+     * Only that exception, and only from update, is caught here; when the
+     * system refuses the plain text too, that exception propagates.
      */
     fun push(
         context: Context,
@@ -344,7 +343,8 @@ internal object DrawnWidget {
  * widgets after it in that update are not updated (D40).
  *
  * Each widget draws by its settings from its setup: without the calendars
- * it leaves out (D11), with its days and its corner of "+" ([Look]); the
+ * it leaves out (D11), with its days, its corner of "+" and its card's
+ * opacity ([Look]), the plain texts on its card at that opacity too; the
  * month's and "Woche"'s lists scroll to today when their "Zurück zu heute"
  * says the redraw should, or when they were just built anew
  * ([ReturnToToday.step]), and where each list stands is kept
