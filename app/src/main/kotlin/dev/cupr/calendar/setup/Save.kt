@@ -7,7 +7,8 @@ import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.widget.WidgetKind
 import dev.cupr.calendar.widget.Widgets
 
-private const val TAG = "Setup"
+/** The log's tag for a widget's setup. */
+internal const val TAG = "Setup"
 
 /**
  * Stores settings for the widget id, a widget of kind, and redraws it at

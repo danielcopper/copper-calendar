@@ -3,17 +3,12 @@ package dev.cupr.calendar.setup
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -26,22 +21,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import dev.cupr.calendar.R
-import dev.cupr.calendar.app.Choice
-import dev.cupr.calendar.app.Heading
-import dev.cupr.calendar.app.ROW_HEIGHT
 import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.ha.SensorCalendar
 import dev.cupr.calendar.ha.SensorCalendars
 import dev.cupr.calendar.store.BackToToday
 import dev.cupr.calendar.store.PlusCorner
+import dev.cupr.calendar.store.TapElement
+import dev.cupr.calendar.store.TapTargets
 import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.store.stored
 import dev.cupr.calendar.week.WeekDays
@@ -53,10 +45,10 @@ import java.time.ZoneId
 /**
  * The setup of the widget id, a widget of kind: the calendars it shows
  * (D11), the week widgets' days (D20), when the month and "Woche" return to
- * today (D27), and the corner of "+". Its stored settings and the calendars
- * are read off the main thread; "Speichern" stores the settings shown and
- * redraws the widget with them ([save]), then calls onDone with whether it
- * did.
+ * today (D27), the corner of "+", and what a tap on each element opens
+ * (D63). Its stored settings and the calendars are read off the main
+ * thread; "Speichern" stores the settings shown and redraws the widget with
+ * them ([save]), then calls onDone with whether it did.
  */
 @Composable
 fun SetupScreen(
@@ -92,27 +84,16 @@ fun SetupScreen(
                     .safeDrawingPadding()
                     .verticalScroll(rememberScrollState())
                     .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
                 stringResource(R.string.setup_title, stringResource(kind.label)),
                 style = MaterialTheme.typography.headlineSmall,
             )
             val current = settings ?: return@Column
-            Calendars(calendars ?: return@Column, current.leftOut) { settings = current.copy(leftOut = it) }
-            if (kind.days) {
-                Choice(R.string.setup_days, WeekDays.entries, current.days, ::daysLabel) {
-                    settings = current.copy(days = it)
-                }
-            }
-            if (kind.backToToday) {
-                Choice(R.string.setup_back_to_today, BackToToday.entries, current.backToToday, ::backLabel) {
-                    settings = current.copy(backToToday = it)
-                }
-            }
-            Choice(R.string.setup_plus_corner, PlusCorner.entries, current.plusCorner, ::cornerLabel) {
-                settings = current.copy(plusCorner = it)
-            }
+            val listed = calendars ?: return@Column
+            SettingRows(kind, listed, current) { settings = it }
+            TapSection(kind, current.taps) { settings = current.copy(taps = it) }
             Button(
                 enabled = !saving,
                 onClick = {
@@ -124,37 +105,28 @@ fun SetupScreen(
     }
 }
 
-/**
- * A box per calendar, named by its name, else its id, ticked unless it is in
- * leftOut; a change hands the new calendars left out to onChange.
- */
+/** A row per setting of kind besides the taps, each with its value, opening its dialog; a change goes to onChange. */
 @Composable
-private fun Calendars(
+private fun SettingRows(
+    kind: WidgetKind,
     calendars: List<SensorCalendar>,
-    leftOut: Set<String>,
-    onChange: (Set<String>) -> Unit,
+    current: WidgetSettings,
+    onChange: (WidgetSettings) -> Unit,
 ) {
     Column {
-        Heading(R.string.setup_calendars)
-        if (calendars.isEmpty()) Text(stringResource(R.string.setup_no_calendars))
-        for (listed in calendars) {
-            val calendar = listed.id
-            val ticked = calendar !in leftOut
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = ROW_HEIGHT)
-                        .toggleable(
-                            value = ticked,
-                            role = Role.Checkbox,
-                            onValueChange = { onChange(if (it) leftOut - calendar else leftOut + calendar) },
-                        ),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Checkbox(checked = ticked, onCheckedChange = null)
-                Text(listed.shown, modifier = Modifier.padding(start = 16.dp))
+        CalendarsRow(calendars, current.leftOut) { onChange(current.copy(leftOut = it)) }
+        if (kind.days) {
+            ChoiceRow(R.string.setup_days, WeekDays.entries, current.days, ::daysLabel) {
+                onChange(current.copy(days = it))
             }
+        }
+        if (kind.backToToday) {
+            ChoiceRow(R.string.setup_back_to_today, BackToToday.entries, current.backToToday, ::backLabel) {
+                onChange(current.copy(backToToday = it))
+            }
+        }
+        ChoiceRow(R.string.setup_plus_corner, PlusCorner.entries, current.plusCorner, ::cornerLabel) {
+            onChange(current.copy(plusCorner = it))
         }
     }
 }
@@ -193,8 +165,12 @@ internal val SettingsSaver =
     listSaver<WidgetSettings?, String>(
         save = { settings ->
             settings
-                ?.let { listOf(it.days.stored, it.backToToday.stored, it.plusCorner.stored) + it.leftOut }
-                .orEmpty()
+                ?.let {
+                    val taps = it.taps
+                    listOf(it.days.stored, it.backToToday.stored, it.plusCorner.stored) +
+                        TapElement.entries.map { element -> taps.of(element).stored } +
+                        it.leftOut
+                }.orEmpty()
         },
         restore = { saved ->
             val days = WeekDays.entries.firstOrNull { it.stored == saved.getOrNull(0) }
@@ -203,10 +179,19 @@ internal val SettingsSaver =
             if (days == null || back == null || corner == null) {
                 null
             } else {
-                WidgetSettings(saved.drop(SAVED_CHOICES).toSet(), days, back, corner)
+                restoreTaps(saved)?.let { WidgetSettings(saved.drop(SAVED_CHOICES).toSet(), days, back, corner, it) }
             }
         },
     )
 
-/** The choices [SettingsSaver] saves before the calendars left out. */
-private const val SAVED_CHOICES = 3
+/** The tap targets [SettingsSaver] saved after the three choices, by element; none if one is unknown or misplaced. */
+private fun restoreTaps(saved: List<String>): TapTargets? =
+    TapElement.entries.fold<TapElement, TapTargets?>(TapTargets.DEFAULT) { taps, element ->
+        saved.getOrNull(FIRST_TAP + element.ordinal)?.let(element::target)?.let { taps?.with(element, it) }
+    }
+
+/** Where [SettingsSaver] saves the tap targets, after the days, "Zurück zu heute" and the corner of "+". */
+private const val FIRST_TAP = 3
+
+/** The choices [SettingsSaver] saves before the calendars left out: three, then the four tap targets. */
+private val SAVED_CHOICES = FIRST_TAP + TapElement.entries.size

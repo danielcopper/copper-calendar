@@ -1,12 +1,18 @@
 package dev.cupr.calendar.tap
 
 import android.app.Application
+import android.app.PendingIntent
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
+import dev.cupr.calendar.app.Settings
+import dev.cupr.calendar.store.TapElement
+import dev.cupr.calendar.store.TapTarget
+import dev.cupr.calendar.store.TapTargets
+import dev.cupr.calendar.store.WidgetSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
@@ -36,37 +42,37 @@ class TapTest {
 
     @Test
     fun `the header opens the calendar page`() {
-        assertEquals(calendar, TapTargets.uri(Tap.Header))
+        assertEquals(calendar, CalendarLinks.uri(Tap.Header))
     }
 
     @Test
     fun `a day opens the calendar page on that day`() {
-        assertEquals("$calendar?day=2026-11-12", TapTargets.uri(Tap.Day(day)))
+        assertEquals("$calendar?day=2026-11-12", CalendarLinks.uri(Tap.Day(day)))
     }
 
     @Test
     fun `plus opens the form for a new entry on the day it is given`() {
-        assertEquals("$calendar?new=2026-11-12", TapTargets.uri(Tap.New(day)))
+        assertEquals("$calendar?new=2026-11-12", CalendarLinks.uri(Tap.New(day)))
     }
 
     @Test
     fun `an entry opens the calendar page on that entry and its day`() {
-        assertEquals("$calendar?entry=abc-123&day=2026-11-12", TapTargets.uri(Tap.Entry("abc-123", day)))
+        assertEquals("$calendar?entry=abc-123&day=2026-11-12", CalendarLinks.uri(Tap.Entry("abc-123", day)))
     }
 
     @Test
     fun `an entry's UID is encoded for the link`() {
         assertEquals(
             "$calendar?entry=a%2Fb%26day%3D1%40x%20y&day=2026-11-12",
-            TapTargets.uri(Tap.Entry("a/b&day=1@x y", day)),
+            CalendarLinks.uri(Tap.Entry("a/b&day=1@x y", day)),
         )
     }
 
     @Test
     fun `an entry's tap carries its UID and day to the tap activity`() {
         val tap = Tap.Entry("abc-123", day)
-        assertEquals(tap, Taps.read(Taps.fillIn(tap)))
-        val activity = launch(Taps.fillIn(tap))
+        assertEquals(tap, Taps.read(fillIn(tap)))
+        val activity = launch(fillIn(tap))
         assertEquals("$calendar?entry=abc-123&day=2026-11-12", started().last().dataString)
         assertTrue(activity.isFinishing)
     }
@@ -96,13 +102,13 @@ class TapTest {
 
     @Test
     fun `a target is its element's template with the day filled in`() {
-        assertEquals("$calendar?day={day}", TapTargets.defaults[TapElement.DAY])
-        assertEquals("other://x/2026-11-12/y", TapTargets.uri(Tap.New(day), "other://x/{day}/y"))
+        assertEquals("$calendar?day={day}", CalendarLinks.defaults[TapElement.DAY])
+        assertEquals("other://x/2026-11-12/y", CalendarLinks.uri(Tap.New(day), "other://x/{day}/y"))
     }
 
     @Test
     fun `the tap activity opens the tapped day's target and finishes`() {
-        val activity = launch(Taps.fillIn(Tap.Day(day)))
+        val activity = launch(fillIn(Tap.Day(day)))
         val opened = started().last()
         assertEquals(Intent.ACTION_VIEW, opened.action)
         assertEquals("$calendar?day=2026-11-12", opened.dataString)
@@ -113,7 +119,7 @@ class TapTest {
     @Test
     fun `a Home Assistant target opens on top of that app started as its icon starts it, in a cleared task`() {
         installLinkApp()
-        launch(Taps.fillIn(Tap.Day(day)))
+        launch(fillIn(Tap.Day(day)))
         val opened = started()
         assertEquals(2, opened.size)
         val (app, target) = opened
@@ -128,7 +134,7 @@ class TapTest {
 
     @Test
     fun `without an app for Home Assistant links, the target is started alone in a new task and the log says so`() {
-        launch(Taps.fillIn(Tap.Day(day)))
+        launch(fillIn(Tap.Day(day)))
         val opened = started().single()
         assertEquals("$calendar?day=2026-11-12", opened.dataString)
         assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, opened.flags)
@@ -143,7 +149,7 @@ class TapTest {
         installLinkApp()
         installLinkApp(app = "io.homeassistant.companion.android")
         shadowOf(application.packageManager).setShouldShowActivityChooser(true)
-        launch(Taps.fillIn(Tap.Header))
+        launch(fillIn(Tap.Header))
         val opened = started().single()
         assertEquals(calendar, opened.dataString)
         assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, opened.flags)
@@ -156,7 +162,7 @@ class TapTest {
     @Test
     fun `when the app for Home Assistant links has no launcher entry, the target opens alone and the log says so`() {
         installLinkApp(launcher = false)
-        launch(Taps.fillIn(Tap.Header))
+        launch(fillIn(Tap.Header))
         val opened = started().single()
         assertEquals(calendar, opened.dataString)
         assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, opened.flags)
@@ -254,8 +260,8 @@ class TapTest {
     @Test
     fun `the fixed parts' pending intents carry their tap to the tap activity`() {
         // Both made before either is read, so the test sees it if the second overwrites the first.
-        val header = Taps.pendingIntent(application, Tap.Header)
-        val plus = Taps.pendingIntent(application, Tap.New(day))
+        val header = pendingIntent(Tap.Header, WIDGET)
+        val plus = pendingIntent(Tap.New(day), WIDGET)
         val headerIntent = shadowOf(header).savedIntent
         assertEquals(TapActivity::class.java.name, headerIntent.component?.className)
         assertEquals(Tap.Header, Taps.read(headerIntent))
@@ -265,7 +271,7 @@ class TapTest {
     @Test
     fun `nothing crashes when no app handles the target`() {
         shadowOf(application).checkActivities(true)
-        val activity = launch(Taps.fillIn(Tap.New(day)))
+        val activity = launch(fillIn(Tap.New(day)))
         assertNull(shadowOf(application).nextStartedActivity)
         assertTrue(activity.isFinishing)
     }
@@ -349,6 +355,170 @@ class TapTest {
         assertEquals(2, ShadowToast.shownToastCount())
     }
 
+    @Test
+    fun `by default each element opens its calendar link, an entry the entry`() {
+        val opened = mutableListOf<Intent>()
+        val taps = listOf(Tap.Header, Tap.Day(day), Tap.Entry("abc", day), Tap.New(day))
+
+        for (tap in taps) open(application, tap, TapTargets.DEFAULT) { opened += it }
+
+        assertEquals(
+            listOf(
+                calendar,
+                "$calendar?day=2026-11-12",
+                "$calendar?entry=abc&day=2026-11-12",
+                "$calendar?new=2026-11-12",
+            ),
+            opened.map { it.dataString },
+        )
+    }
+
+    @Test
+    fun `an entry set to its day opens its day's calendar link, not the day's target`() {
+        val opened = mutableListOf<Intent>()
+        val targets = TapTargets(day = TapTarget.App(OTHER_APP), entry = TapTarget.EntryDay)
+
+        open(application, Tap.Entry("abc", day), targets) { opened += it }
+
+        assertEquals(listOf("$calendar?day=2026-11-12"), opened.map { it.dataString })
+    }
+
+    @Test
+    fun `another app opens as its icon starts it, in its own task, without the day`() {
+        installApp(OTHER_APP)
+        val opened = mutableListOf<Intent>()
+
+        open(application, Tap.Day(day), TapTargets(day = TapTarget.App(OTHER_APP))) { opened += it }
+
+        val launch = opened.single()
+        assertEquals(ComponentName(OTHER_APP, "$OTHER_APP.Main"), launch.component)
+        assertEquals(Intent.ACTION_MAIN, launch.action)
+        assertTrue(launch.hasCategory(Intent.CATEGORY_LAUNCHER))
+        assertNull(launch.data)
+        assertNull(launch.extras)
+        val flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+        assertEquals(flags, launch.flags and flags)
+        assertEquals(0, ShadowToast.shownToastCount())
+    }
+
+    @Test
+    fun `another app no longer installed shows that the target does not open, and is logged`() {
+        open(application, Tap.Header, TapTargets(header = TapTarget.App("com.example.gone"))) {
+            throw AssertionError("started $it")
+        }
+
+        assertEquals("Ziel lässt sich nicht öffnen", ShadowToast.getTextOfLatestToast())
+        assertEquals(
+            listOf("No app com.example.gone with a launcher entry is installed"),
+            ShadowLog.getLogsForTag("TapActivity").map { it.msg },
+        )
+    }
+
+    @Test
+    fun `another app that does not start shows that the target does not open, not that Home Assistant is missing`() {
+        installApp(OTHER_APP)
+
+        open(application, Tap.New(day), TapTargets(new = TapTarget.App(OTHER_APP))) {
+            throw ActivityNotFoundException("none")
+        }
+
+        assertEquals("Ziel lässt sich nicht öffnen", ShadowToast.getTextOfLatestToast())
+    }
+
+    @Test
+    fun `an element set to open nothing opens nothing, and its tap from before is logged`() {
+        val targets = TapTargets(TapTarget.None, TapTarget.None, TapTarget.AsDay, TapTarget.None)
+
+        for (tap in listOf(Tap.Header, Tap.Day(day), Tap.Entry("abc", day), Tap.New(day))) {
+            open(application, tap, targets) { throw AssertionError("started $it") }
+        }
+
+        assertEquals(0, ShadowToast.shownToastCount())
+        // The entry's tap is its day's, which opens nothing.
+        assertEquals(
+            listOf("HEADER", "DAY", "DAY", "NEW").map { "A tap on $it, which its widget has set to open nothing" },
+            ShadowLog.getLogsForTag("TapActivity").map { it.msg },
+        )
+    }
+
+    @Test
+    fun `an entry's tap from before it was set to its day's tap opens what its day opens`() {
+        installApp(OTHER_APP)
+        val opened = mutableListOf<Intent>()
+
+        open(application, Tap.Entry("abc", day), TapTargets(entry = TapTarget.AsDay)) { opened += it }
+        val toApp = TapTargets(day = TapTarget.App(OTHER_APP), entry = TapTarget.AsDay)
+        open(application, Tap.Entry("abc", day), toApp) { opened += it }
+
+        assertEquals("$calendar?day=2026-11-12", opened[0].dataString)
+        assertEquals(ComponentName(OTHER_APP, "$OTHER_APP.Main"), opened[1].component)
+    }
+
+    @Test
+    fun `an element takes only the kinds of target it can have, and has a tap of its own unless it opens none`() {
+        val entryKinds = listOf(TapTarget.Kind.CALENDAR_PAGE, TapTarget.Kind.ENTRY_DAY, TapTarget.Kind.AS_DAY)
+        val otherKinds = listOf(TapTarget.Kind.CALENDAR_PAGE, TapTarget.Kind.APP, TapTarget.Kind.NONE)
+        assertEquals(listOf(otherKinds, otherKinds, entryKinds, otherKinds), TapElement.entries.map { it.kinds })
+        assertThrows(IllegalArgumentException::class.java) { TapTargets(entry = TapTarget.None) }
+        assertThrows(
+            IllegalArgumentException::class.java,
+        ) { TapTargets.DEFAULT.with(TapElement.HEADER, TapTarget.AsDay) }
+        val app = TapTarget.App(OTHER_APP)
+        val set = TapTargets(TapTarget.None, app, TapTarget.AsDay, TapTarget.CalendarPage)
+        assertEquals(listOf(false, true, false, true), TapElement.entries.map { set.opens(it) })
+        assertEquals(
+            set,
+            TapTargets.DEFAULT
+                .with(TapElement.HEADER, TapTarget.None)
+                .with(TapElement.DAY, app)
+                .with(TapElement.ENTRY, TapTarget.AsDay),
+        )
+    }
+
+    @Test
+    fun `the tap activity opens the tapped widget's targets, another widget its own, a plain text the calendar`() {
+        installApp(OTHER_APP)
+        Settings
+            .widgets(
+                application,
+            ).write(WIDGET, WidgetSettings(taps = TapTargets(header = TapTarget.App(OTHER_APP))))
+
+        launch(fillIn(Tap.Header))
+        assertEquals(ComponentName(OTHER_APP, "$OTHER_APP.Main"), started().single().component)
+        launch(fillIn(Tap.Header, OTHER_WIDGET))
+        assertEquals(calendar, started().last().dataString)
+        launch(shadowOf(Taps.calendarPage(application)).savedIntent)
+        assertEquals(calendar, started().last().dataString)
+    }
+
+    @Test
+    fun `the fixed parts' request codes differ per widget, so two widgets' intents do not replace each other`() {
+        // Both made before either is read, so the test sees it if the second overwrites the first.
+        val first = pendingIntent(Tap.Header, WIDGET)
+        val second = pendingIntent(Tap.Header, OTHER_WIDGET)
+
+        assertEquals(WIDGET, Taps.widget(shadowOf(first).savedIntent))
+        assertEquals(OTHER_WIDGET, Taps.widget(shadowOf(second).savedIntent))
+        val codes =
+            listOf(null, 0, 1, WIDGET, OTHER_WIDGET).flatMap { widget ->
+                TapElement.entries.map { Taps.requestCode(it, widget) }
+            }
+        assertEquals(codes.size, codes.distinct().size)
+        // Apart from the list's template and the sign-in screen's.
+        assertTrue(codes.none { it == 100 || it == 101 })
+    }
+
+    /** Installs an app with a launcher entry, its activity "<package>.Main". */
+    private fun installApp(app: String) {
+        val packageManager = shadowOf(application.packageManager)
+        val main = ComponentName(app, "$app.Main")
+        packageManager.addActivityIfNotPresent(main)
+        packageManager.addIntentFilterForActivity(
+            main,
+            IntentFilter(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) },
+        )
+    }
+
     /** Every intent started since the last call, oldest first (Robolectric hands out the newest first). */
     private fun started(): List<Intent> =
         generateSequence { shadowOf(application).nextStartedActivity }.toList().asReversed()
@@ -382,7 +552,7 @@ class TapTest {
         IntentFilter(Intent.ACTION_VIEW).apply {
             addCategory(Intent.CATEGORY_DEFAULT)
             addCategory(Intent.CATEGORY_BROWSABLE)
-            addDataScheme(TapTargets.HOME_ASSISTANT_SCHEME)
+            addDataScheme(CalendarLinks.HOME_ASSISTANT_SCHEME)
             addDataAuthority("navigate", null)
         }
 
@@ -390,6 +560,25 @@ class TapTest {
         element: String,
         day: String,
     ) = Intent().putExtra("dev.cupr.calendar.tap.ELEMENT", element).putExtra("dev.cupr.calendar.tap.DAY", day)
+
+    /** The fill-in of a tap on the widget [widget], as its default targets make it. */
+    private fun fillIn(
+        tap: Tap,
+        widget: Int = WIDGET,
+    ): Intent = checkNotNull(WidgetTaps(widget, TapTargets.DEFAULT).fillIn(tap))
+
+    /** The pending intent of a tap on a fixed part of the widget [widget], as its default targets make it. */
+    private fun pendingIntent(
+        tap: Tap,
+        widget: Int,
+    ): PendingIntent = checkNotNull(WidgetTaps(widget, TapTargets.DEFAULT).pendingIntent(application, tap))
+
+    private companion object {
+        /** A widget without stored settings, so with the default targets. */
+        const val WIDGET = 7
+        const val OTHER_WIDGET = 8
+        const val OTHER_APP = "com.example.app"
+    }
 
     private fun launch(extras: Intent): TapActivity =
         Robolectric

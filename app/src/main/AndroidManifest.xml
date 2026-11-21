@@ -20,6 +20,12 @@
                 android:host="navigate"
                 android:scheme="homeassistant" />
         </intent>
+        <!-- The apps with a launcher icon, which a widget's setup lists as
+             tap targets and a tap starts as their icon does (D63). -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application

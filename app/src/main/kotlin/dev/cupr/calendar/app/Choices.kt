@@ -30,8 +30,21 @@ internal fun <T> Choice(
     label: (T) -> Int,
     onSelect: (T) -> Unit,
 ) {
-    Column(modifier = Modifier.selectableGroup()) {
+    Column {
         Heading(title)
+        RadioOptions(options, selected, label, onSelect)
+    }
+}
+
+/** A radio button per option, named by label, the selected one on; selecting one hands it to onSelect. */
+@Composable
+internal fun <T> RadioOptions(
+    options: List<T>,
+    selected: T,
+    label: (T) -> Int,
+    onSelect: (T) -> Unit,
+) {
+    Column(modifier = Modifier.selectableGroup()) {
         for (option in options) {
             Row(
                 modifier =

@@ -11,12 +11,16 @@ import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.core.net.toUri
 import dev.cupr.calendar.R
+import dev.cupr.calendar.app.Settings
+import dev.cupr.calendar.store.TapTarget
+import dev.cupr.calendar.store.TapTargets
 
 /**
  * The invisible activity a widget's taps start (D23): it shows nothing,
- * resolves the tapped element's target, opens it and finishes at once. When
- * the intent carries no complete tap, nothing opens and the log says why;
- * when no app handles or may open its target, a Toast says so too (D25).
+ * resolves the tapped element's target from the tapped widget's settings
+ * (D63), opens it and finishes at once. When the intent carries no complete
+ * tap, nothing opens and the log says why; when no app handles or may open
+ * its target, a Toast says so too (D25).
  */
 class TapActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,10 +29,56 @@ class TapActivity : Activity() {
         if (tap == null) {
             Log.w(TAG, "An intent without a complete tap: ${Taps.describe(intent)}")
         } else {
-            openTarget(this, TapTargets.uri(tap), ::startActivity)
+            val targets = Taps.widget(intent)?.let { Settings.widgets(this).read(it).taps } ?: TapTargets.DEFAULT
+            open(this, tap, targets, ::startActivity)
         }
         finish()
     }
+}
+
+/**
+ * Opens what tap's element has as its target in targets (D63) with start,
+ * an Activity's startActivity: a calendar link through [openTarget], for an
+ * entry's day the link a tap on that day has, another app as its icon
+ * starts it ([openApp]). An element without a tap of its own has none on
+ * the widget; an intent of it from before it was set opens what the
+ * element's setting says all the same: for an entry, what a tap on its day
+ * opens; for nothing, nothing, and the log says so.
+ */
+internal fun open(
+    context: Context,
+    tap: Tap,
+    targets: TapTargets,
+    start: (Intent) -> Unit,
+) {
+    when (val target = targets.of(tap.element)) {
+        TapTarget.CalendarPage -> openTarget(context, CalendarLinks.uri(tap), start)
+        TapTarget.EntryDay -> openTarget(context, CalendarLinks.uri(tap.day?.let(Tap::Day) ?: tap), start)
+        is TapTarget.App -> openApp(context, target.packageName, start)
+        TapTarget.AsDay -> tap.day?.let { open(context, Tap.Day(it), targets, start) }
+        TapTarget.None -> Log.w(TAG, "A tap on ${tap.element}, which its widget has set to open nothing")
+    }
+}
+
+/**
+ * Starts the app of packageName with start as its icon starts it: its launch
+ * intent, in its own task, brought to the front when it runs (D63). When it
+ * is no longer installed or has no launcher entry, or does not start, the
+ * log and a short Toast say that the target does not open (D25).
+ */
+private fun openApp(
+    context: Context,
+    packageName: String,
+    start: (Intent) -> Unit,
+) {
+    val launch = context.packageManager.getLaunchIntentForPackage(packageName)
+    if (launch == null) {
+        Log.w(TAG, "No app $packageName with a launcher entry is installed")
+        toast(context, R.string.target_not_openable)
+        return
+    }
+    launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+    opened(context, launch, packageName, missing = false, start = start)
 }
 
 /**
@@ -67,8 +117,8 @@ internal fun openTarget(
     }
 }
 
-/** A link the Home Assistant app opens: its scheme, [TapTargets.HOME_ASSISTANT_SCHEME]. */
-private val Intent.forHomeAssistant: Boolean get() = data?.scheme == TapTargets.HOME_ASSISTANT_SCHEME
+/** A link the Home Assistant app opens: its scheme, [CalendarLinks.HOME_ASSISTANT_SCHEME]. */
+private val Intent.forHomeAssistant: Boolean get() = data?.scheme == CalendarLinks.HOME_ASSISTANT_SCHEME
 
 /**
  * The app that handles link started the way its icon starts it, in a cleared

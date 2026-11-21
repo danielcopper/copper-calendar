@@ -10,6 +10,7 @@ import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.render.WeekRowRenderer
+import dev.cupr.calendar.tap.WidgetTaps
 import java.time.YearMonth
 import kotlin.math.roundToInt
 
@@ -43,14 +44,16 @@ object MonthWidget {
 
     /**
      * The widget at widthDp showing the month of calendar's today, and the
-     * bytes of its bitmaps; the widget's id only names it in the log. The
+     * bytes of its bitmaps; the widget's id names it in the log and its
+     * taps. The
      * month's cells show at most two entries each, so it leaves nothing out
      * for the limit; the log warns when its weeks pass it, and
      * [DrawnWidget.push] falls back.
      * Its list scrolls, when look says it does, so the current week stands
      * on top in a widget of height, or to its end when the weeks from the
      * current one on fit, and only into view without a height
-     * ([TodayOnTop.scroll], D27); "+" stands in look's corner.
+     * ([TodayOnTop.scroll], D27); "+" stands in look's corner, and its
+     * taps open what look's say ([Look]).
      */
     internal fun draw(
         context: Context,
@@ -71,8 +74,16 @@ object MonthWidget {
         val kept = Kept()
         val views = RemoteViews(context.packageName, R.layout.widget_month)
         val title = ChromeRenderer.title(view.month)
+        val taps = WidgetTaps(id, look.taps)
         val headerPx =
-            DrawnWidget.fixedParts(context, views, kept, title, calendar, look.corner) { chrome, palette, note ->
+            DrawnWidget.fixedParts(
+                context,
+                views,
+                kept,
+                title,
+                calendar,
+                FixedParts(look.corner, taps),
+            ) { chrome, palette, note ->
                 chrome.header(view.month, widthPx, scale, palette, note)
             }
         val heightsPx = view.weeks.map { rows.heightPx(it, scale) }
@@ -90,7 +101,7 @@ object MonthWidget {
                 week.days
                     .first()
                     .date
-                    .toEpochDay() to DrawnWidget.weekRow(context, week, light, dark)
+                    .toEpochDay() to DrawnWidget.weekRow(context, week, light, dark, taps)
             }
         DrawnWidget.list(context, views, items)
         val measured = TodayOnTop.Measured(scale, heightsPx, today = view.todayWeek, headerPx = headerPx)

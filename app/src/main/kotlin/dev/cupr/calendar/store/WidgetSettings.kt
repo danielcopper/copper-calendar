@@ -36,14 +36,16 @@ enum class PlusCorner(
 /**
  * One widget's settings from its setup: the calendars it leaves out, so a
  * calendar that comes later shows (D11), its days (D20, the week widgets),
- * when it returns to today (D27, the month and "Woche"), and the corner of
- * "+". Each defaults to what a widget without settings shows.
+ * when it returns to today (D27, the month and "Woche"), the corner of
+ * "+", and what a tap on each element opens (D63). Each defaults to what a
+ * widget without settings shows.
  */
 data class WidgetSettings(
     val leftOut: Set<String> = emptySet(),
     val days: WeekDays = WeekDays.MONDAY_TO_SUNDAY,
     val backToToday: BackToToday = BackToToday.EACH_UPDATE,
     val plusCorner: PlusCorner = PlusCorner.BOTTOM_RIGHT,
+    val taps: TapTargets = TapTargets.DEFAULT,
 ) {
     companion object {
         val DEFAULT = WidgetSettings()
@@ -65,6 +67,10 @@ class WidgetSettingsStore(
             days = prefs.choice(key(id, DAYS), WeekDays.entries, default.days, TAG, what(id, DAYS)) { it.stored },
             backToToday = choice(id, BACK_TO_TODAY, BackToToday.entries, default.backToToday),
             plusCorner = choice(id, PLUS_CORNER, PlusCorner.entries, default.plusCorner),
+            taps =
+                TapElement.entries.fold(default.taps) { taps, element ->
+                    taps.with(element, target(id, element, default.taps.of(element)))
+                },
         )
     }
 
@@ -76,6 +82,7 @@ class WidgetSettingsStore(
         putString(key(id, DAYS), settings.days.stored)
         putString(key(id, BACK_TO_TODAY), settings.backToToday.stored)
         putString(key(id, PLUS_CORNER), settings.plusCorner.stored)
+        for ((element, field) in TAP_FIELDS) putString(key(id, field), settings.taps.of(element).stored)
     }
 
     /** Forgets the settings of the widgets ids, removed from the home screen. */
@@ -93,13 +100,45 @@ class WidgetSettingsStore(
         default: T,
     ): T = prefs.choice(key(id, field), entries, default, TAG, what(id, field))
 
+    /**
+     * The target of element, default when none is stored; one stored under a
+     * name this app does not know, or of a kind the element cannot have (an
+     * entry another app, the header an entry's day), reads as default, logged.
+     */
+    private fun target(
+        id: Int,
+        element: TapElement,
+        default: TapTarget,
+    ): TapTarget {
+        val field = TAP_FIELDS.getValue(element)
+        return prefs.choice(
+            key(id, field),
+            default,
+            TAG,
+            what(id, field),
+            TapTarget::stored,
+            MISPLACED,
+            element::target,
+        )
+    }
+
     private companion object {
         const val TAG = "WidgetSettings"
         const val LEFT_OUT = "left_out"
         const val DAYS = "days"
         const val BACK_TO_TODAY = "back_to_today"
         const val PLUS_CORNER = "plus_corner"
-        val FIELDS = listOf(LEFT_OUT, DAYS, BACK_TO_TODAY, PLUS_CORNER)
+        const val MISPLACED = "is unknown or not one this element can have"
+
+        /** The fields of the elements' targets, by element. */
+        val TAP_FIELDS =
+            mapOf(
+                TapElement.HEADER to "tap_header",
+                TapElement.DAY to "tap_day",
+                TapElement.ENTRY to "tap_entry",
+                TapElement.NEW to "tap_new",
+            )
+        val FIELDS = listOf(LEFT_OUT, DAYS, BACK_TO_TODAY, PLUS_CORNER) + TAP_FIELDS.values
 
         fun key(
             id: Int,

@@ -5,6 +5,7 @@ import android.content.Context
 import android.widget.RemoteViews
 import dev.cupr.calendar.sample.SampleData
 import dev.cupr.calendar.store.PlusCorner
+import dev.cupr.calendar.store.TapTargets
 import dev.cupr.calendar.week.WeekDays
 import org.junit.rules.ExternalResource
 
@@ -19,8 +20,16 @@ internal fun MonthWidget.views(
     id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
     calendar: Content.Calendar = SampleData.calendar(),
     corner: PlusCorner = PlusCorner.BOTTOM_RIGHT,
+    taps: TapTargets = TapTargets.DEFAULT,
 ): RemoteViews =
-    draw(context, widthDp, id, BitmapLimit.limitBytes(context, TAG, id), calendar, look = Look(corner = corner)).views
+    draw(
+        context,
+        widthDp,
+        id,
+        BitmapLimit.limitBytes(context, TAG, id),
+        calendar,
+        look = Look(corner = corner, taps = taps),
+    ).views
 
 internal fun WeekWidget.views(
     context: Context,
@@ -29,8 +38,16 @@ internal fun WeekWidget.views(
     id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
     calendar: Content.Calendar = SampleData.calendar(),
     corner: PlusCorner = PlusCorner.BOTTOM_RIGHT,
+    taps: TapTargets = TapTargets.DEFAULT,
 ): RemoteViews =
-    draw(context, widthDp, Look(days, corner), id, BitmapLimit.limitBytes(context, TAG, id), calendar).views
+    draw(
+        context,
+        widthDp,
+        Look(days, corner, taps = taps),
+        id,
+        BitmapLimit.limitBytes(context, TAG, id),
+        calendar,
+    ).views
 
 internal fun WeekColumnsWidget.views(
     context: Context,
@@ -40,8 +57,17 @@ internal fun WeekColumnsWidget.views(
     id: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
     calendar: Content.Calendar = SampleData.calendar(),
     corner: PlusCorner = PlusCorner.BOTTOM_RIGHT,
+    taps: TapTargets = TapTargets.DEFAULT,
 ): RemoteViews =
-    draw(context, widthDp, heightDp, Look(days, corner), id, BitmapLimit.limitBytes(context, TAG, id), calendar).views
+    draw(
+        context,
+        widthDp,
+        heightDp,
+        Look(days, corner, taps = taps),
+        id,
+        BitmapLimit.limitBytes(context, TAG, id),
+        calendar,
+    ).views
 
 /**
  * Makes the providers draw the sample month, as if signed in with a fresh
