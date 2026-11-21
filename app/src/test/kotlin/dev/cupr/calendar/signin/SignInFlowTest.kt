@@ -129,7 +129,7 @@ class SignInFlowTest {
     }
 
     @Test(timeout = 10_000)
-    fun `a run that throws ends, says the sign-in failed and logs the exception's class`() {
+    fun `a run that throws a runtime exception ends, says the sign-in failed and logs the exception's class`() {
         Services.cipher = { throw IllegalStateException("broken") }
 
         assertTrue(atOnce { SignInFlow.signOut(context) })
