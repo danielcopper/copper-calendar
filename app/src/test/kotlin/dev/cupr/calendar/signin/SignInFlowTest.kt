@@ -15,6 +15,7 @@ import dev.cupr.calendar.ha.SignInRequest
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.AesGcmCipher
 import dev.cupr.calendar.store.TokenCipher
+import dev.cupr.calendar.widget.DrawnWidgetProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -137,6 +138,21 @@ class SignInFlowTest {
         assertEquals(Problem.FAILED, SignInFlow.state.value.problem)
         val errors = ShadowLog.getLogsForTag(SIGN_IN_TAG).filter { it.type == Log.ERROR }.map { it.msg }
         assertEquals(listOf("A sign-in or sign-out failed: IllegalStateException"), errors)
+    }
+
+    @Test(timeout = 10_000)
+    fun `a sign-in kept whose widget update then throws ends and says the sign-in failed`() {
+        val content = DrawnWidgetProvider.content
+        DrawnWidgetProvider.content = { throw IllegalStateException("the widgets cannot be read") }
+        try {
+            assertTrue(atOnce { SignInFlow.signIn(context, SignInRequest.start(home.address), code) })
+        } finally {
+            DrawnWidgetProvider.content = content
+        }
+
+        assertEquals(Account.State.SIGNED_IN, Services.account(context).state)
+        assertFalse(SignInFlow.state.value.busy)
+        assertEquals(Problem.FAILED, SignInFlow.state.value.problem)
     }
 
     @Test(timeout = 10_000)
