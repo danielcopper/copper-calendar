@@ -22,9 +22,14 @@ class TokenClient(
     private val address: HaAddress,
 ) {
     sealed interface Exchange {
-        /** The refresh token of the new sign-in; the access token that comes with it is not used (D45). */
+        /**
+         * The refresh token of the new sign-in and the `client_id` it was
+         * issued to (D10); the access token that comes with it is not used
+         * (D45).
+         */
         data class Signed(
             val refreshToken: RefreshToken,
+            val clientId: String,
         ) : Exchange
 
         data class Failed(
@@ -84,7 +89,7 @@ class TokenClient(
                 val body = body(response)
                 val refresh = body?.string("refresh_token")
                 if (response.isSuccessful && refresh != null) {
-                    Exchange.Signed(RefreshToken(refresh))
+                    Exchange.Signed(RefreshToken(refresh), SignInRequest.CLIENT_ID)
                 } else {
                     Exchange.Failed(describe(response, body))
                 }

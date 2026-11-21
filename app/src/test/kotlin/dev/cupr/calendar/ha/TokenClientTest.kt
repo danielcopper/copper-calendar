@@ -23,7 +23,7 @@ class TokenClientTest {
     fun `the code is traded for the refresh token with the client id and the verifier`() {
         val exchange = client.exchange(code, request)
 
-        assertEquals(TokenClient.Exchange.Signed(RefreshToken("refresh-1")), exchange)
+        assertEquals(TokenClient.Exchange.Signed(RefreshToken("refresh-1"), "http://127.0.0.1:47123/"), exchange)
         val (sent, form) = home.requests.single()
         assertEquals("POST", sent.method)
         assertEquals("/auth/token", sent.url.encodedPath)
@@ -137,7 +137,10 @@ class TokenClientTest {
             "Access(accessToken=AccessToken(…))",
             TokenClient.Refresh.Access(AccessToken("access-1")).toString(),
         )
-        assertEquals("Signed(refreshToken=RefreshToken(…))", TokenClient.Exchange.Signed(refresh).toString())
+        assertEquals(
+            "Signed(refreshToken=RefreshToken(…), clientId=http://127.0.0.1:47123/)",
+            TokenClient.Exchange.Signed(refresh, SignInRequest.CLIENT_ID).toString(),
+        )
     }
 
     @Test
@@ -145,7 +148,7 @@ class TokenClientTest {
         FakeHomeAssistant().use { other ->
             val exchange = TokenClient(OkHttpClient(), other.address).exchange(code, request)
 
-            assertEquals(TokenClient.Exchange.Signed(refresh), exchange)
+            assertEquals(TokenClient.Exchange.Signed(refresh, SignInRequest.CLIENT_ID), exchange)
             assertEquals("verifier-1", home.requests.single().second["code_verifier"])
             assertEquals(0, other.requests.size)
         }
