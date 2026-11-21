@@ -12,7 +12,6 @@ import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.HaAddress
 import dev.cupr.calendar.ha.SignInRequest
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -28,7 +27,7 @@ import java.security.cert.X509Certificate
 @RunWith(RobolectricTestRunner::class)
 class LoginClientTest {
     private val view = WebView(ApplicationProvider.getApplicationContext<Application>())
-    private val signIn = SignInRequest(HaAddress("https://home.example/".toHttpUrl()), "verifier-1", "state-1")
+    private val signIn = SignInRequest(checkNotNull(HaAddress.stored("https://home.example/")), "verifier-1", "state-1")
     private val callbacks = mutableListOf<SignInRequest.Callback>()
     private var unreachable = 0
     private val client = LoginClient(signIn, { callbacks += it }, { unreachable++ })

@@ -105,7 +105,7 @@ class FakeHomeAssistant : Closeable {
 
     /** The fake's address; plain http, which [HaAddress.parse] would refuse. */
     val address: HaAddress
-        get() = HaAddress(url)
+        get() = checkNotNull(HaAddress.stored(url.toString()))
 
     init {
         server.dispatcher =

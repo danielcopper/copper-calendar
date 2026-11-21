@@ -6,7 +6,6 @@ import androidx.core.content.edit
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.ha.HaAddress
 import dev.cupr.calendar.ha.RefreshToken
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -24,7 +23,7 @@ class AccountTest {
         ApplicationProvider.getApplicationContext<Application>().getSharedPreferences("account", Context.MODE_PRIVATE)
     private val key = key()
     private val account = Account(prefs, AesGcmCipher { key })
-    private val address = HaAddress("https://home.example/".toHttpUrl())
+    private val address = checkNotNull(HaAddress.stored("https://home.example/"))
     private val token = RefreshToken("refresh-1")
 
     private fun key(): SecretKey = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()

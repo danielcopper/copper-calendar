@@ -9,12 +9,9 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
  * what [stored] makes of the form the account and a pending sign-in keep.
  * The rest of the app takes the address only in this form, so every path is
  * resolved below the instance's root.
- *
- * The constructor is internal, not private, for the tests' fake Home
- * Assistant on plain http, which [parse] refuses.
  */
 @JvmInline
-value class HaAddress internal constructor(
+value class HaAddress private constructor(
     val url: HttpUrl,
 ) {
     /** [path] below the root, such as `auth/token`. */
