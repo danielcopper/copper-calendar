@@ -68,6 +68,17 @@ class SignInFlowTest {
 
     private fun awaitIdle() = runBlocking { withTimeout(5_000) { SignInFlow.state.first { !it.busy } } }
 
+    /** Starts a run that is done when [start] returns, its failure handled by then too. */
+    private fun atOnce(start: () -> Boolean): Boolean {
+        val io = Services.io
+        Services.io = Dispatchers.Unconfined
+        try {
+            return start()
+        } finally {
+            Services.io = io
+        }
+    }
+
     @Test(timeout = 10_000)
     fun `a second sign-in while one runs is refused, and the result stays held after the run`() {
         val gate = CountDownLatch(1)
@@ -119,19 +130,31 @@ class SignInFlowTest {
     @Test(timeout = 10_000)
     fun `a run that throws ends, says the sign-in failed and logs the exception's class`() {
         Services.cipher = { throw IllegalStateException("broken") }
-        val io = Services.io
-        // The run and the handling of its exception happen at once, so the log is there when the call returns.
-        Services.io = Dispatchers.Unconfined
-        try {
-            assertTrue(SignInFlow.signOut(context))
-        } finally {
-            Services.io = io
-        }
+
+        assertTrue(atOnce { SignInFlow.signOut(context) })
 
         assertFalse(SignInFlow.state.value.busy)
         assertEquals(Problem.FAILED, SignInFlow.state.value.problem)
         val errors = ShadowLog.getLogsForTag(SIGN_IN_TAG).filter { it.type == Log.ERROR }.map { it.msg }
         assertEquals(listOf("A sign-in or sign-out failed: IllegalStateException"), errors)
+    }
+
+    @Test(timeout = 10_000)
+    fun `an error a run throws is not taken for a failed sign-in and reaches the thread's handler`() {
+        Services.cipher = { throw StackOverflowError() }
+        val thread = Thread.currentThread()
+        val handler = thread.uncaughtExceptionHandler
+        val uncaught = mutableListOf<Throwable>()
+        thread.uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { _, e -> uncaught += e }
+        try {
+            assertTrue(atOnce { SignInFlow.signOut(context) })
+        } finally {
+            thread.uncaughtExceptionHandler = handler
+        }
+
+        assertEquals(listOf(StackOverflowError::class.java), uncaught.map { it.javaClass })
+        assertFalse(SignInFlow.state.value.busy)
+        assertNull(SignInFlow.state.value.problem)
     }
 
     @Test

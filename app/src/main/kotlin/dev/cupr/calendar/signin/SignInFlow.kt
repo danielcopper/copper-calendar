@@ -5,7 +5,7 @@ import android.util.Log
 import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.SignInRequest
-import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,14 +31,7 @@ object SignInFlow {
         val finished: Int = 0,
     )
 
-    /** An exception a run did not expect is logged by its class alone, which names no secret; the app goes on. */
-    private val scope =
-        CoroutineScope(
-            SupervisorJob() +
-                CoroutineExceptionHandler { _, e ->
-                    Log.e(SIGN_IN_TAG, "A sign-in or sign-out failed: ${e.javaClass.simpleName}")
-                },
-        )
+    private val scope = CoroutineScope(SupervisorJob())
     private val mutable = MutableStateFlow(State())
     val state: StateFlow<State> = mutable.asStateFlow()
 
@@ -68,9 +61,12 @@ object SignInFlow {
 
     /**
      * Starts [work] unless a run is under way; a refused start is logged, and
-     * the screen keeps showing the run. A run that throws ends too, its
-     * problem [Problem.FAILED].
+     * the screen keeps showing the run. A run that throws a runtime
+     * exception ends too, its problem [Problem.FAILED], and the log names the
+     * exception's class alone, which holds no secret; an error is not caught
+     * (D43, as D54 draws the line).
      */
+    @Suppress("TooGenericExceptionCaught")
     private fun run(work: () -> Problem?): Boolean {
         var started = false
         mutable.update {
@@ -80,9 +76,13 @@ object SignInFlow {
         if (!started) Log.w(SIGN_IN_TAG, "A sign-in or sign-out is under way; another was not started")
         if (started) {
             scope.launch(Services.io) {
-                var problem: Problem? = Problem.FAILED
+                var problem: Problem? = null
                 try {
                     problem = work()
+                } catch (e: RuntimeException) {
+                    if (e is CancellationException) throw e
+                    Log.e(SIGN_IN_TAG, "A sign-in or sign-out failed: ${e.javaClass.simpleName}")
+                    problem = Problem.FAILED
                 } finally {
                     mutable.update { State(busy = false, problem = problem, finished = it.finished + 1) }
                 }

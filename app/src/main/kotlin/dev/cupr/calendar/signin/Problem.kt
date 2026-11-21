@@ -12,7 +12,8 @@ enum class Problem(
 
     /**
      * Anything else: a redirect this sign-in cannot use, no tokens, a token
-     * that cannot be sealed, or a sign-in or sign-out that threw.
+     * that cannot be sealed, or a sign-in or sign-out that threw a runtime
+     * exception.
      */
     FAILED(R.string.sign_in_failed),
 }
