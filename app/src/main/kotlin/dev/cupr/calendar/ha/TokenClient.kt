@@ -26,14 +26,18 @@ class TokenClient(
 
     sealed interface Exchange {
         /**
-         * The refresh token of the new sign-in and the `client_id` it was
-         * issued to (D10); the access token that comes with it is not used
-         * (D45).
+         * The refresh token of the new sign-in, the `client_id` it was issued
+         * to (D10) and the address of the instance that issued it, its login
+         * page's (D43); the access token that comes with it is not used
+         * (D45). Its text leaves the address out.
          */
         data class Signed(
             val refreshToken: RefreshToken,
             val clientId: String,
-        ) : Exchange
+            val address: HaAddress,
+        ) : Exchange {
+            override fun toString() = "Signed(refreshToken=$refreshToken, clientId=$clientId, address=…)"
+        }
 
         data class Failed(
             val reason: String,
@@ -92,7 +96,7 @@ class TokenClient(
                 val body = body(response)
                 val refresh = body?.string("refresh_token")
                 if (response.isSuccessful && refresh != null) {
-                    Exchange.Signed(RefreshToken(refresh), SignInRequest.CLIENT_ID)
+                    Exchange.Signed(RefreshToken(refresh), SignInRequest.CLIENT_ID, request.address)
                 } else {
                     Exchange.Failed(describe(response, body))
                 }

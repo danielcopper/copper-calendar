@@ -5,7 +5,6 @@ import dev.cupr.calendar.ha.AccessToken
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.EntryParser
 import dev.cupr.calendar.ha.FailureKind
-import dev.cupr.calendar.ha.HaAddress
 import dev.cupr.calendar.ha.HaClient
 import dev.cupr.calendar.ha.SensorCalendars
 import dev.cupr.calendar.ha.SignInRequest
@@ -84,21 +83,20 @@ class Fetcher(
 
     /**
      * Trades the code [request]'s redirect carried for a refresh token and
-     * keeps it with the `client_id` it was issued to (D10); the snapshot,
-     * the last failure and the unreadable theme of an earlier sign-in go
-     * (D45, D48). When the token cannot be sealed, Home Assistant is asked to
-     * end it again, so it is not left valid there unused, and nothing is
-     * kept.
+     * keeps it with the `client_id` it was issued to (D10) and the address
+     * of the instance that issued it; the snapshot, the last failure and the
+     * unreadable theme of an earlier sign-in go (D45, D48). When the token
+     * cannot be sealed, that instance is asked to end it again, so it is not
+     * left valid there unused, and nothing is kept.
      */
     fun signIn(
         request: SignInRequest,
         code: AuthorizationCode,
     ): SignIn {
-        val tokens = TokenClient(http, request.address)
         val outcome =
-            when (val exchange = tokens.exchange(code, request)) {
+            when (val exchange = TokenClient(http, request.address).exchange(code, request)) {
                 is TokenClient.Exchange.Failed -> SignIn.Failed("Home Assistant gave no tokens: ${exchange.reason}")
-                is TokenClient.Exchange.Signed -> keep(request.address, exchange, tokens)
+                is TokenClient.Exchange.Signed -> keep(exchange)
             }
         when (outcome) {
             SignIn.SignedIn -> Log.i(TAG, "Signed in")
@@ -107,19 +105,15 @@ class Fetcher(
         return outcome
     }
 
-    private fun keep(
-        address: HaAddress,
-        signed: TokenClient.Exchange.Signed,
-        tokens: TokenClient,
-    ): SignIn =
+    private fun keep(signed: TokenClient.Exchange.Signed): SignIn =
         try {
             synchronized(LOCK) {
-                account.signIn(address, signed.clientId, signed.refreshToken)
+                account.signIn(signed.address, signed.clientId, signed.refreshToken)
                 forgetKept()
             }
             SignIn.SignedIn
         } catch (e: CipherFailureException) {
-            val revoked = revoked(tokens.revoke(signed.refreshToken))
+            val revoked = revoked(TokenClient(http, signed.address).revoke(signed.refreshToken))
             SignIn.Failed("the token cannot be sealed (${e.message}); ${revoked.text}")
         }
 
