@@ -9,7 +9,6 @@ import dev.cupr.calendar.store.FailedFetch
 import dev.cupr.calendar.store.FetchCause
 import dev.cupr.calendar.store.Snapshot
 import dev.cupr.calendar.store.UnreadableTheme
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -127,7 +126,7 @@ class StatusTest {
 
     @Test
     fun `the status reads the address without its slash, the snapshot, the last failure and the theme`() {
-        Services.account(context).rememberAddress(HaAddress("https://home.example/".toHttpUrl()))
+        Services.account(context).rememberAddress(HaAddress.parse("https://home.example")!!)
         Services.snapshots(context).write(Snapshot(1_000, "Daniel", emptyList()))
         Services
             .failures(

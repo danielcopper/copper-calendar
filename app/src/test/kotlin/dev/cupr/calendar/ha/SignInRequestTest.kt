@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SignInRequestTest {
-    private val address = HaAddress("https://home.example/".toHttpUrl())
+    private val address = HaAddress.parse("https://home.example")!!
     private val request = SignInRequest(address, "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk", "state-1")
 
     @Test

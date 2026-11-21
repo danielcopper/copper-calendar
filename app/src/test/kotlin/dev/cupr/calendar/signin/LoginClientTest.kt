@@ -5,14 +5,15 @@ import android.net.Uri
 import android.net.http.SslCertificate
 import android.net.http.SslError
 import android.webkit.SslErrorHandler
+import android.webkit.TestWebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.HaAddress
 import dev.cupr.calendar.ha.SignInRequest
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -28,7 +29,7 @@ import java.security.cert.X509Certificate
 @RunWith(RobolectricTestRunner::class)
 class LoginClientTest {
     private val view = WebView(ApplicationProvider.getApplicationContext<Application>())
-    private val signIn = SignInRequest(HaAddress("https://home.example/".toHttpUrl()), "verifier-1", "state-1")
+    private val signIn = SignInRequest(HaAddress.parse("https://home.example")!!, "verifier-1", "state-1")
     private val callbacks = mutableListOf<SignInRequest.Callback>()
     private var unreachable = 0
     private val client = LoginClient(signIn, { callbacks += it }, { unreachable++ })
@@ -85,6 +86,19 @@ class LoginClientTest {
         )
 
         assertEquals(listOf(SignInRequest.Callback.Failed("the redirect's state does not match")), callbacks)
+    }
+
+    @Test
+    fun `a load error of the page ends the sign-in, logged by its code, one of a part of it does not`() {
+        val error = TestWebResourceError(WebViewClient.ERROR_HOST_LOOKUP, "net::ERR_NAME_NOT_RESOLVED")
+
+        client.onReceivedError(view, request("https://home.example/missing.js", mainFrame = false), error)
+        assertEquals(0, unreachable)
+
+        client.onReceivedError(view, request("https://home.example/auth/authorize"), error)
+        assertEquals(1, unreachable)
+        assertTrue(logs, logs.contains("The login page did not load: load error ${WebViewClient.ERROR_HOST_LOOKUP}"))
+        assertFalse(logs, logs.contains("home.example"))
     }
 
     @Test

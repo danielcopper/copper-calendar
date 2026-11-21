@@ -1,11 +1,13 @@
 package dev.cupr.calendar.ha
 
+import mockwebserver3.MockResponse
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.util.concurrent.TimeUnit
 
 /** Under Robolectric, since OkHttp's Android build reaches for android.util.Log. */
 @RunWith(RobolectricTestRunner::class)
@@ -23,7 +25,10 @@ class TokenClientTest {
     fun `the code is traded for the refresh token with the client id and the verifier`() {
         val exchange = client.exchange(code, request)
 
-        assertEquals(TokenClient.Exchange.Signed(RefreshToken("refresh-1")), exchange)
+        assertEquals(
+            TokenClient.Exchange.Signed(RefreshToken("refresh-1"), "http://127.0.0.1:47123/", home.address),
+            exchange,
+        )
         val (sent, form) = home.requests.single()
         assertEquals("POST", sent.method)
         assertEquals("/auth/token", sent.url.encodedPath)
@@ -137,6 +142,59 @@ class TokenClientTest {
             "Access(accessToken=AccessToken(…))",
             TokenClient.Refresh.Access(AccessToken("access-1")).toString(),
         )
-        assertEquals("Signed(refreshToken=RefreshToken(…))", TokenClient.Exchange.Signed(refresh).toString())
+        assertEquals(
+            "Signed(refreshToken=RefreshToken(…), clientId=http://127.0.0.1:47123/, address=…)",
+            TokenClient.Exchange.Signed(refresh, SignInRequest.CLIENT_ID, home.address).toString(),
+        )
+    }
+
+    @Test
+    fun `the code goes to the address of the sign-in's login page, whatever address the client has`() {
+        FakeHomeAssistant().use { other ->
+            val exchange = TokenClient(OkHttpClient(), other.address).exchange(code, request)
+
+            // The token comes with the address that issued it, not the client's.
+            assertEquals(TokenClient.Exchange.Signed(refresh, SignInRequest.CLIENT_ID, home.address), exchange)
+            assertEquals("verifier-1", home.requests.single().second["code_verifier"])
+            assertEquals(0, other.requests.size)
+        }
+    }
+
+    @Test
+    fun `a redirect from the token endpoints is not followed`() {
+        FakeHomeAssistant().use { elsewhere ->
+            val moved = {
+                MockResponse
+                    .Builder()
+                    .code(307)
+                    .setHeader("Location", elsewhere.url.resolve("auth/token").toString())
+                    .build()
+            }
+            home.token = { moved() }
+            home.revoke = moved
+
+            assertEquals(TokenClient.Exchange.Failed("HTTP 307"), client.exchange(code, request))
+            assertEquals(failed("HTTP 307", FailureKind.UNEXPECTED), client.refresh(refresh, "client"))
+            assertEquals(TokenClient.Revoke.Failed("HTTP 307"), client.revoke(refresh))
+            assertEquals(0, elsewhere.requests.size)
+        }
+    }
+
+    @Test
+    fun `a refresh Home Assistant does not answer in time is a timeout`() {
+        home.token = {
+            FakeHomeAssistant
+                .json("""{"access_token":"access-1"}""")
+                .newBuilder()
+                .headersDelay(2, TimeUnit.SECONDS)
+                .build()
+        }
+        val http = OkHttpClient.Builder().readTimeout(200, TimeUnit.MILLISECONDS).build()
+        val impatient = TokenClient(http, home.address)
+
+        assertEquals(
+            TokenClient.Refresh.Failed("SocketTimeoutException", FailureKind.TIMEOUT),
+            impatient.refresh(refresh, "client"),
+        )
     }
 }

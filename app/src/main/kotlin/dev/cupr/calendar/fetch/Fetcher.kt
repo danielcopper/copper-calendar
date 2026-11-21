@@ -5,9 +5,7 @@ import dev.cupr.calendar.ha.AccessToken
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.EntryParser
 import dev.cupr.calendar.ha.FailureKind
-import dev.cupr.calendar.ha.HaAddress
 import dev.cupr.calendar.ha.HaClient
-import dev.cupr.calendar.ha.RefreshToken
 import dev.cupr.calendar.ha.SensorCalendars
 import dev.cupr.calendar.ha.SignInRequest
 import dev.cupr.calendar.ha.ThemePalettes
@@ -85,20 +83,20 @@ class Fetcher(
 
     /**
      * Trades the code [request]'s redirect carried for a refresh token and
-     * keeps it; the snapshot, the last failure and the unreadable theme of
-     * an earlier sign-in go (D45, D48). When the token cannot be sealed,
-     * Home Assistant is asked to end it again, so it is not left valid there
-     * unused, and nothing is kept.
+     * keeps it with the `client_id` it was issued to (D10) and the address
+     * of the instance that issued it; the snapshot, the last failure and the
+     * unreadable theme of an earlier sign-in go (D45, D48). When the token
+     * cannot be sealed, that instance is asked to end it again, so it is not
+     * left valid there unused, and nothing is kept.
      */
     fun signIn(
         request: SignInRequest,
         code: AuthorizationCode,
     ): SignIn {
-        val tokens = TokenClient(http, request.address)
         val outcome =
-            when (val exchange = tokens.exchange(code, request)) {
+            when (val exchange = TokenClient(http, request.address).exchange(code, request)) {
                 is TokenClient.Exchange.Failed -> SignIn.Failed("Home Assistant gave no tokens: ${exchange.reason}")
-                is TokenClient.Exchange.Signed -> keep(request.address, exchange.refreshToken, tokens)
+                is TokenClient.Exchange.Signed -> keep(exchange)
             }
         when (outcome) {
             SignIn.SignedIn -> Log.i(TAG, "Signed in")
@@ -107,19 +105,16 @@ class Fetcher(
         return outcome
     }
 
-    private fun keep(
-        address: HaAddress,
-        refreshToken: RefreshToken,
-        tokens: TokenClient,
-    ): SignIn =
+    private fun keep(signed: TokenClient.Exchange.Signed): SignIn =
         try {
             synchronized(LOCK) {
-                account.signIn(address, SignInRequest.CLIENT_ID, refreshToken)
+                account.signIn(signed.address, signed.clientId, signed.refreshToken)
                 forgetKept()
             }
             SignIn.SignedIn
         } catch (e: CipherFailureException) {
-            SignIn.Failed("the token cannot be sealed (${e.message}); ${revoked(tokens.revoke(refreshToken))}")
+            val revoked = revoked(TokenClient(http, signed.address).revoke(signed.refreshToken))
+            SignIn.Failed("the token cannot be sealed (${e.message}); ${revoked.text}")
         }
 
     /**
@@ -145,15 +140,16 @@ class Fetcher(
      * failure and the unreadable theme; the address stays. Waits for a
      * fetch that is running, so it cannot write its snapshot afterwards. The
      * local sign-in goes even when asking Home Assistant fails or the stored
-     * token cannot be read.
+     * token cannot be read; the log then warns that the token was not ended
+     * there.
      */
     fun signOut() {
-        var asked = "Home Assistant was not asked to end the refresh token"
+        var asked = Asked("Home Assistant was not asked to end the refresh token", ended = false)
         try {
             asked =
                 when (val opened = account.open()) {
                     Account.Opened.NotSignedIn -> {
-                        "nothing was stored"
+                        Asked("nothing was stored", ended = true)
                     }
 
                     is Account.Opened.Usable -> {
@@ -175,9 +171,15 @@ class Fetcher(
                 account.signOut()
                 forgetKept()
             }
-            Log.i(TAG, "Signed out; $asked")
+            if (asked.ended) Log.i(TAG, "Signed out; ${asked.text}") else Log.w(TAG, "Signed out; ${asked.text}")
         }
     }
+
+    /** What became of the refresh token at Home Assistant; [ended] when it ended there or nothing was stored. */
+    private class Asked(
+        val text: String,
+        val ended: Boolean,
+    )
 
     /**
      * Forgets what the fetches kept for the sign-in that ends: the snapshot,
@@ -189,19 +191,25 @@ class Fetcher(
         themes.clear()
     }
 
-    private fun revoked(revoke: TokenClient.Revoke): String =
+    private fun revoked(revoke: TokenClient.Revoke): Asked =
         when (revoke) {
             TokenClient.Revoke.Ended -> {
-                "Home Assistant ended the refresh token"
+                Asked("Home Assistant ended the refresh token", ended = true)
             }
 
             is TokenClient.Revoke.Failed -> {
-                "Home Assistant could not be asked to end the refresh token (${revoke.reason}); $UNTIL_UNUSED"
+                Asked(
+                    "Home Assistant could not be asked to end the refresh token (${revoke.reason}); $UNTIL_UNUSED",
+                    ended = false,
+                )
             }
         }
 
     private fun notAsked(reason: String) =
-        "the stored token cannot be read ($reason), so Home Assistant was not asked to end it; $UNTIL_UNUSED"
+        Asked(
+            "the stored token cannot be read ($reason), so Home Assistant was not asked to end it; $UNTIL_UNUSED",
+            ended = false,
+        )
 
     private fun run(): Outcome =
         when (val opened = account.open()) {

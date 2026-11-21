@@ -15,6 +15,8 @@ import dev.cupr.calendar.ha.SignInRequest
 import dev.cupr.calendar.store.Account
 import dev.cupr.calendar.store.AesGcmCipher
 import dev.cupr.calendar.store.TokenCipher
+import dev.cupr.calendar.widget.DrawnWidgetProvider
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -67,6 +69,17 @@ class SignInFlowTest {
 
     private fun awaitIdle() = runBlocking { withTimeout(5_000) { SignInFlow.state.first { !it.busy } } }
 
+    /** Starts a run that is done when [start] returns, its failure handled by then too. */
+    private fun atOnce(start: () -> Boolean): Boolean {
+        val io = Services.io
+        Services.io = Dispatchers.Unconfined
+        try {
+            return start()
+        } finally {
+            Services.io = io
+        }
+    }
+
     @Test(timeout = 10_000)
     fun `a second sign-in while one runs is refused, and the result stays held after the run`() {
         val gate = CountDownLatch(1)
@@ -113,6 +126,51 @@ class SignInFlowTest {
 
         val logs = ShadowLog.getLogsForTag(SIGN_IN_TAG).joinToString { it.msg }
         assertTrue(logs, logs.contains("A sign-in or sign-out is under way; another was not started"))
+    }
+
+    @Test(timeout = 10_000)
+    fun `a run that throws a runtime exception ends, says the sign-in failed and logs the exception's class`() {
+        Services.cipher = { throw IllegalStateException("broken") }
+
+        assertTrue(atOnce { SignInFlow.signOut(context) })
+
+        assertFalse(SignInFlow.state.value.busy)
+        assertEquals(Problem.FAILED, SignInFlow.state.value.problem)
+        val errors = ShadowLog.getLogsForTag(SIGN_IN_TAG).filter { it.type == Log.ERROR }.map { it.msg }
+        assertEquals(listOf("A sign-in or sign-out failed: IllegalStateException"), errors)
+    }
+
+    @Test(timeout = 10_000)
+    fun `a sign-in kept whose widget update then throws ends and says the sign-in failed`() {
+        val content = DrawnWidgetProvider.content
+        DrawnWidgetProvider.content = { throw IllegalStateException("the widgets cannot be read") }
+        try {
+            assertTrue(atOnce { SignInFlow.signIn(context, SignInRequest.start(home.address), code) })
+        } finally {
+            DrawnWidgetProvider.content = content
+        }
+
+        assertEquals(Account.State.SIGNED_IN, Services.account(context).state)
+        assertFalse(SignInFlow.state.value.busy)
+        assertEquals(Problem.FAILED, SignInFlow.state.value.problem)
+    }
+
+    @Test(timeout = 10_000)
+    fun `an error a run throws is not taken for a failed sign-in and reaches the thread's handler`() {
+        Services.cipher = { throw StackOverflowError() }
+        val thread = Thread.currentThread()
+        val handler = thread.uncaughtExceptionHandler
+        val uncaught = mutableListOf<Throwable>()
+        thread.uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { _, e -> uncaught += e }
+        try {
+            assertTrue(atOnce { SignInFlow.signOut(context) })
+        } finally {
+            thread.uncaughtExceptionHandler = handler
+        }
+
+        assertEquals(listOf(StackOverflowError::class.java), uncaught.map { it.javaClass })
+        assertFalse(SignInFlow.state.value.busy)
+        assertNull(SignInFlow.state.value.problem)
     }
 
     @Test

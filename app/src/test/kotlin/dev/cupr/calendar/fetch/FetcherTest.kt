@@ -2,6 +2,7 @@ package dev.cupr.calendar.fetch
 
 import android.app.Application
 import android.content.Context
+import android.util.Log
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.FakeHomeAssistant
@@ -93,6 +94,9 @@ class FetcherTest {
 
     private val logs: String
         get() = ShadowLog.getLogsForTag("Fetch").joinToString("\n") { it.msg }
+
+    /** The level of the sign-out's log line. */
+    private fun signedOutLevel() = ShadowLog.getLogsForTag("Fetch").single { it.msg.startsWith("Signed out") }.type
 
     @Test
     fun `a fetch replaces the snapshot with the entries, the user and the theme`() {
@@ -492,6 +496,29 @@ class FetcherTest {
         assertEquals(home.address, account.address)
         assertNull(snapshots.read())
         assertNull(failures.read())
+        assertTrue(logs, logs.contains("Signed out; Home Assistant ended the refresh token"))
+        assertEquals(Log.INFO, signedOutLevel())
+    }
+
+    @Test
+    fun `signing out with nothing stored asks Home Assistant nothing and logs it as info`() {
+        fetcher.signOut()
+
+        assertEquals(0, home.requests.size)
+        assertTrue(logs, logs.contains("Signed out; nothing was stored"))
+        assertEquals(Log.INFO, signedOutLevel())
+    }
+
+    @Test
+    fun `signing out that Home Assistant answers with an error warns that the token was not ended`() {
+        signIn()
+        home.revoke = { FakeHomeAssistant.json("Server error", 500) }
+
+        fetcher.signOut()
+
+        assertEquals(Account.State.SIGNED_OUT, account.state)
+        assertTrue(logs, logs.contains("could not be asked to end the refresh token (HTTP 500)"))
+        assertEquals(Log.WARN, signedOutLevel())
     }
 
     @Test(timeout = 10_000)
@@ -530,6 +557,8 @@ class FetcherTest {
 
         assertEquals(Account.State.SIGNED_OUT, account.state)
         assertTrue(logs, logs.contains("could not be asked to end the refresh token (ConnectException)"))
+        assertTrue(logs, logs.contains("it stays valid there until it goes 90 days unused"))
+        assertEquals(Log.WARN, signedOutLevel())
     }
 
     @Test
@@ -542,6 +571,7 @@ class FetcherTest {
         assertEquals(Account.State.SIGNED_OUT, account.state)
         assertEquals(0, home.requests.size)
         assertTrue(logs, logs.contains("so Home Assistant was not asked to end it"))
+        assertEquals(Log.WARN, signedOutLevel())
     }
 
     @Test
@@ -553,6 +583,7 @@ class FetcherTest {
         assertEquals(Account.State.SIGNED_OUT, account.state)
         assertEquals(0, home.requests.size)
         assertTrue(logs, logs.contains("the stored token cannot be read (the Keystore failed: ProviderException)"))
+        assertEquals(Log.WARN, signedOutLevel())
     }
 
     @Test
@@ -566,6 +597,7 @@ class FetcherTest {
         assertEquals(Account.State.SIGNED_OUT, account.state)
         assertNull(snapshots.read())
         assertTrue(logs, logs.contains("Signed out; Home Assistant was not asked to end the refresh token"))
+        assertEquals(Log.WARN, signedOutLevel())
     }
 
     @Test

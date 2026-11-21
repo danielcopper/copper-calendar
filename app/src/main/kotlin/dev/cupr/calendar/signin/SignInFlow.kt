@@ -5,6 +5,7 @@ import android.util.Log
 import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.SignInRequest
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,10 +18,11 @@ import kotlinx.coroutines.launch
 internal const val SIGN_IN_TAG = "SignIn"
 
 /**
- * A sign-in or sign-out under way, and why the last sign-in did not come
- * about (D43, D47). Held for the app's process, not the screen, so a screen
- * rebuilt meanwhile (a rotation, the dark mode) shows the work still
- * running and its result once done; only one runs at a time.
+ * A sign-in or sign-out under way, and why the last sign-in or sign-out
+ * did not come about (D43, D47). Held for the app's process, not the
+ * screen, so a screen rebuilt meanwhile (a rotation, the dark mode) shows
+ * the work still running and its result once done; only one runs at a
+ * time.
  */
 object SignInFlow {
     data class State(
@@ -58,7 +60,14 @@ object SignInFlow {
 
     fun clearProblem() = mutable.update { it.copy(problem = null) }
 
-    /** Starts [work] unless a run is under way; a refused start is logged, and the screen keeps showing the run. */
+    /**
+     * Starts [work] unless a run is under way; a refused start is logged, and
+     * the screen keeps showing the run. A run that throws a runtime
+     * exception ends too, its problem [Problem.FAILED], and the log names the
+     * exception's class alone, which holds no secret; an error is not caught
+     * (D43, as D54 draws the line).
+     */
+    @Suppress("TooGenericExceptionCaught")
     private fun run(work: () -> Problem?): Boolean {
         var started = false
         mutable.update {
@@ -68,8 +77,16 @@ object SignInFlow {
         if (!started) Log.w(SIGN_IN_TAG, "A sign-in or sign-out is under way; another was not started")
         if (started) {
             scope.launch(Services.io) {
-                val problem = work()
-                mutable.update { State(busy = false, problem = problem, finished = it.finished + 1) }
+                var problem: Problem? = null
+                try {
+                    problem = work()
+                } catch (e: RuntimeException) {
+                    if (e is CancellationException) throw e
+                    Log.e(SIGN_IN_TAG, "A sign-in or sign-out failed: ${e.javaClass.simpleName}")
+                    problem = Problem.FAILED
+                } finally {
+                    mutable.update { State(busy = false, problem = problem, finished = it.finished + 1) }
+                }
             }
         }
         return started
