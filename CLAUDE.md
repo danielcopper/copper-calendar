@@ -14,6 +14,6 @@ An Android app with home-screen widgets that draw the family calendar like the H
   - Heavy runs one at a time, never in parallel: Gradle, tests, lint. A full gate adds a few gigabytes of memory use; the daemon's workers and heap are capped in `gradle.properties`, the test JVM's heap in `app/build.gradle.kts`.
   - Run the gate once; it takes about 2 minutes.
   - Absolute paths in every command (`git -C <worktree>`); the shell's working directory resets between calls.
-  - Clean up only your own processes, by PID; stop the Gradle daemon with `./gradlew --stop`, never with `pkill -f`.
+  - Clean up only your own processes, by PID, never with `pkill -f`. Leave the Gradle daemon running: `./gradlew --stop` stops every daemon of this Gradle version under the same Gradle user home, so builds of other sessions fail with it; an idle daemon ends itself after three hours.
   - `mise run render` writes the render tests' PNGs to `app/build/render/`; look at them after a change to the drawing, then write the widget picker's preview anew with `mise run preview` and commit it.
   - `homelab` is read only: the dashboard and theme the app follows live there, and this repository never writes into it.
