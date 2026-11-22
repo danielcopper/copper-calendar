@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.cupr.calendar.R
@@ -178,8 +179,9 @@ internal fun OpacitySetting(
     opacity: CardOpacity,
     onChange: (CardOpacity) -> Unit,
 ) {
-    // Above it the rows' padding, so its name stands 16 dp below the row above, as copper-weather's does; below
-    // it the screen's own 16 dp before the taps' divider.
+    // 8 dp above it, which with the row above's own 8 dp of padding puts its name 16 dp below that row's value,
+    // the gap copper-weather leaves between its settings; below it the screen's own 16 dp before the taps' divider.
+    val name = stringResource(R.string.setup_opacity)
     Column(modifier = Modifier.padding(top = 8.dp)) {
         Heading(R.string.setup_opacity)
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -189,7 +191,8 @@ internal fun OpacitySetting(
                 valueRange = 0f..CardOpacity.FULL.percent.toFloat(),
                 // The steps between the ends: 10 % to 90 %.
                 steps = CardOpacity.steps.size - 2,
-                modifier = Modifier.weight(1f),
+                // A screen reader names the slider by the name above it, which it reads apart.
+                modifier = Modifier.weight(1f).semantics { contentDescription = name },
             )
             Text(
                 stringResource(R.string.setup_opacity_percent, opacity.percent),

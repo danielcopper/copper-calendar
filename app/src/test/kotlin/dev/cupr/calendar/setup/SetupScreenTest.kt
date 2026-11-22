@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
@@ -25,6 +26,7 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasContentDescriptionExactly
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isToggleable
@@ -411,6 +413,13 @@ class SetupScreenTest {
     }
 
     @Test
+    fun `a screen reader names the background's slider by the name above it`() {
+        open(MonthWidgetProvider::class.java)
+
+        slider().assert(hasContentDescriptionExactly(context.getString(R.string.setup_opacity)))
+    }
+
+    @Test
     fun `the taps' rows stand indented below their heading`() {
         open(WeekWidgetProvider::class.java)
 
@@ -569,7 +578,10 @@ class SetupScreenTest {
     private fun slide(percent: Float) =
         slider().performScrollTo().performSemanticsAction(SemanticsActions.SetProgress) { it(percent) }
 
-    /** The background's slider stands at opacity, from 0 to 100 % in steps of 10, and its value beside it says so. */
+    /**
+     * The background's slider stands at opacity, from 0 to 100 % in steps of
+     * 10, and the screen shows its value in percent.
+     */
     private fun assertOpacity(opacity: Int) {
         val info = slider().fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo]
         // The slider snaps to its step in floats, 60.000004 for 60.
