@@ -179,7 +179,7 @@ internal val SettingsSaver =
             val days = WeekDays.entries.firstOrNull { it.stored == saved.getOrNull(0) } ?: return@restore null
             val back = BackToToday.entries.firstOrNull { it.stored == saved.getOrNull(1) } ?: return@restore null
             val corner = PlusCorner.entries.firstOrNull { it.stored == saved.getOrNull(2) } ?: return@restore null
-            val opacity = saved.getOrNull(OPACITY)?.toIntOrNull()?.let(CardOpacity::of) ?: return@restore null
+            val opacity = saved.getOrNull(OPACITY)?.let(CardOpacity::ofStored) ?: return@restore null
             restoreTaps(saved)?.let {
                 WidgetSettings(saved.drop(SAVED_CHOICES).toSet(), days, back, corner, it, opacity)
             }

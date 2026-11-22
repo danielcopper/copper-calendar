@@ -25,10 +25,6 @@ internal val WeekDays.stored: String
             WeekDays.FROM_TODAY -> "from_today"
         }
 
-/** The name a card's opacity is kept under in a widget's settings: its percent, "0" to "100". */
-internal val CardOpacity.stored: String
-    get() = percent.toString()
-
 /** The corner "+" stands in; the top corners hold the header. */
 enum class PlusCorner(
     override val stored: String,
@@ -82,9 +78,15 @@ class WidgetSettingsStore(
                     taps.with(element, target(id, element, default.taps.of(element)))
                 },
             opacity =
-                prefs.choice(key(id, OPACITY), default.opacity, TAG, what(id, OPACITY), { it.stored }, NO_STEP) {
-                    it.toIntOrNull()?.let(CardOpacity::of)
-                },
+                prefs.choice(
+                    key(id, OPACITY),
+                    default.opacity,
+                    TAG,
+                    what(id, OPACITY),
+                    CardOpacity::stored,
+                    NO_STEP,
+                    CardOpacity::ofStored,
+                ),
         )
     }
 

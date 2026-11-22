@@ -3,6 +3,7 @@ package dev.cupr.calendar.widget
 import android.view.View
 import android.widget.RemoteViews
 import dev.cupr.calendar.R
+import dev.cupr.calendar.render.opacityAlpha
 import dev.cupr.calendar.store.CardOpacity
 
 /**
@@ -24,7 +25,7 @@ internal object Card {
         views: RemoteViews,
         opacity: CardOpacity,
     ) {
-        views.setInt(R.id.card, "setImageAlpha", opacity.alpha)
+        views.setInt(R.id.card, "setImageAlpha", opacityAlpha(opacity.fraction))
         views.setViewVisibility(R.id.card, if (opacity.shown) View.VISIBLE else View.GONE)
     }
 }

@@ -215,7 +215,6 @@ private fun OpacityDialog(
                     // The steps between the ends: 10 % to 90 %.
                     steps = CardOpacity.steps.size - 2,
                 )
-                // Of a least width, so the slider keeps its width as the value changes.
                 Text(
                     percent(shown),
                     modifier = Modifier.padding(start = 16.dp).widthIn(min = PERCENT_WIDTH),

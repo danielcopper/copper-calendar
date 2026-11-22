@@ -9,6 +9,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.GradientDrawable
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -19,7 +20,9 @@ import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.sample.SampleData
+import dev.cupr.calendar.store.CardOpacity
 import dev.cupr.calendar.store.WidgetSettings
+import dev.cupr.calendar.store.cardOpacity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -31,6 +34,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowLog
 import kotlin.math.roundToInt
 
 /**
@@ -125,6 +129,49 @@ class CardOpacityTest {
         WidgetHost.reapplied(context, widget, WidgetHost.LOW_HEIGHT_DP, columns(100, WidgetHost.LOW_HEIGHT_DP))
         assertEquals(View.VISIBLE, widget.findViewById<View>(R.id.fade).visibility)
     }
+
+    @Test
+    fun `each step's card is drawn at its share of 255, rounded half up`() {
+        val alphas = listOf(0, 26, 51, 77, 102, 128, 153, 179, 204, 230, 255)
+        for ((opacity, alpha) in CardOpacity.steps.zip(alphas)) {
+            val views = { c: Context, _: Int -> DrawnWidget.plainViews(c, R.string.widget_failed, opacity = opacity) }
+            val card = WidgetHost.applied(context, views = views).findViewById<ImageView>(R.id.card)
+            assertEquals("${opacity.percent} %", alpha, card.imageAlpha)
+            assertEquals("${opacity.percent} %", if (alpha == 0) View.GONE else View.VISIBLE, card.visibility)
+        }
+    }
+
+    @Test
+    fun `below 100 percent the week across counts no fade's room against the bitmap limit`() {
+        val sample = SampleData.calendar()
+        val draw = { opacity: Int, limit: Long ->
+            WeekColumnsWidget.draw(
+                context,
+                WidgetHost.WIDTH_DP,
+                WidgetHost.LOW_HEIGHT_DP,
+                Look(opacity = cardOpacity(opacity)),
+                7,
+                limit,
+                sample,
+            )
+        }
+        for (opacity in listOf(90, 50, 0)) {
+            // Exactly what the row takes without the fade's room: the whole week fits, nothing left out.
+            val bytes = draw(opacity, Long.MAX_VALUE).bytes
+            ShadowLog.clear()
+
+            assertEquals("$opacity %", bytes, draw(opacity, bytes).bytes)
+            assertEquals("$opacity %", emptyList<String>(), warnings())
+        }
+        // On the whole card the fade's room counts: at the bytes of a row without it, the week is over.
+        val unfaded = draw(50, Long.MAX_VALUE).bytes
+        ShadowLog.clear()
+        draw(100, unfaded)
+        assertTrue(warnings().single().startsWith("Widget 7: "))
+    }
+
+    private fun warnings() =
+        ShadowLog.getLogsForTag(WeekColumnsWidget.TAG).filter { it.type == Log.WARN }.map { it.msg }
 
     private fun fade(views: (Context, Int) -> RemoteViews): View =
         WidgetHost.applied(context, views = views).findViewById(R.id.fade)

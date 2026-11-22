@@ -112,8 +112,10 @@ object WeekColumnsWidget {
                 chrome.weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette, note)
             }
         val full = MonthLayout.week(dates, calendar.entries, today)
-        // Room for the fade's blank room counted in, as a row that has to be capped is taller than its list.
-        val fadeDp = FADE_DP.toFloat()
+        // Only on the whole card (D64).
+        val fades = look.opacity == CardOpacity.FULL
+        // Where it fades, the fade's blank room is counted in, as a row that has to be capped is taller than its list.
+        val fadeDp = if (fades) FADE_DP.toFloat() else 0f
         val bytesOf = { week: Week -> BitmapLimit.bytes(widthPx, rows.heightPx(week, scale, fadeDp)) }
         val capped = BitmapLimit.capped(full, limit - kept.bytes, bytesOf, ::leaveOutOne)
         val week = capped.drawn
@@ -127,8 +129,7 @@ object WeekColumnsWidget {
             after = fixed + bytesOf(week),
         )
         DrawnWidget.warnMarks(TAG, id, rows.marksWithoutRoom(week, widthPx, scale))
-        // Only on the whole card: on a card shown through, the fade would stand out as a band (D64).
-        val faded = look.opacity == CardOpacity.FULL && overflows(rows, week, scale, heightDp, headerPx)
+        val faded = fades && overflows(rows, week, scale, heightDp, headerPx)
         val blank = if (faded) fadeDp else 0f
         views.setViewVisibility(R.id.fade, if (faded) View.VISIBLE else View.GONE)
         val light = kept.keep(rows.render(week, widthPx, scale, calendar.palettes.light, blank))

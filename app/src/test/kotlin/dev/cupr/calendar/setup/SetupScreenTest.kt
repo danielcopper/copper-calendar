@@ -49,13 +49,13 @@ import dev.cupr.calendar.store.Snapshot
 import dev.cupr.calendar.store.TapTarget
 import dev.cupr.calendar.store.TapTargets
 import dev.cupr.calendar.store.WidgetSettings
+import dev.cupr.calendar.store.cardOpacity
 import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.widget.MonthWidgetProvider
 import dev.cupr.calendar.widget.SampleContent
 import dev.cupr.calendar.widget.WeekColumnsWidgetProvider
 import dev.cupr.calendar.widget.WeekWidget
 import dev.cupr.calendar.widget.WeekWidgetProvider
-import dev.cupr.calendar.widget.cardOpacity
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.addJsonObject

@@ -4,9 +4,9 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.widget.RemoteViews
 import dev.cupr.calendar.sample.SampleData
-import dev.cupr.calendar.store.CardOpacity
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.TapTargets
+import dev.cupr.calendar.store.cardOpacity
 import dev.cupr.calendar.week.WeekDays
 import org.junit.rules.ExternalResource
 
@@ -72,9 +72,6 @@ internal fun WeekColumnsWidget.views(
         BitmapLimit.limitBytes(context, TAG, id),
         calendar,
     ).views
-
-/** The card's opacity of percent, a step of 10 from 0 to 100, as the tests write it. */
-internal fun cardOpacity(percent: Int): CardOpacity = checkNotNull(CardOpacity.of(percent)) { "No opacity: $percent" }
 
 /**
  * Makes the providers draw the sample month, as if signed in with a fresh

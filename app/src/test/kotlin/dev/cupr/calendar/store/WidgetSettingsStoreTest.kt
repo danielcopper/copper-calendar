@@ -32,7 +32,7 @@ class WidgetSettingsStoreTest {
                     entry = TapTarget.EntryDay,
                     new = TapTarget.None,
                 ),
-            opacity = checkNotNull(CardOpacity.of(30)),
+            opacity = cardOpacity(30),
         )
 
     @Test
@@ -80,10 +80,11 @@ class WidgetSettingsStoreTest {
     }
 
     @Test
-    fun `an opacity is drawn at its share of 255, and not at all at 0`() {
-        val alphas = listOf(0 to 0, 10 to 26, 30 to 77, 50 to 128, 70 to 179, 90 to 230, 100 to 255)
-        for ((percent, alpha) in alphas) assertEquals("$percent", alpha, checkNotNull(CardOpacity.of(percent)).alpha)
-        assertEquals(listOf(false, true, true), listOf(0, 10, 100).map { checkNotNull(CardOpacity.of(it)).shown })
+    fun `an opacity is kept as its percent and read back from it, and only a step of 10 from 0 to 100 reads`() {
+        assertEquals("50", cardOpacity(50).stored)
+        assertEquals(cardOpacity(50), CardOpacity.ofStored("50"))
+        for (name in listOf("55", "110", "-10", "halb", "", "50 %")) assertNull(name, CardOpacity.ofStored(name))
+        assertEquals(listOf(false, true, true), listOf(0, 10, 100).map { cardOpacity(it).shown })
     }
 
     @Test
