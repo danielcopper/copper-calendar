@@ -33,6 +33,7 @@ import dev.cupr.calendar.widget.WeekWidgetProvider
 import dev.cupr.calendar.widget.WidgetHost
 import dev.cupr.calendar.widget.WidgetKind
 import dev.cupr.calendar.widget.Widgets
+import dev.cupr.calendar.widget.cardOpacity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -200,7 +201,7 @@ class SetupTest {
                 BackToToday.EVERY_30_MINUTES,
                 PlusCorner.BOTTOM_LEFT,
                 TapTargets(app, TapTarget.None, TapTarget.EntryDay, TapTarget.CalendarPage),
-                opacity = 50,
+                opacity = cardOpacity(50),
             )
         val saved =
             listOf("from_today", "every_30", "bottom_left", "50") +

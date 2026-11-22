@@ -25,6 +25,10 @@ internal val WeekDays.stored: String
             WeekDays.FROM_TODAY -> "from_today"
         }
 
+/** The name a card's opacity is kept under in a widget's settings: its percent, "0" to "100". */
+internal val CardOpacity.stored: String
+    get() = percent.toString()
+
 /** The corner "+" stands in; the top corners hold the header. */
 enum class PlusCorner(
     override val stored: String,
@@ -34,24 +38,10 @@ enum class PlusCorner(
 }
 
 /**
- * The card's opacity in percent (D64): from 0, no card, to 100, the card as
- * it always was, in steps of 10.
- */
-object CardOpacity {
-    const val FULL = 100
-    const val STEP = 10
-
-    /** Every opacity the setup offers, from none to full. */
-    val steps: List<Int> = (0..FULL step STEP).toList()
-
-    fun isStep(percent: Int): Boolean = percent in 0..FULL && percent % STEP == 0
-}
-
-/**
  * One widget's settings from its setup: the calendars it leaves out, so a
  * calendar that comes later shows (D11), its days (D20, the week widgets),
  * when it returns to today (D27, the month and "Woche"), the corner of
- * "+", the card's opacity in percent ([CardOpacity], D64), and what a tap on
+ * "+", the card's opacity ([CardOpacity], D64), and what a tap on
  * each element opens (D63). Each defaults to what a widget without settings
  * shows.
  */
@@ -61,12 +51,8 @@ data class WidgetSettings(
     val backToToday: BackToToday = BackToToday.EACH_UPDATE,
     val plusCorner: PlusCorner = PlusCorner.BOTTOM_RIGHT,
     val taps: TapTargets = TapTargets.DEFAULT,
-    val opacity: Int = CardOpacity.FULL,
+    val opacity: CardOpacity = CardOpacity.FULL,
 ) {
-    init {
-        require(CardOpacity.isStep(opacity)) { "A card's opacity runs from 0 to 100 % in steps of 10, not $opacity" }
-    }
-
     companion object {
         val DEFAULT = WidgetSettings()
     }
@@ -96,8 +82,8 @@ class WidgetSettingsStore(
                     taps.with(element, target(id, element, default.taps.of(element)))
                 },
             opacity =
-                prefs.choice(key(id, OPACITY), default.opacity, TAG, what(id, OPACITY), Int::toString, NO_STEP) {
-                    it.toIntOrNull()?.takeIf(CardOpacity::isStep)
+                prefs.choice(key(id, OPACITY), default.opacity, TAG, what(id, OPACITY), { it.stored }, NO_STEP) {
+                    it.toIntOrNull()?.let(CardOpacity::of)
                 },
         )
     }
@@ -111,7 +97,7 @@ class WidgetSettingsStore(
         putString(key(id, BACK_TO_TODAY), settings.backToToday.stored)
         putString(key(id, PLUS_CORNER), settings.plusCorner.stored)
         for ((element, field) in TAP_FIELDS) putString(key(id, field), settings.taps.of(element).stored)
-        putString(key(id, OPACITY), settings.opacity.toString())
+        putString(key(id, OPACITY), settings.opacity.stored)
     }
 
     /** Forgets the settings of the widgets ids, removed from the home screen. */

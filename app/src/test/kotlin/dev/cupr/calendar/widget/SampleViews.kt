@@ -22,7 +22,7 @@ internal fun MonthWidget.views(
     calendar: Content.Calendar = SampleData.calendar(),
     corner: PlusCorner = PlusCorner.BOTTOM_RIGHT,
     taps: TapTargets = TapTargets.DEFAULT,
-    opacity: Int = CardOpacity.FULL,
+    opacity: Int = 100,
 ): RemoteViews =
     draw(
         context,
@@ -30,7 +30,7 @@ internal fun MonthWidget.views(
         id,
         BitmapLimit.limitBytes(context, TAG, id),
         calendar,
-        look = Look(corner = corner, taps = taps, opacity = opacity),
+        look = Look(corner = corner, taps = taps, opacity = cardOpacity(opacity)),
     ).views
 
 internal fun WeekWidget.views(
@@ -41,12 +41,12 @@ internal fun WeekWidget.views(
     calendar: Content.Calendar = SampleData.calendar(),
     corner: PlusCorner = PlusCorner.BOTTOM_RIGHT,
     taps: TapTargets = TapTargets.DEFAULT,
-    opacity: Int = CardOpacity.FULL,
+    opacity: Int = 100,
 ): RemoteViews =
     draw(
         context,
         widthDp,
-        Look(days, corner, taps = taps, opacity = opacity),
+        Look(days, corner, taps = taps, opacity = cardOpacity(opacity)),
         id,
         BitmapLimit.limitBytes(context, TAG, id),
         calendar,
@@ -61,17 +61,20 @@ internal fun WeekColumnsWidget.views(
     calendar: Content.Calendar = SampleData.calendar(),
     corner: PlusCorner = PlusCorner.BOTTOM_RIGHT,
     taps: TapTargets = TapTargets.DEFAULT,
-    opacity: Int = CardOpacity.FULL,
+    opacity: Int = 100,
 ): RemoteViews =
     draw(
         context,
         widthDp,
         heightDp,
-        Look(days, corner, taps = taps, opacity = opacity),
+        Look(days, corner, taps = taps, opacity = cardOpacity(opacity)),
         id,
         BitmapLimit.limitBytes(context, TAG, id),
         calendar,
     ).views
+
+/** The card's opacity of percent, a step of 10 from 0 to 100, as the tests write it. */
+internal fun cardOpacity(percent: Int): CardOpacity = checkNotNull(CardOpacity.of(percent)) { "No opacity: $percent" }
 
 /**
  * Makes the providers draw the sample month, as if signed in with a fresh

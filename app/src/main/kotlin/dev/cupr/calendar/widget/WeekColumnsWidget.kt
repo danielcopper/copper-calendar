@@ -2,6 +2,7 @@ package dev.cupr.calendar.widget
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.view.View
 import android.widget.RemoteViews
 import dev.cupr.calendar.R
 import dev.cupr.calendar.month.MonthLayout
@@ -10,6 +11,7 @@ import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.render.WeekRowRenderer
+import dev.cupr.calendar.store.CardOpacity
 import dev.cupr.calendar.tap.WidgetTaps
 import dev.cupr.calendar.week.WeekLayout
 import kotlin.math.roundToInt
@@ -18,11 +20,12 @@ import kotlin.math.roundToInt
  * The week widget "Woche quer" (D19, D35): the month widget's header with the
  * week's title, range and weekday heads, its "+", and a list of one drawn
  * row, the seven days as a week of the month with every entry of a day, so
- * the list scrolls when a day is fuller than the widget is tall. A fixed fade
- * above the list's bottom edge shows then, and the row ends in blank room as
- * tall as the fade, so its last entries come out from under it at the end of
- * the scroll. Each drawn part comes twice, light and dark, as in
- * [MonthWidget].
+ * the list scrolls when a day is fuller than the widget is tall. On the
+ * whole card, at 100 % (D64), a fixed fade above the list's bottom edge
+ * shows then, and the row ends in blank room as tall as the fade, so its
+ * last entries come out from under it at the end of the scroll; below 100 %
+ * there is neither, and the row ends at the list's edge. Each drawn part
+ * comes twice, light and dark, as in [MonthWidget].
  */
 object WeekColumnsWidget {
     /** The widget's height before the launcher reports one: 2 cells (design.md). */
@@ -37,8 +40,9 @@ object WeekColumnsWidget {
 
     /**
      * Draws the widget at its width and its least height: in portrait it is
-     * taller, so the fade shows whenever the row is taller than the list at
-     * the least height, also when portrait's list would hold it.
+     * taller, so the fade, on the whole card, shows whenever the row is
+     * taller than the list at the least height, also when portrait's list
+     * would hold it.
      */
     fun update(
         context: Context,
@@ -103,7 +107,7 @@ object WeekColumnsWidget {
                 kept,
                 description,
                 calendar,
-                FixedParts(look.corner, taps, look.opacity),
+                FixedParts.of(look, taps),
             ) { chrome, palette, note ->
                 chrome.weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette, note)
             }
@@ -123,10 +127,10 @@ object WeekColumnsWidget {
             after = fixed + bytesOf(week),
         )
         DrawnWidget.warnMarks(TAG, id, rows.marksWithoutRoom(week, widthPx, scale))
-        val faded = overflows(rows, week, scale, heightDp, headerPx)
+        // Only on the whole card: on a card shown through, the fade would stand out as a band (D64).
+        val faded = look.opacity == CardOpacity.FULL && overflows(rows, week, scale, heightDp, headerPx)
         val blank = if (faded) fadeDp else 0f
-        // In the card's colour at the card's opacity, so it fades into the card; none without a card (D64).
-        Card.layer(views, R.id.fade, look.opacity, shown = faded)
+        views.setViewVisibility(R.id.fade, if (faded) View.VISIBLE else View.GONE)
         val light = kept.keep(rows.render(week, widthPx, scale, calendar.palettes.light, blank))
         val dark = kept.keep(rows.render(week, widthPx, scale, calendar.palettes.dark, blank))
         DrawnWidget.list(

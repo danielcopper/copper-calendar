@@ -94,14 +94,21 @@ internal class WidgetHeight(
 
 /**
  * What a widget sets for its fixed parts: the corner of "+" (D58), its taps,
- * the header's and "+"'s (D63), and the card's opacity in percent ([Card],
- * D64).
+ * the header's and "+"'s (D63), and the card's opacity ([Card], D64).
  */
 internal class FixedParts(
     val corner: PlusCorner,
     val taps: WidgetTaps,
-    val opacity: Int,
-)
+    val opacity: CardOpacity,
+) {
+    companion object {
+        /** The fixed parts look sets, with taps, look's taps for the widget drawn. */
+        fun of(
+            look: Look,
+            taps: WidgetTaps,
+        ) = FixedParts(look.corner, taps, look.opacity)
+    }
+}
 
 /** A widget's views, the bytes of the bitmaps they hold as the app counts them, and the limit it drew them for. */
 internal class Drawn(
@@ -292,7 +299,7 @@ internal object DrawnWidget {
         id: Int,
         drawn: Drawn,
         @StringRes tooFull: Int,
-        opacity: Int,
+        opacity: CardOpacity,
         tag: String,
         update: (RemoteViews) -> Unit,
     ): Boolean {
@@ -313,14 +320,14 @@ internal object DrawnWidget {
 
     /**
      * The plain views of a widget that shows a text instead of its drawing:
-     * text on its card at opacity, in percent, by default full ([Card]),
+     * text on its card at opacity, by default full ([Card]),
      * opening tap, by default the calendar page ([Taps.calendarPage]).
      */
     fun plainViews(
         context: Context,
         @StringRes text: Int,
         tap: PendingIntent = Taps.calendarPage(context),
-        opacity: Int = CardOpacity.FULL,
+        opacity: CardOpacity = CardOpacity.FULL,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_plain)
         Card.show(views, opacity)
@@ -479,7 +486,7 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         context: Context,
         manager: AppWidgetManager,
         id: Int,
-        opacity: Int,
+        opacity: CardOpacity,
         error: RuntimeException,
     ) {
         Log.e(tag, "Widget $id: could not be drawn", error)

@@ -170,24 +170,18 @@ internal val SettingsSaver =
             settings
                 ?.let {
                     val taps = it.taps
-                    listOf(it.days.stored, it.backToToday.stored, it.plusCorner.stored, it.opacity.toString()) +
+                    listOf(it.days.stored, it.backToToday.stored, it.plusCorner.stored, it.opacity.stored) +
                         TapElement.entries.map { element -> taps.of(element).stored } +
                         it.leftOut
                 }.orEmpty()
         },
-        restore = { saved ->
-            val days = WeekDays.entries.firstOrNull { it.stored == saved.getOrNull(0) }
-            val back = BackToToday.entries.firstOrNull { it.stored == saved.getOrNull(1) }
-            val corner = PlusCorner.entries.firstOrNull { it.stored == saved.getOrNull(2) }
-            val opacity = saved.getOrNull(OPACITY)?.toIntOrNull()?.takeIf(CardOpacity::isStep)
-            if (days == null || back == null || corner == null) {
-                null
-            } else {
-                opacity?.let { shown ->
-                    restoreTaps(saved)?.let {
-                        WidgetSettings(saved.drop(SAVED_CHOICES).toSet(), days, back, corner, it, shown)
-                    }
-                }
+        restore = restore@{ saved ->
+            val days = WeekDays.entries.firstOrNull { it.stored == saved.getOrNull(0) } ?: return@restore null
+            val back = BackToToday.entries.firstOrNull { it.stored == saved.getOrNull(1) } ?: return@restore null
+            val corner = PlusCorner.entries.firstOrNull { it.stored == saved.getOrNull(2) } ?: return@restore null
+            val opacity = saved.getOrNull(OPACITY)?.toIntOrNull()?.let(CardOpacity::of) ?: return@restore null
+            restoreTaps(saved)?.let {
+                WidgetSettings(saved.drop(SAVED_CHOICES).toSet(), days, back, corner, it, opacity)
             }
         },
     )

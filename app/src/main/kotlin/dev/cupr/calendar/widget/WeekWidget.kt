@@ -94,7 +94,7 @@ object WeekWidget {
                 kept,
                 description,
                 calendar,
-                FixedParts(look.corner, taps, look.opacity),
+                FixedParts.of(look, taps),
             ) { chrome, palette, note ->
                 chrome.weekHeader(title, range, null, headerWidthPx, scale, palette, note)
             }

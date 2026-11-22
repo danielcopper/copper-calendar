@@ -37,7 +37,6 @@ import dev.cupr.calendar.app.ROW_HEIGHT
 import dev.cupr.calendar.app.RadioOptions
 import dev.cupr.calendar.ha.SensorCalendar
 import dev.cupr.calendar.store.CardOpacity
-import kotlin.math.roundToInt
 
 /** A setting's row: its name and its value; onClick, when given, opens its dialog. */
 @Composable
@@ -144,9 +143,7 @@ private fun CalendarsDialog(
     var unticked by rememberSaveable { mutableStateOf<List<String>>(leftOut.toList()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = { onDone(unticked.toSet()) }) { Text(stringResource(R.string.setup_ok)) }
-        },
+        confirmButton = { Ok { onDone(unticked.toSet()) } },
         dismissButton = { Cancel(onDismiss) },
         title = { Text(stringResource(R.string.setup_calendars)) },
         text = {
@@ -181,8 +178,8 @@ private fun CalendarsDialog(
  */
 @Composable
 internal fun OpacityRow(
-    opacity: Int,
-    onChange: (Int) -> Unit,
+    opacity: CardOpacity,
+    onChange: (CardOpacity) -> Unit,
 ) {
     var open by rememberSaveable { mutableStateOf(false) }
     SettingRow(stringResource(R.string.setup_opacity), percent(opacity)) { open = true }
@@ -196,29 +193,29 @@ internal fun OpacityRow(
 
 @Composable
 private fun OpacityDialog(
-    opacity: Int,
+    opacity: CardOpacity,
     onDismiss: () -> Unit,
-    onDone: (Int) -> Unit,
+    onDone: (CardOpacity) -> Unit,
 ) {
-    var shown by rememberSaveable { mutableIntStateOf(opacity) }
+    // Kept as its percent, which a configuration change can save.
+    var percent by rememberSaveable { mutableIntStateOf(opacity.percent) }
+    val shown = CardOpacity.nearest(percent.toFloat())
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = { onDone(shown) }) { Text(stringResource(R.string.setup_ok)) }
-        },
+        confirmButton = { Ok { onDone(shown) } },
         dismissButton = { Cancel(onDismiss) },
         title = { Text(stringResource(R.string.setup_opacity)) },
         text = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Slider(
-                    value = shown.toFloat(),
-                    onValueChange = { shown = (it / CardOpacity.STEP).roundToInt() * CardOpacity.STEP },
+                    value = shown.percent.toFloat(),
+                    onValueChange = { percent = CardOpacity.nearest(it).percent },
                     modifier = Modifier.weight(1f),
-                    valueRange = 0f..CardOpacity.FULL.toFloat(),
+                    valueRange = 0f..CardOpacity.FULL.percent.toFloat(),
                     // The steps between the ends: 10 % to 90 %.
                     steps = CardOpacity.steps.size - 2,
                 )
-                // As wide as "100 %", so the slider keeps its width as the value changes.
+                // Of a least width, so the slider keeps its width as the value changes.
                 Text(
                     percent(shown),
                     modifier = Modifier.padding(start = 16.dp).widthIn(min = PERCENT_WIDTH),
@@ -231,10 +228,16 @@ private fun OpacityDialog(
 
 /** An opacity as the setup shows it, "50 %". */
 @Composable
-private fun percent(opacity: Int): String = stringResource(R.string.setup_opacity_percent, opacity)
+private fun percent(opacity: CardOpacity): String = stringResource(R.string.setup_opacity_percent, opacity.percent)
 
-/** The room the opacity's value takes beside its slider, enough for "100 %". */
+/** The least room the opacity's value takes beside its slider: "100 %" at the default font size. */
 private val PERCENT_WIDTH = 48.dp
+
+/** A dialog's "OK", which takes what the dialog shows. */
+@Composable
+internal fun Ok(onClick: () -> Unit) {
+    TextButton(onClick = onClick) { Text(stringResource(R.string.setup_ok)) }
+}
 
 /** A dialog's "Abbrechen", which closes it without a change. */
 @Composable

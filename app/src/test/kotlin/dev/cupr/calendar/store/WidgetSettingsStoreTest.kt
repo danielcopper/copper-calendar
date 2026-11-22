@@ -6,7 +6,7 @@ import androidx.core.content.edit
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.week.WeekDays
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThrows
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,7 +32,7 @@ class WidgetSettingsStoreTest {
                     entry = TapTarget.EntryDay,
                     new = TapTarget.None,
                 ),
-            opacity = 30,
+            opacity = checkNotNull(CardOpacity.of(30)),
         )
 
     @Test
@@ -44,16 +44,17 @@ class WidgetSettingsStoreTest {
         assertEquals(WidgetSettings(), WidgetSettings.DEFAULT)
         val calendar = TapTarget.CalendarPage
         assertEquals(TapTargets(calendar, calendar, calendar, calendar), store.read(7).taps)
-        assertEquals(100, store.read(7).opacity)
+        assertEquals(CardOpacity.FULL, store.read(7).opacity)
+        assertEquals(100, CardOpacity.FULL.percent)
     }
 
     @Test
     fun `every opacity from 0 to 100 in steps of 10 reads back as it was written, in percent`() {
-        assertEquals(listOf(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100), CardOpacity.steps)
+        assertEquals(listOf(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100), CardOpacity.steps.map { it.percent })
         for (opacity in CardOpacity.steps) {
             store.write(7, WidgetSettings(opacity = opacity))
             assertEquals(opacity, store.read(7).opacity)
-            assertEquals(opacity.toString(), prefs.getString("7.opacity", null))
+            assertEquals(opacity.percent.toString(), prefs.getString("7.opacity", null))
         }
     }
 
@@ -71,10 +72,18 @@ class WidgetSettingsStoreTest {
     }
 
     @Test
-    fun `settings hold only an opacity from 0 to 100 in steps of 10`() {
-        for (opacity in listOf(-10, 5, 110)) {
-            assertThrows(IllegalArgumentException::class.java) { WidgetSettings(opacity = opacity) }
-        }
+    fun `an opacity is a step of 10 from 0 to 100, and a slider's value goes to the nearest one`() {
+        for (percent in listOf(-10, 5, 55, 110)) assertNull("$percent", CardOpacity.of(percent))
+        for (percent in listOf(0, 10, 50, 100)) assertEquals(percent, CardOpacity.of(percent)?.percent)
+        val nearest = listOf(-3f to 0, 4.9f to 0, 5f to 10, 54f to 50, 96f to 100, 130f to 100)
+        for ((value, percent) in nearest) assertEquals("$value", percent, CardOpacity.nearest(value).percent)
+    }
+
+    @Test
+    fun `an opacity is drawn at its share of 255, and not at all at 0`() {
+        val alphas = listOf(0 to 0, 10 to 26, 30 to 77, 50 to 128, 70 to 179, 90 to 230, 100 to 255)
+        for ((percent, alpha) in alphas) assertEquals("$percent", alpha, checkNotNull(CardOpacity.of(percent)).alpha)
+        assertEquals(listOf(false, true, true), listOf(0, 10, 100).map { checkNotNull(CardOpacity.of(it)).shown })
     }
 
     @Test

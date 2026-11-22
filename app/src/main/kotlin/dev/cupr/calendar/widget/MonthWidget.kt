@@ -84,7 +84,7 @@ object MonthWidget {
                 kept,
                 title,
                 calendar,
-                FixedParts(look.corner, taps, look.opacity),
+                FixedParts.of(look, taps),
             ) { chrome, palette, note ->
                 chrome.header(view.month, widthPx, scale, palette, note)
             }

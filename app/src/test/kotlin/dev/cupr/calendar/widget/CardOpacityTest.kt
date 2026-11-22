@@ -7,10 +7,12 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.ListView
 import android.widget.RemoteViews
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.R
@@ -21,6 +23,7 @@ import dev.cupr.calendar.store.WidgetSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,7 +55,7 @@ class CardOpacityTest {
             "week" to { opacity -> { c, width -> WeekWidget.views(c, width, opacity = opacity) } },
             "week across" to { opacity -> { c, width -> WeekColumnsWidget.views(c, width, opacity = opacity) } },
             "plain" to { opacity ->
-                { c, _ -> DrawnWidget.plainViews(c, R.string.widget_failed, opacity = opacity) }
+                { c, _ -> DrawnWidget.plainViews(c, R.string.widget_failed, opacity = cardOpacity(opacity)) }
             },
         )
 
@@ -93,31 +96,44 @@ class CardOpacityTest {
     @Test
     fun `a redraw sets the opacity again, so the launcher keeps no earlier one`() {
         for ((name, views) in layouts) {
-            for ((before, after) in listOf(50 to 100, 0 to 50, 100 to 0, 30 to 30)) {
+            val redraws = listOf(Triple(50, 100, 255), Triple(0, 50, 128), Triple(100, 0, 0), Triple(30, 30, 77))
+            for ((before, after, alpha) in redraws) {
                 val widget = WidgetHost.applied(context, views = views(before))
                 WidgetHost.reapplied(context, widget, views = views(after))
-                assertCard("$name from $before to $after %", widget, (after * 255 / 100f).roundToInt())
+                assertCard("$name from $before to $after %", widget, alpha)
             }
         }
     }
 
     @Test
-    fun `the fade of the week across takes the card's opacity, and is gone without a card`() {
-        val columns = { opacity: Int ->
-            { c: Context, width: Int -> WeekColumnsWidget.views(c, width, WidgetHost.LOW_HEIGHT_DP, opacity = opacity) }
+    fun `the fade of the week across shows only with the whole card, and below it the row ends at the list's edge`() {
+        val columns = { opacity: Int, heightDp: Int ->
+            { c: Context, width: Int -> WeekColumnsWidget.views(c, width, heightDp, opacity = opacity) }
         }
-        for ((opacity, alpha) in listOf(0 to 0, 50 to 128, 100 to 255)) {
-            val fade = WidgetHost.applied(context, views = columns(opacity)).findViewById<ImageView>(R.id.fade)
-            assertEquals("$opacity %", if (opacity == 0) View.GONE else View.VISIBLE, fade.visibility)
-            assertEquals("$opacity %", alpha, fade.imageAlpha)
-            val gradient = fade.drawable as GradientDrawable
-            val card = context.getColor(R.color.widget_card)
-            assertEquals(listOf(card and 0x00FFFFFF, card), gradient.colors?.toList())
-            assertEquals(GradientDrawable.Orientation.TOP_BOTTOM, gradient.orientation)
+        // As tall as its list's content, without the fade's blank room: the row of a widget that holds it whole.
+        val unfaded = rowHeight(columns(100, WidgetHost.HEIGHT_DP))
+        assertEquals(View.VISIBLE, fade(columns(100, WidgetHost.LOW_HEIGHT_DP)).visibility)
+        assertTrue(rowHeight(columns(100, WidgetHost.LOW_HEIGHT_DP)) > unfaded)
+        for (opacity in listOf(90, 50, 0)) {
+            assertEquals("$opacity %", View.GONE, fade(columns(opacity, WidgetHost.LOW_HEIGHT_DP)).visibility)
+            assertEquals("$opacity %", unfaded, rowHeight(columns(opacity, WidgetHost.LOW_HEIGHT_DP)))
         }
-        // Where the list holds the whole row, no fade at any opacity.
-        val tall = { c: Context, width: Int -> WeekColumnsWidget.views(c, width, WidgetHost.HEIGHT_DP, opacity = 50) }
-        assertEquals(View.GONE, WidgetHost.applied(context, views = tall).findViewById<View>(R.id.fade).visibility)
+        // A redraw below 100 % hides the fade an earlier one showed, and one at 100 % shows it again.
+        val widget = WidgetHost.applied(context, views = columns(100, WidgetHost.LOW_HEIGHT_DP))
+        WidgetHost.reapplied(context, widget, WidgetHost.LOW_HEIGHT_DP, columns(50, WidgetHost.LOW_HEIGHT_DP))
+        assertEquals(View.GONE, widget.findViewById<View>(R.id.fade).visibility)
+        WidgetHost.reapplied(context, widget, WidgetHost.LOW_HEIGHT_DP, columns(100, WidgetHost.LOW_HEIGHT_DP))
+        assertEquals(View.VISIBLE, widget.findViewById<View>(R.id.fade).visibility)
+    }
+
+    private fun fade(views: (Context, Int) -> RemoteViews): View =
+        WidgetHost.applied(context, views = views).findViewById(R.id.fade)
+
+    /** The height in px of the drawn row of "Woche quer" in views. */
+    private fun rowHeight(views: (Context, Int) -> RemoteViews): Int {
+        val list = WidgetHost.applied(context, views = views).findViewById<ListView>(R.id.list)
+        val image = list.adapter.getView(0, null, list).findViewById<ImageView>(R.id.week_light)
+        return (image.drawable as BitmapDrawable).bitmap.height
     }
 
     @Test
@@ -130,7 +146,7 @@ class CardOpacityTest {
             )
         for ((provider, layout) in providers) {
             val id = shadowOf(manager).createWidget(provider.javaClass, layout)
-            Settings.widgets(context).write(id, WidgetSettings(opacity = 40))
+            Settings.widgets(context).write(id, WidgetSettings(opacity = cardOpacity(40)))
             val other = shadowOf(manager).createWidget(provider.javaClass, layout)
 
             provider.onUpdate(context, manager, intArrayOf(id, other))
@@ -143,7 +159,7 @@ class CardOpacityTest {
     @Test
     fun `the plain texts without data, failed or too full, stand on the card at the widget's opacity`() {
         val id = shadowOf(manager).createWidget(AppWidgetProvider::class.java, R.layout.widget_plain)
-        Settings.widgets(context).write(id, WidgetSettings(opacity = 20))
+        Settings.widgets(context).write(id, WidgetSettings(opacity = cardOpacity(20)))
 
         DrawnWidgetProvider.content = { Content.NoData(R.string.widget_signed_out) }
         MonthWidgetProvider().onUpdate(context, manager, intArrayOf(id))
@@ -168,7 +184,7 @@ class CardOpacityTest {
 
         val pushed = mutableListOf<RemoteViews>()
         val drawn = Drawn(RemoteViews(context.packageName, R.layout.widget_week), 42, 41)
-        DrawnWidget.push(context, id, drawn, R.string.widget_week_too_full, 20, "Test") {
+        DrawnWidget.push(context, id, drawn, R.string.widget_week_too_full, cardOpacity(20), "Test") {
             pushed += it
             if (pushed.size == 1) throw IllegalArgumentException("RemoteViews for widget update exceeds")
         }

@@ -55,6 +55,7 @@ import dev.cupr.calendar.widget.SampleContent
 import dev.cupr.calendar.widget.WeekColumnsWidgetProvider
 import dev.cupr.calendar.widget.WeekWidget
 import dev.cupr.calendar.widget.WeekWidgetProvider
+import dev.cupr.calendar.widget.cardOpacity
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.addJsonObject
@@ -238,7 +239,7 @@ class SetupScreenTest {
         assertRow(R.string.setup_opacity, percent(60))
         tap(R.string.setup_save)
         assertEquals(
-            WidgetSettings(setOf(HOLIDAYS), WeekDays.FROM_TODAY, opacity = 60),
+            WidgetSettings(setOf(HOLIDAYS), WeekDays.FROM_TODAY, opacity = cardOpacity(60)),
             Settings.widgets(context).read(ID),
         )
     }
@@ -405,12 +406,12 @@ class SetupScreenTest {
         assertRow(R.string.setup_opacity, percent(0))
         tap(R.string.setup_save)
 
-        assertEquals(WidgetSettings(opacity = 0), Settings.widgets(context).read(ID))
+        assertEquals(WidgetSettings(opacity = cardOpacity(0)), Settings.widgets(context).read(ID))
     }
 
     @Test
     fun `the background's row stands after the corner of plus and before the taps, and shows the stored value`() {
-        Settings.widgets(context).write(ID, WidgetSettings(opacity = 70))
+        Settings.widgets(context).write(ID, WidgetSettings(opacity = cardOpacity(70)))
         open(WeekWidgetProvider::class.java)
 
         assertRow(R.string.setup_opacity, percent(70))
@@ -442,12 +443,11 @@ class SetupScreenTest {
         node(R.string.setup_opacity).assertIsDisplayed()
         node(R.string.setup_tap_new).assertIsDisplayed()
         node(R.string.setup_save).assertIsDisplayed()
-        // Whole, not cut at the screen's bottom edge.
-        val root = compose.onRoot()
-        val screen = root.fetchSemanticsNode().size.height
-        val save = node(R.string.setup_save).fetchSemanticsNode().boundsInRoot
-        assertTrue("Speichern ends at ${save.bottom} px of $screen", save.bottom <= screen)
-        val image = root.captureToImage()
+        // The screen has nothing to scroll, so nothing lies below its bottom edge.
+        val scroll = compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange))
+        val range = scroll.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange]
+        assertEquals(0f, range.maxValue(), 0f)
+        val image = compose.onRoot().captureToImage()
         Probe.renderDir.mkdirs()
         File(Probe.renderDir, "setup-week-phone.png").writeBytes(Probe.png(image.asAndroidBitmap()))
     }
