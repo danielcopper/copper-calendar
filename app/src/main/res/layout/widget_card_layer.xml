@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The card behind a widget, as each widget's layout includes it as its
+     first child: an image of its own, so each update can set the card's
+     opacity, its fill and border together, without the texts and drawings
+     above it, and hide it at 0 % (Card.kt, D64). -->
+<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/card"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:importantForAccessibility="no"
+    android:scaleType="fitXY"
+    android:src="@drawable/widget_card" />

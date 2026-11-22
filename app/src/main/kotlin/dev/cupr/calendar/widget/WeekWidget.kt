@@ -46,7 +46,9 @@ object WeekWidget {
         val height = WidgetHeight.of(options, TAG, id)
         val limit = BitmapLimit.limitBytes(context, TAG, id)
         val drawn = draw(context, width, look, id, limit, calendar, height)
-        return DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
+        return DrawnWidget.push(context, id, drawn, TOO_FULL, look.opacity, TAG) {
+            manager.updateAppWidget(id, it)
+        }
     }
 
     /**
@@ -92,7 +94,7 @@ object WeekWidget {
                 kept,
                 description,
                 calendar,
-                FixedParts(look.corner, taps),
+                FixedParts.of(look, taps),
             ) { chrome, palette, note ->
                 chrome.weekHeader(title, range, null, headerWidthPx, scale, palette, note)
             }

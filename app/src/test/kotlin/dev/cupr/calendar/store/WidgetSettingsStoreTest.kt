@@ -6,6 +6,7 @@ import androidx.core.content.edit
 import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.week.WeekDays
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,6 +32,7 @@ class WidgetSettingsStoreTest {
                     entry = TapTarget.EntryDay,
                     new = TapTarget.None,
                 ),
+            opacity = cardOpacity(30),
         )
 
     @Test
@@ -42,6 +44,47 @@ class WidgetSettingsStoreTest {
         assertEquals(WidgetSettings(), WidgetSettings.DEFAULT)
         val calendar = TapTarget.CalendarPage
         assertEquals(TapTargets(calendar, calendar, calendar, calendar), store.read(7).taps)
+        assertEquals(CardOpacity.FULL, store.read(7).opacity)
+        assertEquals(100, CardOpacity.FULL.percent)
+    }
+
+    @Test
+    fun `every opacity from 0 to 100 in steps of 10 reads back as it was written, in percent`() {
+        assertEquals(listOf(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100), CardOpacity.steps.map { it.percent })
+        for (opacity in CardOpacity.steps) {
+            store.write(7, WidgetSettings(opacity = opacity))
+            assertEquals(opacity, store.read(7).opacity)
+            assertEquals(opacity.percent.toString(), prefs.getString("7.opacity", null))
+        }
+    }
+
+    @Test
+    fun `an opacity that is no number or no step of 10 from 0 to 100 reads as full, and is logged`() {
+        for (stored in listOf("55", "110", "-10", "halb", "", "50 %")) {
+            prefs.edit { putString("7.opacity", stored) }
+            ShadowLog.clear()
+
+            assertEquals(stored, WidgetSettings.DEFAULT, store.read(7))
+            val line =
+                "Widget 7: its stored opacity \"$stored\" is no opacity from 0 to 100 in steps of 10; it reads as 100"
+            assertEquals(listOf(line), ShadowLog.getLogsForTag("WidgetSettings").map { it.msg })
+        }
+    }
+
+    @Test
+    fun `an opacity is a step of 10 from 0 to 100, and a slider's value goes to the nearest one`() {
+        for (percent in listOf(-10, 5, 55, 110)) assertNull("$percent", CardOpacity.of(percent))
+        for (percent in listOf(0, 10, 50, 100)) assertEquals(percent, CardOpacity.of(percent)?.percent)
+        val nearest = listOf(-3f to 0, 4.9f to 0, 5f to 10, 54f to 50, 96f to 100, 130f to 100)
+        for ((value, percent) in nearest) assertEquals("$value", percent, CardOpacity.nearest(value).percent)
+    }
+
+    @Test
+    fun `an opacity is kept as its percent and read back from it, and only a step of 10 from 0 to 100 reads`() {
+        assertEquals("50", cardOpacity(50).stored)
+        assertEquals(cardOpacity(50), CardOpacity.ofStored("50"))
+        for (name in listOf("55", "110", "-10", "halb", "", "50 %")) assertNull(name, CardOpacity.ofStored(name))
+        assertEquals(listOf(false, true, true), listOf(0, 10, 100).map { cardOpacity(it).shown })
     }
 
     @Test
@@ -168,6 +211,7 @@ class WidgetSettingsStoreTest {
                 "8.days",
                 "8.back_to_today",
                 "8.plus_corner",
+                "8.opacity",
                 "8.tap_header",
                 "8.tap_day",
                 "8.tap_entry",

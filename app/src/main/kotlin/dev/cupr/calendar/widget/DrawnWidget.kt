@@ -22,8 +22,10 @@ import dev.cupr.calendar.render.HeaderNote
 import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
+import dev.cupr.calendar.store.CardOpacity
 import dev.cupr.calendar.store.ListStore
 import dev.cupr.calendar.store.PlusCorner
+import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
 import dev.cupr.calendar.tap.WidgetTaps
@@ -90,11 +92,23 @@ internal class WidgetHeight(
     }
 }
 
-/** What a widget sets for its fixed parts: the corner of "+" (D58), and its taps, the header's and "+"'s (D63). */
+/**
+ * What a widget sets for its fixed parts: the corner of "+" (D58), its taps,
+ * the header's and "+"'s (D63), and the card's opacity ([Card], D64).
+ */
 internal class FixedParts(
     val corner: PlusCorner,
     val taps: WidgetTaps,
-)
+    val opacity: CardOpacity,
+) {
+    companion object {
+        /** The fixed parts look sets, with taps, look's taps for the widget drawn. */
+        fun of(
+            look: Look,
+            taps: WidgetTaps,
+        ) = FixedParts(look.corner, taps, look.opacity)
+    }
+}
 
 /** A widget's views, the bytes of the bitmaps they hold as the app counts them, and the limit it drew them for. */
 internal class Drawn(
@@ -167,9 +181,10 @@ internal object DrawnWidget {
     }
 
     /**
-     * The fixed parts of calendar: its header, drawn light and dark by
-     * header with the renderer of the fixed parts and the calendar's notice
-     * at its right, named by description and the notice, and opening what
+     * The fixed parts of calendar: the card at set's opacity ([Card]); its
+     * header, drawn light and dark by header with the renderer of the fixed
+     * parts and the calendar's notice at its right, named by description
+     * and the notice, and opening what
      * set's taps say for it (D63), or the sign-in screen while the notice
      * asks to sign in again (D52); and "+" ([Plus]). Without a tap, the
      * header's earlier one is cleared. Returns the drawn header's height in
@@ -184,6 +199,7 @@ internal object DrawnWidget {
         set: FixedParts,
         header: (ChromeRenderer, Palette, HeaderNote?) -> Bitmap,
     ): Int {
+        Card.show(views, set.opacity)
         val chrome = chrome(context)
         Plus.place(context, views, kept, chrome, set, calendar)
         val taps = set.taps
@@ -274,15 +290,16 @@ internal object DrawnWidget {
      * it. When the system refuses it for its bitmaps, which it does by
      * throwing an IllegalArgumentException (see [BitmapLimit.limitBytes]),
      * the log says so and the widget shows the plain tooFull text instead,
-     * which opens the calendar page; false then. Only that exception, and
-     * only from update, is caught here; when the system refuses the plain
-     * text too, that exception propagates.
+     * on its card at opacity, which opens the calendar page; false then.
+     * Only that exception, and only from update, is caught here; when the
+     * system refuses the plain text too, that exception propagates.
      */
     fun push(
         context: Context,
         id: Int,
         drawn: Drawn,
         @StringRes tooFull: Int,
+        opacity: CardOpacity,
         tag: String,
         update: (RemoteViews) -> Unit,
     ): Boolean {
@@ -296,22 +313,24 @@ internal object DrawnWidget {
                     "against ${BitmapLimit.describe(drawn.limit)}, the limit it read from the display",
                 e,
             )
-            update(plainViews(context, tooFull))
+            update(plainViews(context, tooFull, opacity = opacity))
             return false
         }
     }
 
     /**
      * The plain views of a widget that shows a text instead of its drawing:
-     * text on its card, opening tap, by default the calendar page
-     * ([Taps.calendarPage]).
+     * text on its card at opacity, by default full ([Card]),
+     * opening tap, by default the calendar page ([Taps.calendarPage]).
      */
     fun plainViews(
         context: Context,
         @StringRes text: Int,
         tap: PendingIntent = Taps.calendarPage(context),
+        opacity: CardOpacity = CardOpacity.FULL,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_plain)
+        Card.show(views, opacity)
         views.setTextViewText(R.id.plain_text, context.getString(text))
         views.setOnClickPendingIntent(R.id.plain_text, tap)
         return views
@@ -331,7 +350,8 @@ internal object DrawnWidget {
  * widgets after it in that update are not updated (D40).
  *
  * Each widget draws by its settings from its setup: without the calendars
- * it leaves out (D11), with its days and its corner of "+" ([Look]); the
+ * it leaves out (D11), with its days, its corner of "+" and its card's
+ * opacity ([Look]), the plain texts on its card at that opacity too; the
  * month's and "Woche"'s lists scroll to today when their "Zurück zu heute"
  * says the redraw should, or when they were just built anew
  * ([ReturnToToday.step]), and where each list stands is kept
@@ -412,26 +432,28 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         content: Content,
         redraw: Redraw,
     ) {
+        val settings = Settings.widgets(context).read(id)
         when (content) {
             is Content.NoData -> {
-                manager.updateAppWidget(id, DrawnWidget.plainViews(context, content.text, Taps.signIn(context)))
+                val plain = DrawnWidget.plainViews(context, content.text, Taps.signIn(context), settings.opacity)
+                manager.updateAppWidget(id, plain)
                 shownPlain(context, id)
             }
 
             is Content.Calendar -> {
                 try {
-                    draw(context, manager, id, content, redraw)
+                    draw(context, manager, id, content, settings, redraw)
                 } catch (e: IllegalArgumentException) {
-                    failed(context, manager, id, e)
+                    failed(context, manager, id, settings.opacity, e)
                 } catch (e: IllegalStateException) {
-                    failed(context, manager, id, e)
+                    failed(context, manager, id, settings.opacity, e)
                 }
             }
         }
     }
 
     /**
-     * Draws calendar on the widget id by its settings. For the month and
+     * Draws calendar on the widget id by settings, its own. For the month and
      * "Woche", once the system took the drawing, it keeps where their list
      * stands and when it scrolled to today ([ReturnToToday.step]); when the
      * system refused it and the widget shows the plain too-full text
@@ -442,9 +464,9 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         manager: AppWidgetManager,
         id: Int,
         calendar: Content.Calendar,
+        settings: WidgetSettings,
         redraw: Redraw,
     ) {
-        val settings = Settings.widgets(context).read(id)
         val shown = calendar.without(settings.leftOut)
         if (!kind.backToToday) {
             update(context, manager, id, shown, Look.of(settings, scroll = false))
@@ -464,10 +486,11 @@ abstract class DrawnWidgetProvider : AppWidgetProvider() {
         context: Context,
         manager: AppWidgetManager,
         id: Int,
+        opacity: CardOpacity,
         error: RuntimeException,
     ) {
         Log.e(tag, "Widget $id: could not be drawn", error)
-        manager.updateAppWidget(id, DrawnWidget.plainViews(context, R.string.widget_failed))
+        manager.updateAppWidget(id, DrawnWidget.plainViews(context, R.string.widget_failed, opacity = opacity))
         shownPlain(context, id)
     }
 

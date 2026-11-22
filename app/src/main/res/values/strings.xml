@@ -99,6 +99,9 @@
     <string name="setup_plus_corner">Ecke für „+“</string>
     <string name="setup_plus_bottom_right">Unten rechts</string>
     <string name="setup_plus_bottom_left">Unten links</string>
+    <!-- The card's opacity (D64), and its value in percent, a no-break space before the sign. -->
+    <string name="setup_opacity">Hintergrund</string>
+    <string name="setup_opacity_percent">%1$d\u00A0%%</string>
     <!-- A widget's taps (D63): the section, its elements, and the targets each can have: its place on the calendar page, another app, or nothing, an entry instead its day or what a tap on its day opens; the list of apps, and a chosen app no longer there. -->
     <string name="setup_taps">Beim Tippen auf …</string>
     <string name="setup_tap_header">Kopfzeile</string>

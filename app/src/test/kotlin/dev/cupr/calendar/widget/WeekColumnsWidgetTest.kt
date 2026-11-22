@@ -193,11 +193,15 @@ class WeekColumnsWidgetTest {
         assertEquals(dark, row.findViewById<View>(R.id.week_dark).visibility)
     }
 
-    /** The fade runs down from the card's colour, clear, to the card's colour at the list's bottom edge. */
+    /**
+     * The fade the widget shows runs down from the card's colour, clear, to
+     * the card's colour at the list's bottom edge.
+     */
     private fun assertFade(card: Int) {
         assertEquals(card, application.getColor(R.color.widget_card))
         assertEquals(card and 0x00FFFFFF, application.getColor(R.color.widget_card_clear))
-        val fade = application.getDrawable(R.drawable.widget_fade) as GradientDrawable
+        val widget = WidgetHost.applied(application, views = columns())
+        val fade = widget.findViewById<View>(R.id.fade).background as GradientDrawable
         assertEquals(GradientDrawable.Orientation.TOP_BOTTOM, fade.orientation)
         assertEquals(listOf(card and 0x00FFFFFF, card), fade.colors?.toList())
     }

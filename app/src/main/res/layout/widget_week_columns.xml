@@ -6,8 +6,9 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/widget_card">
+    android:layout_height="match_parent">
+
+    <include layout="@layout/widget_card_layer" />
 
     <!-- Inside the card's 1 dp border, its padding of 10 dp at the top and
          bottom and 12 dp at the sides. -->
@@ -38,8 +39,9 @@
     </LinearLayout>
 
     <!-- The fade above the list's bottom edge, shown only when the drawn row
-         is taller than the list (WeekColumnsWidget.FADE_DP); its own layer,
-         since a widget cannot know how far its list is scrolled. -->
+         is taller than the list (WeekColumnsWidget.FADE_DP) and the card is
+         whole, at 100 % (D64); its own layer, since a widget cannot know how
+         far its list is scrolled. -->
     <FrameLayout
         android:id="@+id/fade"
         android:layout_width="match_parent"

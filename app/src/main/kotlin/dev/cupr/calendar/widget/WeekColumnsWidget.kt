@@ -11,6 +11,7 @@ import dev.cupr.calendar.render.PhoneMonth
 import dev.cupr.calendar.render.RenderAssets
 import dev.cupr.calendar.render.Scale
 import dev.cupr.calendar.render.WeekRowRenderer
+import dev.cupr.calendar.store.CardOpacity
 import dev.cupr.calendar.tap.WidgetTaps
 import dev.cupr.calendar.week.WeekLayout
 import kotlin.math.roundToInt
@@ -19,11 +20,12 @@ import kotlin.math.roundToInt
  * The week widget "Woche quer" (D19, D35): the month widget's header with the
  * week's title, range and weekday heads, its "+", and a list of one drawn
  * row, the seven days as a week of the month with every entry of a day, so
- * the list scrolls when a day is fuller than the widget is tall. A fixed fade
- * above the list's bottom edge shows then, and the row ends in blank room as
- * tall as the fade, so its last entries come out from under it at the end of
- * the scroll. Each drawn part comes twice, light and dark, as in
- * [MonthWidget].
+ * the list scrolls when a day is fuller than the widget is tall. On the
+ * whole card, at 100 % (D64), a fixed fade above the list's bottom edge
+ * shows then, and the row ends in blank room as tall as the fade, so its
+ * last entries come out from under it at the end of the scroll; below 100 %
+ * there is neither, and the row ends at the list's edge. Each drawn part
+ * comes twice, light and dark, as in [MonthWidget].
  */
 object WeekColumnsWidget {
     /** The widget's height before the launcher reports one: 2 cells (design.md). */
@@ -38,8 +40,9 @@ object WeekColumnsWidget {
 
     /**
      * Draws the widget at its width and its least height: in portrait it is
-     * taller, so the fade shows whenever the row is taller than the list at
-     * the least height, also when portrait's list would hold it.
+     * taller, so the fade, on the whole card, shows whenever the row is
+     * taller than the list at the least height, also when portrait's list
+     * would hold it.
      */
     fun update(
         context: Context,
@@ -60,7 +63,9 @@ object WeekColumnsWidget {
             )
         val limit = BitmapLimit.limitBytes(context, TAG, id)
         val drawn = draw(context, width, height, look, id, limit, calendar)
-        return DrawnWidget.push(context, id, drawn, TOO_FULL, TAG) { manager.updateAppWidget(id, it) }
+        return DrawnWidget.push(context, id, drawn, TOO_FULL, look.opacity, TAG) {
+            manager.updateAppWidget(id, it)
+        }
     }
 
     /**
@@ -102,13 +107,15 @@ object WeekColumnsWidget {
                 kept,
                 description,
                 calendar,
-                FixedParts(look.corner, taps),
+                FixedParts.of(look, taps),
             ) { chrome, palette, note ->
                 chrome.weekHeader(title, range, dates.first().dayOfWeek, widthPx, scale, palette, note)
             }
         val full = MonthLayout.week(dates, calendar.entries, today)
-        // Room for the fade's blank room counted in, as a row that has to be capped is taller than its list.
-        val fadeDp = FADE_DP.toFloat()
+        // Only on the whole card (D64).
+        val fades = look.opacity == CardOpacity.FULL
+        // Where it fades, the fade's blank room is counted in, as a row that has to be capped is taller than its list.
+        val fadeDp = if (fades) FADE_DP.toFloat() else 0f
         val bytesOf = { week: Week -> BitmapLimit.bytes(widthPx, rows.heightPx(week, scale, fadeDp)) }
         val capped = BitmapLimit.capped(full, limit - kept.bytes, bytesOf, ::leaveOutOne)
         val week = capped.drawn
@@ -122,7 +129,7 @@ object WeekColumnsWidget {
             after = fixed + bytesOf(week),
         )
         DrawnWidget.warnMarks(TAG, id, rows.marksWithoutRoom(week, widthPx, scale))
-        val faded = overflows(rows, week, scale, heightDp, headerPx)
+        val faded = fades && overflows(rows, week, scale, heightDp, headerPx)
         val blank = if (faded) fadeDp else 0f
         views.setViewVisibility(R.id.fade, if (faded) View.VISIBLE else View.GONE)
         val light = kept.keep(rows.render(week, widthPx, scale, calendar.palettes.light, blank))

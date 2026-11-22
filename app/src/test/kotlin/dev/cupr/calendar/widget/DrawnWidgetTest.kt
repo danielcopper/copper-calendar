@@ -18,6 +18,7 @@ import dev.cupr.calendar.month.Bar
 import dev.cupr.calendar.month.MonthLayout
 import dev.cupr.calendar.render.Probe
 import dev.cupr.calendar.sample.SampleData
+import dev.cupr.calendar.store.CardOpacity
 import dev.cupr.calendar.tap.Tap
 import dev.cupr.calendar.tap.Taps
 import dev.cupr.calendar.week.WeekDay
@@ -332,7 +333,7 @@ class DrawnWidgetTest {
         val pushed = mutableListOf<RemoteViews>()
         val drawn = Drawn(RemoteViews(application.packageName, R.layout.widget_week), 42, 41)
         val taken =
-            DrawnWidget.push(application, 5, drawn, R.string.widget_week_too_full, "Test") { views ->
+            DrawnWidget.push(application, 5, drawn, R.string.widget_week_too_full, CardOpacity.FULL, "Test") { views ->
                 pushed += views
                 if (pushed.size == 1) throw IllegalArgumentException("RemoteViews for widget update exceeds")
             }
@@ -355,7 +356,7 @@ class DrawnWidgetTest {
         val drawn = Drawn(RemoteViews(application.packageName, R.layout.widget_week), 42, 41)
         val error =
             assertThrows(IllegalArgumentException::class.java) {
-                DrawnWidget.push(application, 5, drawn, R.string.widget_week_too_full, "Test") {
+                DrawnWidget.push(application, 5, drawn, R.string.widget_week_too_full, CardOpacity.FULL, "Test") {
                     throw IllegalArgumentException("refused")
                 }
             }
@@ -366,8 +367,9 @@ class DrawnWidgetTest {
     fun `views the system takes are handed over once, without the fallback`() {
         val pushed = mutableListOf<RemoteViews>()
         val views = RemoteViews(application.packageName, R.layout.widget_week)
-        val taken =
-            DrawnWidget.push(application, 5, Drawn(views, 1, 2), R.string.widget_week_too_full, "Test") { pushed += it }
+        val drawn = Drawn(views, 1, 2)
+        val tooFull = R.string.widget_week_too_full
+        val taken = DrawnWidget.push(application, 5, drawn, tooFull, CardOpacity.FULL, "Test") { pushed += it }
         assertTrue(taken)
         assertEquals(listOf(views), pushed)
     }

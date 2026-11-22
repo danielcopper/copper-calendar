@@ -1,6 +1,7 @@
 package dev.cupr.calendar.widget
 
 import dev.cupr.calendar.store.BackToToday
+import dev.cupr.calendar.store.CardOpacity
 import dev.cupr.calendar.store.ListState
 import dev.cupr.calendar.store.ListStore
 import dev.cupr.calendar.store.PlusCorner
@@ -13,23 +14,25 @@ import java.time.Instant
 /**
  * What one drawing of a widget takes from its settings and its redraw: the
  * days a week widget shows (D20), the corner of "+" ([Plus]), whether the
- * month's or "Woche"'s list scrolls to today ([ReturnToToday]), and its tap
+ * month's or "Woche"'s list scrolls to today ([ReturnToToday]), its tap
  * targets, of which an element set to open nothing gets no tap, and "+" set
- * so is hidden (D63). The calendars it leaves out are gone from the calendar
- * it draws ([Content.Calendar.without]).
+ * so is hidden (D63), and the card's opacity ([Card], D64). The
+ * calendars it leaves out are gone from the calendar it draws
+ * ([Content.Calendar.without]).
  */
 data class Look(
     val days: WeekDays = WidgetSettings.DEFAULT.days,
     val corner: PlusCorner = WidgetSettings.DEFAULT.plusCorner,
     val scroll: Boolean = true,
     val taps: TapTargets = WidgetSettings.DEFAULT.taps,
+    val opacity: CardOpacity = WidgetSettings.DEFAULT.opacity,
 ) {
     companion object {
         /** The look of a widget with settings, scrolling to today or not. */
         internal fun of(
             settings: WidgetSettings,
             scroll: Boolean,
-        ) = Look(settings.days, settings.plusCorner, scroll, settings.taps)
+        ) = Look(settings.days, settings.plusCorner, scroll, settings.taps, settings.opacity)
     }
 }
 

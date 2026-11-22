@@ -17,12 +17,14 @@ import dev.cupr.calendar.app.Settings
 import dev.cupr.calendar.ha.SensorCalendar
 import dev.cupr.calendar.model.Entry
 import dev.cupr.calendar.store.BackToToday
+import dev.cupr.calendar.store.CardOpacity
 import dev.cupr.calendar.store.ListState
 import dev.cupr.calendar.store.PlusCorner
 import dev.cupr.calendar.store.TapTarget
 import dev.cupr.calendar.store.TapTargets
 import dev.cupr.calendar.store.WidgetSettings
 import dev.cupr.calendar.store.WidgetSettingsStore
+import dev.cupr.calendar.store.cardOpacity
 import dev.cupr.calendar.week.WeekDays
 import dev.cupr.calendar.widget.MonthWidgetProvider
 import dev.cupr.calendar.widget.SampleContent
@@ -188,7 +190,8 @@ class SetupTest {
         val taps =
             listOf(TapTarget.CalendarPage, app, TapTarget.None).map { TapTargets(it, it, TapTarget.CalendarPage, it) } +
                 listOf(TapTarget.EntryDay, TapTarget.AsDay).map { TapTargets(entry = it) }
-        for (settings in all + taps.map { WidgetSettings(taps = it) }) {
+        val opacities = CardOpacity.steps.map { WidgetSettings(opacity = it) }
+        for (settings in all + taps.map { WidgetSettings(taps = it) } + opacities) {
             assertEquals(settings, SettingsSaver.restore(checkNotNull(save(settings))))
         }
         val left =
@@ -198,14 +201,20 @@ class SetupTest {
                 BackToToday.EVERY_30_MINUTES,
                 PlusCorner.BOTTOM_LEFT,
                 TapTargets(app, TapTarget.None, TapTarget.EntryDay, TapTarget.CalendarPage),
+                opacity = cardOpacity(50),
             )
         val saved =
-            listOf("from_today", "every_30", "bottom_left") +
+            listOf("from_today", "every_30", "bottom_left", "50") +
                 listOf("app:com.example.app", "nothing", "day", "calendar", "special")
         assertEquals(saved, save(left))
         assertNull(save(null))
-        val choices = listOf("from_today", "every_30", "bottom_left")
-        assertNull(SettingsSaver.restore(listOf("FROM_TODAY", "every_30", "bottom_left") + saved.subList(3, 7)))
+        val choices = listOf("from_today", "every_30", "bottom_left", "50")
+        assertNull(SettingsSaver.restore(listOf("FROM_TODAY", "every_30", "bottom_left", "50") + saved.subList(4, 8)))
+        // An opacity that is no step of 10 from 0 to 100, or no number.
+        for (opacity in listOf("55", "110", "-10", "halb")) {
+            val unreadable = listOf("from_today", "every_30", "bottom_left", opacity) + saved.subList(4, 8)
+            assertNull(opacity, SettingsSaver.restore(unreadable))
+        }
         assertNull(SettingsSaver.restore(choices))
         // An entry cannot have another app, nor the header an entry's day.
         assertNull(SettingsSaver.restore(choices + listOf("calendar", "calendar", "app:a", "calendar")))
