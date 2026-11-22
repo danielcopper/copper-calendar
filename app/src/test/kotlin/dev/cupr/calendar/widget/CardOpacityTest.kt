@@ -156,14 +156,15 @@ class CardOpacityTest {
             )
         }
         for (opacity in listOf(90, 50, 0)) {
-            // Exactly what the row takes without the fade's room: the whole week fits, nothing left out.
+            // Exactly what its bitmaps take without the fade's room: the whole week fits, nothing left out.
             val bytes = draw(opacity, Long.MAX_VALUE).bytes
             ShadowLog.clear()
 
             assertEquals("$opacity %", bytes, draw(opacity, bytes).bytes)
             assertEquals("$opacity %", emptyList<String>(), warnings())
         }
-        // On the whole card the fade's room counts: at the bytes of a row without it, the week is over.
+        // On the whole card the fade's room counts: at the bytes drawn without it, the week passes the limit
+        // and an entry is left out.
         val unfaded = draw(50, Long.MAX_VALUE).bytes
         ShadowLog.clear()
         draw(100, unfaded)
