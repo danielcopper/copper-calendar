@@ -107,7 +107,10 @@ fun SetupScreen(
     }
 }
 
-/** A row per setting of kind besides the taps, each with its value, opening its dialog; a change goes to onChange. */
+/**
+ * A row per setting of kind besides the taps, each with its value, opening
+ * its dialog, and the card's opacity on its slider; a change goes to onChange.
+ */
 @Composable
 private fun SettingRows(
     kind: WidgetKind,
@@ -130,7 +133,7 @@ private fun SettingRows(
         ChoiceRow(R.string.setup_plus_corner, PlusCorner.entries, current.plusCorner, ::cornerLabel) {
             onChange(current.copy(plusCorner = it))
         }
-        OpacityRow(current.opacity) { onChange(current.copy(opacity = it)) }
+        OpacitySetting(current.opacity) { onChange(current.copy(opacity = it)) }
     }
 }
 

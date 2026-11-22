@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
@@ -20,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -30,9 +28,9 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.cupr.calendar.R
+import dev.cupr.calendar.app.Heading
 import dev.cupr.calendar.app.ROW_HEIGHT
 import dev.cupr.calendar.app.RadioOptions
 import dev.cupr.calendar.ha.SensorCalendar
@@ -171,66 +169,35 @@ private fun CalendarsDialog(
 }
 
 /**
- * The card's opacity (D64): a row showing it in percent that opens a slider
- * from 0 to 100 % in steps of 10, its value beside it. Unlike a choice, the
- * slider is not taken as it moves: "OK" hands its value to onChange,
- * "Abbrechen" keeps opacity.
+ * The card's opacity (D64), set in place: its name above a slider from 0 to
+ * 100 % in steps of 10, its value in percent beside it. Each step the slider
+ * moves to goes to onChange at once, as copper-weather's slider does.
  */
 @Composable
-internal fun OpacityRow(
+internal fun OpacitySetting(
     opacity: CardOpacity,
     onChange: (CardOpacity) -> Unit,
 ) {
-    var open by rememberSaveable { mutableStateOf(false) }
-    SettingRow(stringResource(R.string.setup_opacity), percent(opacity)) { open = true }
-    if (open) {
-        OpacityDialog(opacity, onDismiss = { open = false }) {
-            open = false
-            onChange(it)
+    // Above it the rows' padding, so its name stands 16 dp below the row above, as copper-weather's does; below
+    // it the screen's own 16 dp before the taps' divider.
+    Column(modifier = Modifier.padding(top = 8.dp)) {
+        Heading(R.string.setup_opacity)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Slider(
+                value = opacity.percent.toFloat(),
+                onValueChange = { onChange(CardOpacity.nearest(it)) },
+                valueRange = 0f..CardOpacity.FULL.percent.toFloat(),
+                // The steps between the ends: 10 % to 90 %.
+                steps = CardOpacity.steps.size - 2,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                stringResource(R.string.setup_opacity_percent, opacity.percent),
+                modifier = Modifier.padding(start = 16.dp),
+            )
         }
     }
 }
-
-@Composable
-private fun OpacityDialog(
-    opacity: CardOpacity,
-    onDismiss: () -> Unit,
-    onDone: (CardOpacity) -> Unit,
-) {
-    // Kept as its percent, which a configuration change can save.
-    var percent by rememberSaveable { mutableIntStateOf(opacity.percent) }
-    val shown = CardOpacity.nearest(percent.toFloat())
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = { Ok { onDone(shown) } },
-        dismissButton = { Cancel(onDismiss) },
-        title = { Text(stringResource(R.string.setup_opacity)) },
-        text = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Slider(
-                    value = shown.percent.toFloat(),
-                    onValueChange = { percent = CardOpacity.nearest(it).percent },
-                    modifier = Modifier.weight(1f),
-                    valueRange = 0f..CardOpacity.FULL.percent.toFloat(),
-                    // The steps between the ends: 10 % to 90 %.
-                    steps = CardOpacity.steps.size - 2,
-                )
-                Text(
-                    percent(shown),
-                    modifier = Modifier.padding(start = 16.dp).widthIn(min = PERCENT_WIDTH),
-                    textAlign = TextAlign.End,
-                )
-            }
-        },
-    )
-}
-
-/** An opacity as the setup shows it, "50 %". */
-@Composable
-private fun percent(opacity: CardOpacity): String = stringResource(R.string.setup_opacity_percent, opacity.percent)
-
-/** The least room the opacity's value takes beside its slider: "100 %" at the default font size. */
-private val PERCENT_WIDTH = 48.dp
 
 /** A dialog's "OK", which takes what the dialog shows. */
 @Composable
