@@ -135,7 +135,11 @@ class WeekColumnsWidgetTest {
     @Test
     fun `at its default height the row is taller than the list, so the fade shows and the row ends in its room`() {
         val widget = WidgetHost.applied(application, views = columns())
-        assertEquals(View.VISIBLE, widget.findViewById<View>(R.id.fade).visibility)
+        val fade = widget.findViewById<View>(R.id.fade)
+        assertEquals(View.VISIBLE, fade.visibility)
+        // The fade's own gradient, from the card's colour clear to the card's colour.
+        val card = application.getColor(R.color.widget_card)
+        assertEquals(listOf(card and 0x00FFFFFF, card), (fade.background as GradientDrawable).colors?.toList())
         val scale = Scale(application.resources.displayMetrics.density)
         val week = MonthLayout.week(WeekDays.MONDAY_TO_SUNDAY.dates(wednesday), SampleData.entries, wednesday)
         val rows =
