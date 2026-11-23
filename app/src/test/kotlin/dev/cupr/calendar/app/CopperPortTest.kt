@@ -8,8 +8,8 @@ import java.security.MessageDigest
 /**
  * The copy of copper-design's Android port in `src/main` is the port at the
  * pinned release, byte for byte (D65): copied unchanged, never edited here.
- * Moving the pin means copying the port's files at the new tag and writing
- * their SHA-256 and the tag below.
+ * Moving the pin: copy the port's `kotlin/` and `res/` at the new tag into
+ * `src/main`, and write below its tag, its commit and the files' SHA-256.
  */
 class CopperPortTest {
     @Test
