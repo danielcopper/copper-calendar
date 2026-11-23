@@ -74,7 +74,7 @@ internal fun <T> ChoiceRow(
     var open by rememberSaveable { mutableStateOf(false) }
     SettingRow(stringResource(name), stringResource(label(selected))) { open = true }
     if (open) {
-        ChoiceDialog(name, options, selected, label, onDismiss = { open = false }) {
+        ChoiceDialog(name, options, selected, label, onDismiss = { open = false }) @DontMemoize {
             open = false
             onSelect(it)
         }
@@ -121,7 +121,7 @@ internal fun CalendarsRow(
         }
     SettingRow(stringResource(R.string.setup_calendars), value, if (calendars.isEmpty()) null else ({ open = true }))
     if (open) {
-        CalendarsDialog(calendars, leftOut, onDismiss = { open = false }) {
+        CalendarsDialog(calendars, leftOut, onDismiss = { open = false }) @DontMemoize {
             open = false
             onChange(it)
         }
@@ -188,7 +188,6 @@ internal fun OpacitySetting(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Slider(
                 value = opacity.percent.toFloat(),
-                // Not remembered: onChange is a new lambda each time the rows are composed again.
                 onValueChange = @DontMemoize { onChange(CardOpacity.nearest(it)) },
                 valueRange = 0f..CardOpacity.FULL.percent.toFloat(),
                 // The steps between the ends: 10 % to 90 %.
