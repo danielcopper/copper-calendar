@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DontMemoize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -95,7 +96,7 @@ fun SetupScreen(
             val current = settings ?: return@Column
             val listed = calendars ?: return@Column
             SettingRows(kind, listed, current) { settings = it }
-            TapSection(kind, current.taps) { settings = current.copy(taps = it) }
+            TapSection(kind, current.taps) @DontMemoize { settings = current.copy(taps = it) }
             Button(
                 enabled = !saving,
                 onClick = {
@@ -107,7 +108,15 @@ fun SetupScreen(
     }
 }
 
-/** A row per setting of kind besides the taps, each with its value, opening its dialog; a change goes to onChange. */
+/**
+ * A row per setting of kind besides the taps, each with its value, opening
+ * its dialog, and the card's opacity on its slider; a change goes to onChange.
+ * Its callbacks hold current, new on each composition, so they are not
+ * remembered (`@DontMemoize`): a remembered one would be built anew each
+ * time all the same. Neither are the taps' callback beside it, which holds
+ * current too, and the callbacks in the rows and the taps that call one of
+ * them directly.
+ */
 @Composable
 private fun SettingRows(
     kind: WidgetKind,
@@ -116,21 +125,26 @@ private fun SettingRows(
     onChange: (WidgetSettings) -> Unit,
 ) {
     Column {
-        CalendarsRow(calendars, current.leftOut) { onChange(current.copy(leftOut = it)) }
+        CalendarsRow(calendars, current.leftOut) @DontMemoize { onChange(current.copy(leftOut = it)) }
         if (kind.days) {
-            ChoiceRow(R.string.setup_days, WeekDays.entries, current.days, ::daysLabel) {
+            ChoiceRow(R.string.setup_days, WeekDays.entries, current.days, ::daysLabel) @DontMemoize {
                 onChange(current.copy(days = it))
             }
         }
         if (kind.backToToday) {
-            ChoiceRow(R.string.setup_back_to_today, BackToToday.entries, current.backToToday, ::backLabel) {
+            ChoiceRow(
+                R.string.setup_back_to_today,
+                BackToToday.entries,
+                current.backToToday,
+                ::backLabel,
+            ) @DontMemoize {
                 onChange(current.copy(backToToday = it))
             }
         }
-        ChoiceRow(R.string.setup_plus_corner, PlusCorner.entries, current.plusCorner, ::cornerLabel) {
+        ChoiceRow(R.string.setup_plus_corner, PlusCorner.entries, current.plusCorner, ::cornerLabel) @DontMemoize {
             onChange(current.copy(plusCorner = it))
         }
-        OpacityRow(current.opacity) { onChange(current.copy(opacity = it)) }
+        OpacitySetting(current.opacity) @DontMemoize { onChange(current.copy(opacity = it)) }
     }
 }
 

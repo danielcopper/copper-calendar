@@ -53,14 +53,14 @@ Per widget: which calendars it shows (D11), the tap targets above (D63), the cor
 
 A widget's own screen, opened from the launcher's long-press menu; placing a widget opens nothing (D56). In the phone's own colours, light or dark with the system, as the sign-in screen. Without stored settings a widget has the defaults (D57).
 
-It fits on a phone without scrolling: each setting is a row with its name and value, which opens a dialog; a choice is taken on its pick, the calendars' boxes and the opacity's slider with "OK", and "Abbrechen" closes a dialog unchanged (D56).
+It fits on a phone without scrolling: a setting with several options is a row with its name and value, which opens a dialog; a choice is taken on its pick, the calendars' boxes with "OK", and "Abbrechen" closes a dialog unchanged. A single value, the card's opacity, is set in place on a slider (D56).
 
 - Title "Widget „Monat“", "Widget „Woche“" or "Widget „Woche quer“".
 - "Kalender": "Alle", or how many of those listed it shows, "2 von 3"; its dialog has a box per calendar, ticked unless the widget leaves it out, taken with "OK"; by name in the dashboard's order as the sensor lists its calendars, by id while it does not (D57); with none known, the row says "Keine Kalender bekannt" and opens nothing.
 - "Tage" ("Woche", "Woche quer"): "Montag bis Sonntag" or "Heute und die sechs Tage danach" (D20).
 - "Zurück zu heute" ("Monat", "Woche"): "Bei jeder Aktualisierung", "Nur um Mitternacht", "Nie", "Alle 15 Minuten", "Alle 30 Minuten", "Alle 60 Minuten" (D27, D59).
 - "Ecke für „+“": "Unten rechts" or "Unten links" (D58).
-- "Hintergrund": the card's opacity, "100 %" by default; its dialog has a slider from 0 to 100 % in steps of 10, the value in percent beside it, taken with "OK" (D64).
+- "Deckkraft des Hintergrunds": the card's opacity, as copper-weather's setup draws it, the name in the screen's heading style, below it a slider from 0 to 100 % in steps of 10 and the value in percent beside it, "100 %" by default, taken as the slider moves (D64).
 - Below a divider, "Beim Tippen auf …", with a row per element indented below it (D63):
   - "Kopfzeile": "Kalenderseite", "Andere App …" or "Nichts".
   - "Tag": "Der Tag auf der Kalenderseite", "Andere App …" or "Nichts".

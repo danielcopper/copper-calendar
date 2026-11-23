@@ -18,6 +18,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DontMemoize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -76,13 +77,13 @@ internal fun TapSection(
             selected = taps.of(element).kind,
             label = { kindLabel(element, it) },
             onDismiss = { choosing = null },
-        ) { kind ->
+        ) @DontMemoize { kind ->
             choosing = null
             if (kind == TapTarget.Kind.APP) pickingApp = element else onChange(taps.with(element, TapTarget.of(kind)))
         }
     }
     pickingApp?.let { element ->
-        AppDialog(onDismiss = { pickingApp = null }) { app ->
+        AppDialog(onDismiss = { pickingApp = null }) @DontMemoize { app ->
             pickingApp = null
             onChange(taps.with(element, TapTarget.App(app)))
         }

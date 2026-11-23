@@ -15,24 +15,22 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.assertRangeInfoEquals
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasContentDescriptionExactly
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -227,16 +225,14 @@ class SetupScreenTest {
         tap(R.string.setup_calendars)
         box("Ferien").performClick()
         press(R.string.setup_ok)
-        tap(R.string.setup_opacity)
-        slider().performSemanticsAction(SemanticsActions.SetProgress) { it(60f) }
-        press(R.string.setup_ok)
+        slide(60f)
 
         controller.recreate()
         compose.waitForIdle()
 
         assertRow(R.string.setup_days, R.string.setup_days_from_today)
         assertRow(R.string.setup_calendars, "2 von 3")
-        assertRow(R.string.setup_opacity, percent(60))
+        assertOpacity(60)
         tap(R.string.setup_save)
         assertEquals(
             WidgetSettings(setOf(HOLIDAYS), WeekDays.FROM_TODAY, opacity = cardOpacity(60)),
@@ -378,46 +374,49 @@ class SetupScreenTest {
     }
 
     @Test
-    fun `the background's slider takes effect with OK only, Abbrechen keeps it, and saving stores it`() {
+    fun `the background's slider shows its value at once as it moves, opens no dialog, and saving stores it`() {
         open(MonthWidgetProvider::class.java)
 
-        tap(R.string.setup_opacity)
-        // The row's value, and the slider's beside it.
-        compose.onAllNodesWithText(percent(100)).assertCountEquals(2)
-        slider().performSemanticsAction(SemanticsActions.SetProgress) { it(30f) }
-        // Beside the slider the value it shows; the row behind the dialog still has the one before.
-        assertRow(R.string.setup_opacity, percent(100))
-        node(percent(30)).assertExists()
-        press(R.string.setup_cancel)
-        slider().assertDoesNotExist()
-        assertRow(R.string.setup_opacity, percent(100))
-        tap(R.string.setup_opacity)
-        // Opened again, the slider starts from the value set, not from the one cancelled.
-        node(percent(30)).assertDoesNotExist()
-        slider().performSemanticsAction(SemanticsActions.SetProgress) { it(52f) }
-        node(percent(50)).assertExists()
-        press(R.string.setup_ok)
-        slider().assertDoesNotExist()
-        assertRow(R.string.setup_opacity, percent(50))
-        tap(R.string.setup_opacity)
-        slider().assertRangeInfoEquals(ProgressBarRangeInfo(50f, 0f..100f, steps = 9))
-        slider().performSemanticsAction(SemanticsActions.SetProgress) { it(0f) }
-        press(R.string.setup_ok)
-        assertRow(R.string.setup_opacity, percent(0))
+        assertOpacity(100)
+        // Set in place: its name opens nothing.
+        node(R.string.setup_opacity).assertHasNoClickAction()
+        slide(30f)
+        assertOpacity(30)
+        node(percent(100)).assertDoesNotExist()
+        node(R.string.setup_ok).assertDoesNotExist()
+        node(R.string.setup_cancel).assertDoesNotExist()
+        // Between two steps, the nearest.
+        slide(52f)
+        assertOpacity(50)
+        slide(0f)
+        assertOpacity(0)
         tap(R.string.setup_save)
 
         assertEquals(WidgetSettings(opacity = cardOpacity(0)), Settings.widgets(context).read(ID))
     }
 
     @Test
-    fun `the background's row stands after the corner of plus and before the taps, and shows the stored value`() {
+    fun `the background's name stands above its slider, its value beside it, after plus's corner, before the taps`() {
         Settings.widgets(context).write(ID, WidgetSettings(opacity = cardOpacity(70)))
         open(WeekWidgetProvider::class.java)
 
-        assertRow(R.string.setup_opacity, percent(70))
-        assertTrue(top(context.getString(R.string.setup_plus_corner)) < top(context.getString(R.string.setup_opacity)))
-        assertTrue(top(context.getString(R.string.setup_opacity)) < top(context.getString(R.string.setup_taps)))
+        assertOpacity(70)
+        assertEquals("Deckkraft des Hintergrunds", context.getString(R.string.setup_opacity))
         assertEquals("70\u00A0%", percent(70))
+        val slider = slider().fetchSemanticsNode().boundsInRoot
+        val value = node(percent(70)).fetchSemanticsNode().boundsInRoot
+        assertTrue(top(context.getString(R.string.setup_plus_corner)) < top(context.getString(R.string.setup_opacity)))
+        assertTrue(node(R.string.setup_opacity).fetchSemanticsNode().boundsInRoot.bottom <= slider.top)
+        assertTrue(slider.bottom < top(context.getString(R.string.setup_taps)))
+        assertTrue(slider.right <= value.left)
+        assertTrue(value.center.y in slider.top..slider.bottom)
+    }
+
+    @Test
+    fun `a screen reader names the background's slider by the name above it`() {
+        open(MonthWidgetProvider::class.java)
+
+        slider().assert(hasContentDescriptionExactly(context.getString(R.string.setup_opacity)))
     }
 
     @Test
@@ -441,6 +440,7 @@ class SetupScreenTest {
         open(WeekWidgetProvider::class.java)
 
         node(R.string.setup_opacity).assertIsDisplayed()
+        slider().assertIsDisplayed()
         node(R.string.setup_tap_new).assertIsDisplayed()
         node(R.string.setup_save).assertIsDisplayed()
         // The screen has nothing to scroll, so nothing lies below its bottom edge.
@@ -484,7 +484,8 @@ class SetupScreenTest {
         compose.onNodeWithText(context.getString(R.string.setup_title, context.getString(kind))).assertExists()
         assertRow(R.string.setup_calendars, R.string.setup_no_calendars)
         assertRow(R.string.setup_plus_corner, R.string.setup_plus_bottom_right)
-        assertRow(R.string.setup_opacity, percent(100))
+        node(R.string.setup_opacity).assertExists()
+        assertOpacity(100)
         node(R.string.setup_save).assertExists()
         node(R.string.setup_taps).assertExists()
         val shownWhen =
@@ -570,8 +571,25 @@ class SetupScreenTest {
     /** An opacity as the setup shows it. */
     private fun percent(opacity: Int) = context.getString(R.string.setup_opacity_percent, opacity)
 
-    /** The background's slider in its dialog. */
+    /** The background's slider. */
     private fun slider() = compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo))
+
+    /** Moves the background's slider to percent, as a drag that ends there does. */
+    private fun slide(percent: Float) =
+        slider().performScrollTo().performSemanticsAction(SemanticsActions.SetProgress) { it(percent) }
+
+    /**
+     * The background's slider stands at opacity, from 0 to 100 % in steps of
+     * 10, and the screen shows its value in percent.
+     */
+    private fun assertOpacity(opacity: Int) {
+        val info = slider().fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo]
+        // The slider snaps to its step in floats, 60.000004 for 60.
+        assertEquals(opacity.toFloat(), info.current, 0.01f)
+        assertEquals(0f..100f, info.range)
+        assertEquals(9, info.steps)
+        node(percent(opacity)).assertExists()
+    }
 
     /** A calendar's box in the calendars' dialog. */
     private fun box(name: String) = compose.onNode(hasText(name) and isToggleable())
