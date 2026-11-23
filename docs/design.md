@@ -51,7 +51,7 @@ Per widget: which calendars it shows (D11), the tap targets above (D63), the cor
 
 ## Setup screen
 
-A widget's own screen, opened from the launcher's long-press menu; placing a widget opens nothing (D56). In the phone's own colours, light or dark with the system, as the sign-in screen. Without stored settings a widget has the defaults (D57).
+A widget's own screen, opened from the launcher's long-press menu; placing a widget opens nothing (D56). In copper's colour scheme, light or dark with the system, as the sign-in screen (D65). Without stored settings a widget has the defaults (D57).
 
 It fits on a phone without scrolling: a setting with several options is a row with its name and value, which opens a dialog; a choice is taken on its pick, the calendars' boxes with "OK", and "Abbrechen" closes a dialog unchanged. A single value, the card's opacity, is set in place on a slider (D56).
 
@@ -71,7 +71,7 @@ It fits on a phone without scrolling: a setting with several options is a row wi
 
 ## Sign-in screen
 
-The app's screen opened from its launcher icon, in the phone's own colours, light or dark with the system (D41).
+The app's screen opened from its launcher icon, in copper's colour scheme, light or dark with the system (D41, D65).
 
 - Signed out: a field for the Home Assistant address, kept once entered (D42), and "Mit Home Assistant anmelden", which shows Home Assistant's own login page inside the app (D43). When the page does not load or its certificate is not trusted, "Home Assistant nicht erreichbar – Adresse und Verbindung prüfen"; when the sign-in does not come about for another reason, "Anmeldung fehlgeschlagen – bitte noch einmal versuchen"; going back from the page says nothing.
 - Signed in: "Angemeldet als …, letzter Abruf um …" (on an earlier day "am 11. November um …"), or "Angemeldet, noch kein Abruf", "Abmelden" (D47), and under it "Abruf": "Alle 15 Minuten", "Alle 30 Minuten" or "Alle 60 Minuten" (D60). While the last fetch failed, a line under the status says "Letzter Abruf fehlgeschlagen um …: " and its cause in plain words, such as "kein Netz" or "Sensor nicht gefunden" (D46). When a fetch could not read the theme, a line under that says "Theme „Zuhause“ nicht lesbar – Farben vom Abruf um …", or "– eingebaute Farben" without a theme kept; how long: D48.
