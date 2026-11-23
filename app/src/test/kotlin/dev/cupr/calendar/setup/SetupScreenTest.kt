@@ -38,6 +38,7 @@ import androidx.test.core.app.ApplicationProvider
 import dev.cupr.calendar.R
 import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.app.Settings
+import dev.cupr.calendar.app.assertBars
 import dev.cupr.calendar.render.Probe
 import dev.cupr.calendar.store.BackToToday
 import dev.cupr.calendar.store.PlusCorner
@@ -466,6 +467,13 @@ class SetupScreenTest {
         open(WeekWidgetProvider::class.java)
 
         assertEquals(CopperColorScheme.dark.surface.toArgb(), background())
+    }
+
+    @Test
+    fun `the setup's system bars are copper's background`() {
+        val activity = open(WeekWidgetProvider::class.java).get()
+
+        assertBars(CopperColorScheme.light.background.toArgb(), activity)
     }
 
     /**

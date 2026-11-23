@@ -6,8 +6,8 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import dev.cupr.calendar.app.AppTheme
+import dev.cupr.calendar.app.enableEdgeToEdgeFromCopper
 import dev.cupr.calendar.widget.WidgetKind
 
 /**
@@ -31,7 +31,7 @@ class SetupActivity : ComponentActivity() {
             finish()
             return
         }
-        enableEdgeToEdge()
+        enableEdgeToEdgeFromCopper()
         setContent { AppTheme { SetupScreen(id, kind, ::done) } }
     }
 
