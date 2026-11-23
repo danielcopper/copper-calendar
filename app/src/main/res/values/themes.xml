@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- The window of the sign-in screen and the widgets' setup, light or dark
-         with the system, until Compose draws it: copper's bg as its own and
-         that of the splash screen (D65). -->
+         with the system, until Compose draws it (D65). -->
     <style name="Theme.CopperCalendar" parent="android:Theme.DeviceDefault.DayNight">
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
