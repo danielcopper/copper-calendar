@@ -17,11 +17,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 
-/**
- * The app's screens take copper's colour scheme, light or dark with the system (D65). Without Compose's test rule: its
- * `runTest` would keep, in this Robolectric sandbox, the error SignInFlowTest lets reach the thread's handler, and
- * fail the next Compose test with it.
- */
+/** The app's screens take copper's colour scheme, light or dark with the system (D65). */
 @RunWith(RobolectricTestRunner::class)
 class AppThemeTest {
     private val opened = mutableListOf<ActivityController<ComponentActivity>>()
