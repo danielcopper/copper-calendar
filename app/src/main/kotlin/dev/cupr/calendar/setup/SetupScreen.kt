@@ -114,8 +114,8 @@ fun SetupScreen(
  * Its callbacks hold current, new on each composition, so they are not
  * remembered (`@DontMemoize`): a remembered one would be built anew each
  * time all the same. Neither are the taps' callback beside it, which holds
- * current too, and the callbacks in the rows and the taps that hand a change
- * on to one of them.
+ * current too, and the callbacks in the rows and the taps that call one of
+ * them directly.
  */
 @Composable
 private fun SettingRows(
