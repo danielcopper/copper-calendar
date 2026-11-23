@@ -180,10 +180,7 @@ class SignInFlowTest {
         assertNull(SignInFlow.state.value.problem)
     }
 
-    /**
-     * A `runTest`, which Compose's test rule runs too, switches kotlinx-coroutines-test's collector of uncaught
-     * exceptions on for the whole sandbox; an error that reached it would be kept and fail the next `runTest`.
-     */
+    /** An error a run throws, with a `runTest` before it, fails no `runTest` after it (see SignInFlow's handler). */
     @Test(timeout = 10_000)
     fun `an error a run throws reaches no coroutine test that starts after it`() {
         runTest { }

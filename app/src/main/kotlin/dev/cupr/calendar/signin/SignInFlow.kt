@@ -37,8 +37,8 @@ object SignInFlow {
      * Hands an error a run lets through straight to the thread's uncaught-exception handler, the last stop coroutines
      * take on their own too, so it ends the app (D43). Without it, coroutines first offer the error to every handler
      * the ServiceLoader finds: in the app only kotlinx-coroutines-android's, which does nothing from Android 9 on, but
-     * in the tests also kotlinx-coroutines-test's collector, which, once any `runTest` has run, keeps the error and
-     * fails the next `runTest` with it.
+     * in the tests also kotlinx-coroutines-test's collector: once any `runTest`, which Compose's test rule runs too,
+     * has run, it keeps the error and fails the next `runTest` with it.
      */
     private val uncaught =
         CoroutineExceptionHandler { _, e ->
@@ -80,8 +80,7 @@ object SignInFlow {
      * the screen keeps showing the run. A run that throws a runtime
      * exception ends too, its problem [Problem.FAILED], and the log names the
      * exception's class alone, which holds no secret; an error is not caught
-     * and reaches the thread's uncaught-exception handler (D43, as D54 draws
-     * the line).
+     * (D43, as D54 draws the line).
      */
     @Suppress("TooGenericExceptionCaught")
     private fun run(work: () -> Problem?): Boolean {
