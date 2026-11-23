@@ -470,10 +470,18 @@ class SetupScreenTest {
     }
 
     @Test
-    fun `the setup's system bars are copper's background`() {
+    fun `in the light, the setup's system bars are copper's light background`() {
         val activity = open(WeekWidgetProvider::class.java).get()
 
-        assertBars(CopperColorScheme.light.background.toArgb(), activity)
+        assertBars(CopperColorScheme.light.background.toArgb(), light = true, activity)
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun `in the dark, the setup's system bars are copper's dark background`() {
+        val activity = open(WeekWidgetProvider::class.java).get()
+
+        assertBars(CopperColorScheme.dark.background.toArgb(), light = false, activity)
     }
 
     /**
