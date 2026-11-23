@@ -18,6 +18,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DontMemoize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -187,7 +188,8 @@ internal fun OpacitySetting(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Slider(
                 value = opacity.percent.toFloat(),
-                onValueChange = { onChange(CardOpacity.nearest(it)) },
+                // Not remembered: onChange is a new lambda each time the rows are composed again.
+                onValueChange = @DontMemoize { onChange(CardOpacity.nearest(it)) },
                 valueRange = 0f..CardOpacity.FULL.percent.toFloat(),
                 // The steps between the ends: 10 % to 90 %.
                 steps = CardOpacity.steps.size - 2,

@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DontMemoize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -133,7 +134,8 @@ private fun SettingRows(
         ChoiceRow(R.string.setup_plus_corner, PlusCorner.entries, current.plusCorner, ::cornerLabel) {
             onChange(current.copy(plusCorner = it))
         }
-        OpacitySetting(current.opacity) { onChange(current.copy(opacity = it)) }
+        // Not remembered: it holds current, which differs each time these rows are composed again.
+        OpacitySetting(current.opacity, @DontMemoize { onChange(current.copy(opacity = it)) })
     }
 }
 
