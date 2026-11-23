@@ -7,4 +7,8 @@
     <issue id="GradleDependency" severity="ignore" />
     <!-- Looks up the newest library versions online, so it fails on a release day; Dependabot proposes updates (D21). -->
     <issue id="NewerVersionAvailable" severity="ignore" />
+    <!-- copper-design's colours, copied unchanged (D65), so those the app does not use stay in the copy. -->
+    <issue id="UnusedResources">
+        <ignore path="src/main/res/values/copper_colors.xml" />
+    </issue>
 </lint>
