@@ -2,10 +2,14 @@ package dev.cupr.calendar.signin
 
 import android.app.Application
 import android.util.Log
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
@@ -22,6 +26,7 @@ import dev.cupr.calendar.ha.SignInRequest
 import dev.cupr.calendar.store.AesGcmCipher
 import dev.cupr.calendar.store.FetchInterval
 import dev.cupr.calendar.store.TokenCipher
+import dev.cupr.design.CopperColorScheme
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
@@ -33,10 +38,11 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.android.controller.ActivityController
+import org.robolectric.annotation.GraphicsMode
 import java.util.concurrent.TimeUnit
 import javax.crypto.KeyGenerator
 
-/** The sign-in screen's "Abruf": how often the app fetches, shown and set while signed in. */
+/** The sign-in screen's colours, and its "Abruf": how often the app fetches, shown and set while signed in. */
 @RunWith(RobolectricTestRunner::class)
 class SignInScreenTest {
     @get:Rule
@@ -100,6 +106,16 @@ class SignInScreenTest {
 
         node(R.string.sign_in).assertExists()
         node(R.string.fetch_interval).assertDoesNotExist()
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `the screen is in copper's colours`() {
+        open()
+
+        // The screen's corner, where nothing is drawn on its surface.
+        val image = compose.onRoot().captureToImage().asAndroidBitmap()
+        assertEquals(CopperColorScheme.light.surface.toArgb(), image.getPixel(image.width - 1, image.height - 1))
     }
 
     private fun signIn() =

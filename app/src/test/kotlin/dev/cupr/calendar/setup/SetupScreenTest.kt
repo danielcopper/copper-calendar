@@ -11,8 +11,6 @@ import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import androidx.annotation.StringRes
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.SemanticsActions
@@ -54,6 +52,7 @@ import dev.cupr.calendar.widget.SampleContent
 import dev.cupr.calendar.widget.WeekColumnsWidgetProvider
 import dev.cupr.calendar.widget.WeekWidget
 import dev.cupr.calendar.widget.WeekWidgetProvider
+import dev.cupr.design.CopperColorScheme
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.addJsonObject
@@ -453,20 +452,20 @@ class SetupScreenTest {
     }
 
     @Test
-    fun `in the light, the setup is in the phone's light colours`() {
+    fun `in the light, the setup is in copper's light colours`() {
         open(WeekWidgetProvider::class.java)
 
-        val light = dynamicLightColorScheme(context).surface.toArgb()
-        assertNotEquals(dynamicDarkColorScheme(context).surface.toArgb(), light)
+        val light = CopperColorScheme.light.surface.toArgb()
+        assertNotEquals(CopperColorScheme.dark.surface.toArgb(), light)
         assertEquals(light, background())
     }
 
     @Test
     @Config(qualifiers = "+night")
-    fun `in the dark, the setup is in the phone's dark colours`() {
+    fun `in the dark, the setup is in copper's dark colours`() {
         open(WeekWidgetProvider::class.java)
 
-        assertEquals(dynamicDarkColorScheme(context).surface.toArgb(), background())
+        assertEquals(CopperColorScheme.dark.surface.toArgb(), background())
     }
 
     /**

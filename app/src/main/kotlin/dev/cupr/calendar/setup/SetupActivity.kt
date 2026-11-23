@@ -7,7 +7,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import dev.cupr.calendar.app.PhoneTheme
+import dev.cupr.calendar.app.AppTheme
 import dev.cupr.calendar.widget.WidgetKind
 
 /**
@@ -32,7 +32,7 @@ class SetupActivity : ComponentActivity() {
             return
         }
         enableEdgeToEdge()
-        setContent { PhoneTheme { SetupScreen(id, kind, ::done) } }
+        setContent { AppTheme { SetupScreen(id, kind, ::done) } }
     }
 
     /** Finishes after "Speichern", with RESULT_OK for the widget when its settings were saved. */

@@ -8,7 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
-import dev.cupr.calendar.app.PhoneTheme
+import dev.cupr.calendar.app.AppTheme
 import dev.cupr.calendar.app.Services
 import kotlinx.coroutines.launch
 
@@ -23,7 +23,7 @@ class SignInActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { PhoneTheme { SignInScreen(starts) } }
+        setContent { AppTheme { SignInScreen(starts) } }
     }
 
     override fun onStart() {
