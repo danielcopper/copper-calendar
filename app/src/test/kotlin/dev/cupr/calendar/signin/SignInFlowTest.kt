@@ -19,6 +19,7 @@ import dev.cupr.calendar.widget.DrawnWidgetProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.After
@@ -155,8 +156,8 @@ class SignInFlowTest {
         assertEquals(Problem.FAILED, SignInFlow.state.value.problem)
     }
 
-    @Test(timeout = 10_000)
-    fun `an error a run throws is not taken for a failed sign-in and reaches the thread's handler`() {
+    /** Runs a sign-out that throws a [StackOverflowError]; what reached the thread's uncaught-exception handler. */
+    private fun signOutThrowingAnError(): List<Throwable> {
         Services.cipher = { throw StackOverflowError() }
         val thread = Thread.currentThread()
         val handler = thread.uncaughtExceptionHandler
@@ -167,10 +168,25 @@ class SignInFlowTest {
         } finally {
             thread.uncaughtExceptionHandler = handler
         }
+        return uncaught
+    }
+
+    @Test(timeout = 10_000)
+    fun `an error a run throws is not taken for a failed sign-in and reaches the thread's handler`() {
+        val uncaught = signOutThrowingAnError()
 
         assertEquals(listOf(StackOverflowError::class.java), uncaught.map { it.javaClass })
         assertFalse(SignInFlow.state.value.busy)
         assertNull(SignInFlow.state.value.problem)
+    }
+
+    /** An error a run throws, with a `runTest` before it, fails no `runTest` after it (see SignInFlow's handler). */
+    @Test(timeout = 10_000)
+    fun `an error a run throws reaches no coroutine test that starts after it`() {
+        runTest { }
+
+        assertEquals(listOf(StackOverflowError::class.java), signOutThrowingAnError().map { it.javaClass })
+        runTest { }
     }
 
     @Test

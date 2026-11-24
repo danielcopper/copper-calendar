@@ -6,6 +6,7 @@ import dev.cupr.calendar.app.Services
 import dev.cupr.calendar.ha.AuthorizationCode
 import dev.cupr.calendar.ha.SignInRequest
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +33,21 @@ object SignInFlow {
         val finished: Int = 0,
     )
 
-    private val scope = CoroutineScope(SupervisorJob())
+    /**
+     * Hands an error a run lets through straight to the thread's uncaught-exception handler, the last stop coroutines
+     * take on their own too, so it ends the app (D43). Without it, coroutines first offer the error to every handler
+     * the ServiceLoader finds: in the app only kotlinx-coroutines-android's, which does nothing from Android 9 on, but
+     * in the tests also kotlinx-coroutines-test's collector: once any `runTest`, which Compose's test rule runs too,
+     * has run, it keeps the error and fails the next `runTest` with it.
+     */
+    private val uncaught =
+        CoroutineExceptionHandler { _, e ->
+            val thread = Thread.currentThread()
+            // Null only for a thread that has ended, never the running one.
+            checkNotNull(thread.uncaughtExceptionHandler).uncaughtException(thread, e)
+        }
+
+    private val scope = CoroutineScope(SupervisorJob() + uncaught)
     private val mutable = MutableStateFlow(State())
     val state: StateFlow<State> = mutable.asStateFlow()
 
