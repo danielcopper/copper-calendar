@@ -15,7 +15,7 @@ okhttp = "5.5.1"
 kotlinx-serialization = "1.13.0"
 junit = "4.13.2"
 androidx-test-core = "1.7.0"
-robolectric = "4.18"
+robolectric = "4.18.1"
 # Espresso, which Compose's ui test library idles through under Robolectric:
 # the 3.5.0 it brings calls InputManager.getInstance(), gone from Android's
 # newer SDKs, so every Compose test there fails; 3.7.0 no longer does.
