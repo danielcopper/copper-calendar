@@ -204,7 +204,7 @@ class SizesAsValuesTest {
             token: String,
         ): Int = source.indexOf(token, from).takeIf { it >= 0 }?.plus(token.length) ?: source.length
 
-        /** Where the raw string whose text starts at [from] ends: after the first run of three or more quotes. */
+        /** Kotlin closes a raw string at the last quote of a run of three or more. */
         private fun afterRaw(
             source: String,
             from: Int,
