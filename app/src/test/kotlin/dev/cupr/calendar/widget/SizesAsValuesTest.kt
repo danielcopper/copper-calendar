@@ -7,10 +7,9 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Every size the app sets on a widget's views goes to the launcher as a value, never as a resource's number for the
- * launcher to look up (D66): no call in the main code takes one of RemoteViews' forms that pass a dimension's or an
- * attribute's number. A scan of the sources rather than detekt's ForbiddenMethodCall, which needs type resolution:
- * it runs in `detektMain`, not in the `detekt` the gate runs.
+ * No call in the main code takes one of RemoteViews' forms that pass a size as a dimension's or an attribute's number
+ * (D66). A scan of the sources rather than detekt's ForbiddenMethodCall, which needs type resolution: it runs in
+ * `detektMain`, not in the `detekt` the gate runs.
  */
 class SizesAsValuesTest {
     @Test
@@ -53,9 +52,18 @@ class SizesAsValuesTest {
     }
 
     @Test
+    fun `the scan reads on past literals with quotes in them`() {
+        val call = "\nviews.setViewLayoutWidthDimen(R.id.list, R.dimen.width)"
+        val expected = listOf("2: setViewLayoutWidthDimen")
+        for (literal in listOf("'\"'", "\"a\\\"b\"", "\"\"\"5\" tall\"\"\"", "\"\"\"say \"hi\"\"\"\"")) {
+            assertEquals(literal, expected, byNumber("val text = $literal$call"))
+        }
+    }
+
+    @Test
     fun `the scan knows each of RemoteViews' methods that take a size by a resource's number`() {
-        // A method that takes a resource or an attribute is named …Dimen or …Attr; the ones that are not for a size
-        // are left out by name, so one a new SDK adds fails here until it is sorted in.
+        // A method that takes a size by a resource or an attribute is named …Dimen or …Attr; the ones so named that
+        // are not for a size are left out by name, so one a new SDK adds fails here until it is sorted in.
         val methods = RemoteViews::class.java.methods.filter { it.name.endsWith("Dimen") || it.name.endsWith("Attr") }
         val sizes = methods.filter { it.name !in NOT_SIZES }
         assertEquals((BY_NUMBER + BY_NUMBER_OR_VALUE).toSet(), sizes.mapTo(mutableSetOf()) { it.name })
@@ -84,7 +92,7 @@ class SizesAsValuesTest {
 
         /**
          * RemoteViews' methods that take a dimension's number with three arguments (view, method, resource) and a
-         * value with four (view, method, value, unit).
+         * value with four ([VALUE_FORM]).
          */
         val BY_NUMBER_OR_VALUE = listOf("setIntDimen", "setFloatDimen")
 
@@ -184,7 +192,7 @@ class SizesAsValuesTest {
             when {
                 source.startsWith("//", at) -> source.indexOf('\n', at).takeIf { it >= 0 } ?: source.length
                 source.startsWith("/*", at) -> after(source, at + 2, "*/")
-                source.startsWith("\"\"\"", at) -> after(source, at + 3, "\"\"\"")
+                source.startsWith("\"\"\"", at) -> afterRaw(source, at + 3)
                 source.startsWith("\"", at) -> afterQuote(source, at + 1, '"')
                 source.startsWith("'", at) -> afterQuote(source, at + 1, '\'')
                 else -> null
@@ -195,6 +203,16 @@ class SizesAsValuesTest {
             from: Int,
             token: String,
         ): Int = source.indexOf(token, from).takeIf { it >= 0 }?.plus(token.length) ?: source.length
+
+        /** Where the raw string whose text starts at [from] ends: after the first run of three or more quotes. */
+        private fun afterRaw(
+            source: String,
+            from: Int,
+        ): Int {
+            var end = after(source, from, "\"\"\"")
+            while (source.getOrNull(end) == '"') end++
+            return end
+        }
 
         private fun afterQuote(
             source: String,
