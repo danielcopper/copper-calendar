@@ -87,7 +87,8 @@
             </intent-filter>
         </receiver>
 
-        <!-- WorkManager starts on demand (CopperApp, D46), not with every process. -->
+        <!-- WorkManager starts on demand (CopperApp, D46), not with every process. Both merged manifests lack this
+             initializer; the unit tests' merge warns that it finds none to remove. -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
