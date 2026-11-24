@@ -96,7 +96,6 @@ class SizesAsValuesTest {
          */
         val BY_NUMBER_OR_VALUE = listOf("setIntDimen", "setFloatDimen")
 
-        /** The value form of [BY_NUMBER_OR_VALUE]: view, method, value, unit. */
         val VALUE_FORM = arrayOf(Int::class.java, String::class.java, Float::class.java, Int::class.java)
         val VALUE_ARGUMENTS = VALUE_FORM.size
 
